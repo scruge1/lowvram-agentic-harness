@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "project_id": "enforced-task-example",
+  "authority_cap": "tested",
+  "target": {"files": ["PRD.md"]},
+  "requirements": [
+    {
+      "id": "REQ-ENFORCED-OUTCOME",
+      "text": "Produce the accepted result through admitted research, corrective retry, receipt verification, and whole-project acceptance.",
+      "scope_class": "project_specific",
+      "source": {
+        "path": "PRD.md",
+        "locator": "sections:Outcome",
+        "sha256": "afe4a57a6eee048bbb1bd68d849c13ecbecc436633cba76838fdcc79aefc20e5"
+      },
+      "disposition": "applicable",
+      "owner_stage": "execute"
+    }
+  ],
+  "stages": [
+    {
+      "id": "execute",
+      "objective": "Run the research and correction task through the portable enforcement supervisor.",
+      "acceptance": "The live enforcement receipt verifies against the task contract, research, traces, output, and control files.",
+      "depends_on": [],
+      "requirements": ["REQ-ENFORCED-OUTCOME"],
+      "materials": [
+        "PRD.md",
+        "task.json",
+        "worker.py",
+        "research.py",
+        "verify_result.py"
+      ],
+      "trace_output": "artifacts/ssot-run-trace.json",
+      "outputs": [
+        "artifacts/result.txt",
+        "artifacts/research-receipt.json",
+        "artifacts/enforcement-receipt.json",
+        "artifacts/ssot-run-trace.json"
+      ],
+      "properties": [
+        "research meets the declared source floor",
+        "a rejected attempt receives exact feedback",
+        "the accepted output is produced in the live run",
+        "the enforcement receipt revalidates against live bytes"
+      ],
+      "verifier": {
+        "owner": "enforcement-receipt-checker",
+        "type": "deterministic_property",
+        "argv": ["{python}", "verify_enforcement.py"],
+        "negative_control": {
+          "argv": ["{python}", "verify_enforcement.py", "--negative-control"]
+        },
+        "files": ["verify_enforcement.py"],
+        "timeout_seconds": 30
+      }
+    }
+  ],
+  "acceptance": {
+    "owner": "independent-example-acceptor",
+    "type": "deterministic_property",
+    "argv": ["{python}", "accept_project.py"],
+    "negative_control": {
+      "argv": ["{python}", "accept_project.py", "--negative-control"]
+    },
+    "files": ["accept_project.py"],
+    "timeout_seconds": 30
+  }
+}

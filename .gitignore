@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+config.yaml
+models/
+*.gguf
+server.log
+.venv/
+models.yaml
+examples/ssot-starter/.ssot/
+examples/ssot-starter/artifacts/
+examples/enforced-task/.ssot/
+examples/enforced-task/.enforcement/
+examples/enforced-task/artifacts/

@@ -1,0 +1,34 @@
+# Copy to config.yaml and edit. Every value can also be overridden by an env var
+# (shown in [brackets]), which wins over the file.
+
+model:
+  # Base URL of your local OpenAI-compatible server. This is the ONE thing you must
+  # get right. Works with llama.cpp's llama-server, llama-swap, LM Studio, vLLM,
+  # or Ollama (use http://localhost:11434/v1 for Ollama).   [HARNESS_BASE_URL]
+  base_url: http://localhost:8080/v1
+  # Model name. llama-server ignores this; llama-swap routes on it; Ollama needs the
+  # exact tag you pulled (e.g. qwen3:30b-a3b).               [HARNESS_MODEL]
+  model: local-model
+  # Local servers ignore the key, but some HTTP clients insist on a value.  [HARNESS_API_KEY]
+  api_key: not-needed
+  # Sampling + limits.
+  temperature: 0.2
+  max_tokens: 1024
+  timeout_s: 240
+
+harness:
+  # dispatch_retry: how many times to retry a task after a verified failure.
+  max_retries: 3
+  # verify: fraction of a claim's content words that must appear in its evidence quote.
+  provenance_floor: 0.6
+
+research:
+  # Search backend for research_ground: none | brave | serpapi.
+  # 'none' = offline (you supply sources yourself). For live search set the matching
+  # env var: BRAVE_API_KEY (https://brave.com/search/api/) or SERPAPI_KEY.
+  # To use Perplexity/Exa/Tavily instead, return [{"title","url"}] from your own
+  # search() and the rest of the pipeline is unchanged.
+  backend: none
+  max_results: 5
+  # a claim must be independently supported by at least this many sources to count.
+  min_sources: 2

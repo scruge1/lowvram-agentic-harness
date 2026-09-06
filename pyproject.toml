@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lowvram-agentic-harness"
+version = "0.1.0"
+description = "Local-model utilities and a receipt-gated agent task supervisor"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=6.0"]
+
+[project.scripts]
+trusted-task = "harness.enforcement:main"
+blessed-ssot = "ssot.cli:main"
+trusted-task-integrate = "harness.integration:main"
+trusted-project = "harness.project:main"
+
+[tool.setuptools.packages.find]
+include = ["harness*", "ssot*"]
+
+[tool.setuptools.package-data]
+harness = ["templates/*.md"]

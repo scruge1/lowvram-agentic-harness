@@ -1,0 +1,9 @@
+{
+  "kind": "script",
+  "executor": "portable-enforcement-supervisor",
+  "harness": "subprocess",
+  "harness_version": "stdlib",
+  "host_observed": true,
+  "attempt": 1,
+  "fallback_from": null
+}

@@ -1,0 +1,4 @@
+# The harness core runs on the Python 3.9+ standard library alone (urllib, json, re).
+# These two are OPTIONAL quality-of-life extras:
+PyYAML>=6.0        # nicer config.yaml parsing; a tiny built-in fallback is used if absent
+requests>=2.28     # not required by the harness, handy if you extend the research fetcher

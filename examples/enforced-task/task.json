@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task_id": "offline-enforced-example",
+  "objective": "Use the admitted research to write artifacts/result.txt with the exact accepted statement.",
+  "worker": {
+    "argv": ["{python}", "worker.py"],
+    "files": ["worker.py"],
+    "timeout_seconds": 30
+  },
+  "outputs": ["artifacts/result.txt"],
+  "receipt_output": "artifacts/enforcement-receipt.json",
+  "retry": {
+    "max_attempts": 3,
+    "retry_on": ["process_failure", "tool_failure", "verification_failure"],
+    "backoff_seconds": [0],
+    "inner_tool_max_attempts": 2
+  },
+  "research": {
+    "required": true,
+    "argv": ["{python}", "research.py"],
+    "files": ["research.py"],
+    "receipt_output": "artifacts/research-receipt.json",
+    "min_sources": 2,
+    "timeout_seconds": 30
+  },
+  "verifier": {
+    "argv": ["{python}", "verify_result.py"],
+    "negative_control": {
+      "argv": ["{python}", "verify_result.py", "--negative-control"],
+      "files": ["verify_result.py"],
+      "timeout_seconds": 30
+    },
+    "files": ["verify_result.py"],
+    "timeout_seconds": 30
+  }
+}

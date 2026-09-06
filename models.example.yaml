@@ -1,0 +1,47 @@
+# Copy to models.yaml and edit to match what you've actually pulled.
+# One size class = one interchangeable slot. model_catalog.resolve() and
+# dispatch_retry.dispatch_cold_swap() read rank order as the fallback chain --
+# rank 1 is tried first, rank 2 is the cold-swap second opinion, etc.
+#
+# The 30B-MoE class below is the reference config: measured on an 8GB RTX 3070
+# (llama.cpp, --n-cpu-moe offload) at ~19 tok/s using ~6.4GB of the 8GB VRAM
+# budget. An RTX 2080 (also 8GB) should land in the same ballpark -- run the
+# smoke test yourself and update the vram_gb/note fields with YOUR numbers.
+
+size_classes:
+  30B-MoE:
+    - rank: 1
+      model: "qwen3:30b"
+      backend: ollama
+      vram_gb: 6.4
+      note: >-
+        Qwen3-30B-A3B-Instruct-2507 (30B total / 3B active). This is the model:
+        `ollama pull qwen3:30b` (~19GB download). For the raw llama.cpp path
+        instead of ollama (more control over the offload split), see SETUP.md.
+    - rank: 2
+      model: "hf.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF:Q4_K_M"
+      backend: ollama
+      vram_gb: 6.5
+      note: >-
+        NVIDIA Nemotron-3-Nano-30B-A3B, a different training lineage (NVIDIA,
+        not Alibaba) at the same size/active-param shape -- a genuine second
+        opinion for cold-swap retry, not a reskin of the same model.
+        `ollama pull hf.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF:Q4_K_M`
+
+  reasoner-small:
+    - rank: 1
+      model: "qwen3:8b"
+      backend: ollama
+      vram_gb: 5.2
+      note: "fast/cheap sanity-check model -- use for verifier-side judging, not the main worker."
+
+# Not included by default -- add these yourself if you want them, after reading
+# the note:
+#   * Muse-Glimmer-30B (hf.co/mradermacher/Muse-Glimmer-30B-Hermes-Agentic-GGUF or
+#     hf.co/unsloth/Muse-Glimmer-30B-GGUF) -- a real, agentic-tuned 30B finetune.
+#     Whether it's MoE or dense wasn't confirmed before shipping this repo --
+#     check the model card yourself before assuming it behaves like the A3B pair
+#     above.
+#   * A 30B-class Gemma MoE -- as of this repo's writing, no such model exists.
+#     Gemma 3's largest text variant is a DENSE 27B (`ollama pull gemma3:27b`,
+#     ~17GB). If Google ships a Gemma MoE later, add it as rank 3 here.

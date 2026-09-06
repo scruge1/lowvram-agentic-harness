@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "project_id": "ssot-starter",
+  "authority_cap": "tested",
+  "target": {
+    "files": [
+      "PRD.md"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-PLAN",
+      "text": "Create a structured plan before the result.",
+      "scope_class": "project_specific",
+      "source": {
+        "path": "PRD.md",
+        "locator": "section:Plan",
+        "sha256": "de90e2427140df51b20565188c1f56727ea9999fba58854fcfc837cb31786547"
+      },
+      "disposition": "applicable",
+      "owner_stage": "plan"
+    },
+    {
+      "id": "REQ-BUILD",
+      "text": "Build the final result from the verified plan.",
+      "scope_class": "project_specific",
+      "source": {
+        "path": "PRD.md",
+        "locator": "section:Result",
+        "sha256": "de90e2427140df51b20565188c1f56727ea9999fba58854fcfc837cb31786547"
+      },
+      "disposition": "applicable",
+      "owner_stage": "build"
+    }
+  ],
+  "stages": [
+    {
+      "id": "plan",
+      "objective": "Create the structured implementation plan.",
+      "acceptance": "artifacts/plan.json has project=starter and a non-empty steps list.",
+      "depends_on": [],
+      "requirements": ["REQ-PLAN"],
+      "materials": ["PRD.md"],
+      "trace_output": "artifacts/plan-run-trace.json",
+      "outputs": [
+        "artifacts/plan.json",
+        "artifacts/plan-run-trace.json"
+      ],
+      "properties": [
+        "plan names the starter project",
+        "plan has at least one step"
+      ],
+      "verifier": {
+        "owner": "host-plan-checker",
+        "type": "deterministic_property",
+        "argv": [
+          "{python}",
+          "verify_plan.py"
+        ],
+        "negative_control": {
+          "argv": ["{python}", "verify_plan.py", "--negative-control"]
+        },
+        "files": [
+          "verify_plan.py"
+        ],
+        "timeout_seconds": 30
+      }
+    },
+    {
+      "id": "build",
+      "objective": "Produce the result from the verified plan.",
+      "acceptance": "artifacts/result.txt names starter and states plan-used.",
+      "depends_on": [
+        "plan"
+      ],
+      "requirements": ["REQ-BUILD"],
+      "materials": [
+        "PRD.md",
+        "artifacts/plan.json",
+        "artifacts/plan-run-trace.json"
+      ],
+      "trace_output": "artifacts/build-run-trace.json",
+      "outputs": [
+        "artifacts/result.txt",
+        "artifacts/build-run-trace.json"
+      ],
+      "properties": [
+        "result names the starter project",
+        "result confirms that the plan was used"
+      ],
+      "verifier": {
+        "owner": "host-result-checker",
+        "type": "deterministic_property",
+        "argv": [
+          "{python}",
+          "verify_result.py"
+        ],
+        "negative_control": {
+          "argv": ["{python}", "verify_result.py", "--negative-control"]
+        },
+        "files": [
+          "verify_result.py"
+        ],
+        "timeout_seconds": 30
+      }
+    }
+  ],
+  "acceptance": {
+    "owner": "independent-example-acceptor",
+    "type": "deterministic_property",
+    "argv": [
+      "{python}",
+      "accept_project.py"
+    ],
+    "negative_control": {
+      "argv": ["{python}", "accept_project.py", "--negative-control"]
+    },
+    "files": [
+      "accept_project.py"
+    ],
+    "timeout_seconds": 30
+  }
+}

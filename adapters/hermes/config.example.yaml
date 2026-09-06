@@ -1,0 +1,9 @@
+# Merge these entries into ~/.hermes/config.yaml after installing this package.
+hooks:
+  post_tool_call:
+    - matcher: ".*"
+      command: "trusted-task hook --host hermes"
+      timeout: 10
+  pre_verify:
+    - command: "trusted-task hook --host hermes"
+      timeout: 10
