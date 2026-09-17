@@ -16,12 +16,21 @@ function send(payload: object): Directive {
 }
 
 export default function (pi: ExtensionAPI) {
+  const pendingInputs = new Map<string, unknown>();
+
+  pi.on("tool_execution_start", async (event) => {
+    pendingInputs.set(event.toolCallId, event.args);
+  });
+
   pi.on("tool_execution_end", async (event) => {
+    const toolInput = pendingInputs.get(event.toolCallId) ?? {};
+    pendingInputs.delete(event.toolCallId);
     send({
       event_type: "tool_result",
+      tool_call_id: event.toolCallId,
       status: event.isError ? "failed" : "success",
       tool_name: event.toolName,
-      tool_input: event.args,
+      tool_input: toolInput,
       error_summary: event.isError ? "Pi tool returned an error" : "",
     });
   });
