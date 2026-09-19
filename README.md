@@ -55,6 +55,13 @@ Independent pieces, useful together or apart:
    account for budgets, recover interrupted work, and derive independent acceptance
    without choosing the user's model or harness. See
    [TRUSTED-PROJECT.md](TRUSTED-PROJECT.md).
+7. **Pi project coordinator export** (`adapters/pi/project-workflow/`) — a
+   deployment-neutral version of the qualified interactive Pi workflow. It
+   admits one project, discovers actual native tools, reuses project knowledge,
+   binds planning advice and verified work to an exact Kanban card, preserves
+   restart/resume state, prepares closeout records, and compiles immutable
+   project-local skill candidates. See
+   [adapters/pi/project-workflow/README.md](adapters/pi/project-workflow/README.md).
 
 The design principle throughout: **a weak local model is a good reader and a poor
 authority.** So the harness lets the model read, extract and paraphrase, and uses

@@ -1,0 +1,7 @@
+{
+  "python": "/absolute/path/to/python3",
+  "runtime": "/absolute/path/to/reviewed/portable-runtime",
+  "runtime_manifest_sha256": "replace-with-lowercase-runtime-manifest-sha256",
+  "engine_sha256": "replace-with-lowercase-harness-enforcement-py-sha256",
+  "helper_sha256": "replace-with-lowercase-everyday-workflow-py-sha256"
+}

@@ -10,6 +10,13 @@ These templates connect native harness lifecycle events to
 - Pi: copy `pi/enforcement.ts` to `.pi/extensions/enforcement.ts` in a trusted
   project or install it as a Pi package.
 
+The qualified Pi coordinator and per-project workflow export is in
+[`pi/project-workflow`](pi/project-workflow/README.md). It composes native
+capability discovery, a project-local Hermes board, knowledge retrieval,
+planning advice, supervised file work, closeout, and local skill candidates.
+It requires explicit runtime bindings and preserves each component's authority
+limit.
+
 The supervisor supplies the required environment only while it is running a task.
 Outside that process, the hook command fails closed with an explicit configuration
 error instead of inventing task state.
