@@ -23,6 +23,7 @@ sys.path.insert(0, str(WORKFLOW))
 project_identity = load("project_identity")
 project_knowledge = load("project_knowledge")
 project_skill_candidate = load("project_skill_candidate")
+tool_knowledge = load("tool_knowledge")
 
 
 class PiProjectWorkflowTests(unittest.TestCase):
@@ -92,6 +93,40 @@ class PiProjectWorkflowTests(unittest.TestCase):
         self.assertIn("configuration.engine_sha256", extension)
         self.assertNotIn("ENGINE_SHA =", helper)
         self.assertNotIn("RUNTIME_SHA =", helper)
+
+    def test_system_tool_catalog_is_hash_bound_and_searchable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "capabilities.jsonl"
+            source.write_text(
+                json.dumps({"name": "browser-probe", "kind": "script", "when_to_use": "Inspect browser pages", "path": "scripts/browser.py"}) + "\n",
+                encoding="utf-8",
+            )
+            database = root / "tools.db"
+            built = tool_knowledge.build(database, [source])
+            result = tool_knowledge.query(database, "browser inspect", 5)
+            self.assertEqual(result["results"][0]["name"], "browser-probe")
+            self.assertEqual(result["results"][0]["source_sha256"], built["sources"][0]["sha256"])
+            self.assertEqual(tool_knowledge.status(database)["manifest_sha256"], built["manifest_sha256"])
+
+    def test_system_tool_catalog_marks_retired_records(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "history.jsonl"
+            source.write_text(
+                json.dumps({"name": "old-graph", "kind": "script", "description": "temporal knowledge graph", "path": "old.py"}) + "\n",
+                encoding="utf-8",
+            )
+            lifecycle = root / "lifecycle.jsonl"
+            lifecycle.write_text(
+                json.dumps({"name": "old-retirement", "kind": "tool-lifecycle", "target_path": "old.py", "lifecycle": "retired", "description": "retired temporal graph"}) + "\n",
+                encoding="utf-8",
+            )
+            database = root / "tools.db"
+            tool_knowledge.build(database, [source, lifecycle])
+            result = tool_knowledge.query(database, "temporal knowledge graph", 5)["results"][0]
+            self.assertEqual(result["lifecycle"], "retired")
+            self.assertFalse(result["usable_for_planning"])
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ from hermes_cli import kanban_db_connect as kbc
 
 from project_identity import initialize_identity, load_identity
 from project_closeout import compile_closeout
+from memory_claim_candidate import compile_candidate as compile_memory_claim_candidate
 from project_knowledge import build as build_knowledge
 from project_knowledge import query as query_knowledge
 from project_skill_candidate import compile_candidate
@@ -390,6 +391,13 @@ def execute(request: Mapping[str, Any]) -> dict[str, Any]:
                     "triggers", "steps", "verification", "stop_conditions",
                 )
             })
+        elif action == "project_memory_candidate_prepare":
+            result = compile_memory_claim_candidate(
+                root,
+                Path(request.get("closeout_path", "")),
+                Path(request.get("drawer_snapshot_path", "")),
+            )
+            result["knowledge"] = build_knowledge(root)
         elif action == "status":
             result = status(conn, tenant, database, identity)
         elif action == "list":

@@ -4,7 +4,8 @@ This directory contains the portable Pi coordinator layer qualified by the
 project-lifecycle controls. It adds project identity, a project-local Hermes
 board, capability discovery, project knowledge retrieval, external planning
 advice, supervised file changes, closeout records, and project-local skill
-candidates.
+candidates. It also compiles project-local memory claim candidates from exact
+MemPalace readbacks without promoting them into shared recall.
 
 The components preserve separate authority boundaries:
 
@@ -13,6 +14,8 @@ The components preserve separate authority boundaries:
 - Codex responses are planning advice only.
 - `workflow_step` proves only its supplied predicate.
 - A closeout or skill candidate is guidance only.
+- A memory claim candidate is guidance only until a separate promotion path
+  verifies the live source and accepts it into a reviewed registry.
 - Model output cannot promote itself, approve physical actions, or create SSOT
   authority.
 
@@ -74,17 +77,31 @@ observation proves registration only, not tool health.
 
 1. Call `project_admit` for the exact project root.
 2. Call `agent_capabilities` and save its project-bound snapshot.
-3. Query project knowledge before planning.
-4. Draft a plan and call `codex_plan_consult` on the exact active card.
-5. Apply the returned critique as advice. Keep user authority and local tool
+3. Query `system_tool_query` for relevant system capabilities.
+4. Search local Pi MemPalace for validated lessons and recent session history.
+   Use SystemPalace only as a wider implementation-history escalation.
+5. Query project knowledge before planning.
+6. Draft a plan and call `codex_plan_consult` on the exact active card.
+7. Apply the returned critique as advice. Keep user authority and local tool
    capability separate from the adviser.
-6. Execute each mutation through `workflow_step` or another reviewed supervisor.
-7. Attach the verified receipt to the same card and use valid Hermes state
+8. Execute each mutation through `workflow_step` or another reviewed supervisor.
+9. Attach the verified receipt to the same card and use valid Hermes state
    transitions.
-8. Prepare closeout, rebuild project knowledge, and persist validated lessons
+10. Prepare closeout, rebuild project knowledge, and persist validated lessons
    through an independently configured memory route.
-9. Compile a project-local skill candidate only from a verified closeout. Shared
+11. Read the stored MemPalace drawer back exactly. Use
+   `project_memory_candidate_prepare` to bind the verified closeout to that
+   drawer. The immutable candidate is written under
+   `.icm/workspace/wiki/memory-candidates/`, which the existing project index
+   already includes. Reject source drift and sensitive summary text.
+12. Compile a project-local skill candidate only from a verified closeout. Shared
    installation remains a separate review and promotion action.
+
+`tool_knowledge.py` builds a hash-bound SQLite FTS catalog from maintained JSONL
+capability registries. `system-tool-knowledge.ts` exposes read-only query and
+status tools. Configure `PI_SYSTEM_TOOL_HELPER`, `PI_SYSTEM_TOOL_DATABASE`, and
+`PI_SYSTEM_TOOL_HELPER_SHA256`. Catalog results are retrieval guidance. They do
+not prove that a tool is installed, loaded, healthy, or authorized.
 
 The coordinator can answer questions and inspect with native read-only tools.
 The everyday gate blocks raw shell, write, and edit mutations. It requires an

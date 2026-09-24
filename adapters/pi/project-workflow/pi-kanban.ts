@@ -74,6 +74,8 @@ export default function (pi: ExtensionAPI) {
   let activeTask: { taskId: string; cardId: string } | null = null;
   let boardAdmissionFailed = false;
   let capabilitiesObserved = false;
+  let systemToolsQueried = false;
+  let memoryQueried = false;
   let knowledgeQueried = false;
 
   const projectRequest = (request: Record<string, unknown>) => {
@@ -104,6 +106,8 @@ export default function (pi: ExtensionAPI) {
         activeTask = null;
         boardAdmissionFailed = false;
         capabilitiesObserved = false;
+        systemToolsQueried = false;
+        memoryQueried = false;
         knowledgeQueried = false;
         return response(value);
       } catch (error) {
@@ -111,6 +115,8 @@ export default function (pi: ExtensionAPI) {
         activeTask = null;
         boardAdmissionFailed = true;
         capabilitiesObserved = false;
+        systemToolsQueried = false;
+        memoryQueried = false;
         knowledgeQueried = false;
         return failure(error);
       }
@@ -162,6 +168,16 @@ export default function (pi: ExtensionAPI) {
       stop_conditions: Type.Array(Type.String({ minLength: 1, maxLength: 1000 }), { minItems: 1, maxItems: 20 }),
     }, { additionalProperties: false }),
     async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'project_skill_candidate_compile', ...params }), signal)); } catch (error) { return failure(error); } },
+  });
+
+  pi.registerTool({
+    name: 'project_memory_candidate_prepare', label: 'Prepare project memory candidate',
+    description: 'Bind one verified project closeout to one exact MemPalace drawer readback and write an immutable project-local memory claim candidate. It rejects sensitive summaries and grants no shared-memory promotion authority.',
+    parameters: Type.Object({
+      closeout_path: Type.String({ minLength: 1, maxLength: 4096 }),
+      drawer_snapshot_path: Type.String({ minLength: 1, maxLength: 4096 }),
+    }, { additionalProperties: false }),
+    async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'project_memory_candidate_prepare', ...params }), signal)); } catch (error) { return failure(error); } },
   });
 
   pi.registerTool({
@@ -219,6 +235,8 @@ export default function (pi: ExtensionAPI) {
       activeProject = null;
       boardAdmissionFailed = false;
       capabilitiesObserved = false;
+      systemToolsQueried = false;
+      memoryQueried = false;
       knowledgeQueried = false;
       pendingConsultations.clear();
     }
@@ -229,6 +247,8 @@ export default function (pi: ExtensionAPI) {
     if (event.toolName === 'codex_plan_consult') {
       if (!activeProject) return { block: true, reason: 'Admit the project with project_admit before planning consultation.' };
       if (!capabilitiesObserved) return { block: true, reason: 'Call agent_capabilities before planning so the plan uses the tools actually loaded in this Pi session.' };
+      if (!systemToolsQueried) return { block: true, reason: 'Query system_tool_query for relevant capabilities before planning so existing tools and workflows are considered.' };
+      if (!memoryQueried) return { block: true, reason: 'Search local Pi MemPalace for relevant validated lessons and recent session history before planning.' };
       if (!knowledgeQueried) return { block: true, reason: 'Query relevant project knowledge before planning so prior verified work is not rediscovered.' };
       const taskId = typeof event.input?.task_id === 'string' ? event.input.task_id : '';
       const cardId = typeof event.input?.card_id === 'string' ? event.input.card_id : undefined;
@@ -260,6 +280,14 @@ export default function (pi: ExtensionAPI) {
     }
     if (event.toolName === 'project_knowledge_query' && !event.isError && event.details?.ok === true) {
       knowledgeQueried = true;
+      return;
+    }
+    if (event.toolName === 'system_tool_query' && !event.isError && event.details?.ok === true && Array.isArray(event.details?.results)) {
+      systemToolsQueried = true;
+      return;
+    }
+    if (event.toolName === 'mcp__mempalace__mempalace_search' && !event.isError) {
+      memoryQueried = true;
       return;
     }
     if (event.toolName === 'codex_plan_consult') {
