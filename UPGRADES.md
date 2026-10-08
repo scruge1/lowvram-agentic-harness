@@ -37,3 +37,20 @@ Scope: guidance, packaged instruction templates, and fixture byte preservation. 
 negative-control implementation, service, provider, or global memory activation
 changes in this upgrade. Package validation is recorded in the PR. Target adoption
 and performance improvement require normal-path evidence from each target owner.
+
+## Pi negative-control rejection contract — 2026-10-08
+
+Parent commit: `940d746c7dc5e45191307cea495320b4fbc71ffe`.
+
+Change: the generated Pi verifier wrapper accepts only exit 1 as the supplied
+predicate's negative rejection. Exit 0 and all other codes fail the negative
+control. Missing-program errors, unexpected failures, timeout statuses, and
+cancellation cannot qualify through this wrapper's former broad nonzero check.
+The adapter guide documents absolute verifier availability and cwd-relative
+output reads. Regression checks exercise the actual generated wrapper using
+subprocesses, including an unavailable relative Python script.
+
+Limit: exit 1 still needs a reviewed predicate and evidence of the rejection
+reason. This is not general semantic goal acceptance or native-session deadline
+coverage. The portable export changes only; installed helpers remain unchanged
+until their owners review the new hash, qualification, and adoption.

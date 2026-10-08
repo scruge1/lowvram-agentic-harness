@@ -75,6 +75,16 @@ observation proves registration only, not tool health.
 
 ## Intended Flow
 
+The supplied verifier must return 0 when declared outputs satisfy its predicate
+and 1 when they do not. It must read outputs relative to its current working
+directory. Its executable and script must remain available when run in the empty
+negative-control directory, for example through absolute paths. Other exit codes,
+including Python's missing-script exit 2, do not qualify as predicate rejection.
+This exit contract rejects unexpected failures; it does not prove that an arbitrary
+program's exit 1 has the intended semantic cause. Review the predicate and its
+negative evidence separately. Existing installations need an owner-reviewed helper
+hash update; changing public source does not activate this correction.
+
 1. Call `project_admit` for the exact project root.
 2. Call `agent_capabilities` and save its project-bound snapshot.
 3. Query `system_tool_query` for relevant system capabilities.
