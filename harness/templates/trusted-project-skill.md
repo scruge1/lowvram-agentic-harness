@@ -17,6 +17,12 @@ blessed-SSOT workflow. Do not intercept ordinary tasks by default.
    `trusted-project resume PROJECT_ID --root TARGET` when asked to continue.
 6. Use the host's normal planning and research tools to draft the PRD manifest and a
    separate reinforcement report. Preserve all open material decisions.
+   For a performance problem, first establish the symptom, comparable baseline,
+   time spent in each relevant stage, and a check that distinguishes competing
+   causes. Use existing authorized telemetry. Optimize only after evidence locates
+   the constraint. Verify the result against the same workload and correctness
+   checks. Keep unmeasured stages explicit; do not add a diagnostic framework to
+   tasks without a performance symptom.
 7. Run `trusted-project admit-prd PROJECT_ID --root TARGET --contract CONTRACT`.
    The drafter, critic, and independent reviewer must be distinct identities.
 8. Compile the reviewed PRD only with
