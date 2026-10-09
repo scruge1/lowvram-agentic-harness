@@ -10,3 +10,4 @@
 - Do not add credentials, model files, generated `.ssot` run state, or private source material.
 - For performance symptoms, apply `DIAGNOSTICS.md` before proposing an optimization. Separate observed delay from its suspected cause. Use existing authorized telemetry first. Record unknowns and the next discriminating check.
 - Record reusable upgrades and their exact parent commit in `UPGRADES.md`. Public guidance must distinguish source changes, package tests, and target adoption.
+- Follow `IDEA-INTAKE.md` for streams of ideas: capture, route to the existing queue, refine, prioritise, and release within authority and capacity. A new topic alone does not replace the active objective.

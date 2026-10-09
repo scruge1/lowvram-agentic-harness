@@ -54,3 +54,17 @@ Limit: exit 1 still needs a reviewed predicate and evidence of the rejection
 reason. This is not general semantic goal acceptance or native-session deadline
 coverage. The portable export changes only; installed helpers remain unchanged
 until their owners review the new hash, qualification, and adoption.
+
+## Idea intake and work release — 2026-10-09
+
+Parent commit: `d9accac237a588c6ba0903d65e7739f140018940`.
+
+Change: `IDEA-INTAKE.md` separates capturing and refining ideas from releasing
+active work. Repository instructions route to it; the packaged trusted-project
+skill carries the same rule. Reuse existing project authority, queues, owners,
+and capacity checks instead of treating every new topic as a replacement goal.
+
+Scope: guidance and packaged instructions. No scheduler, controller, GPU lease,
+execution permission, or runtime changes. Offline package validation and source
+publication are distinct from target adoption. Normal intake, prioritisation,
+release, and completed work must be observed before claiming target enforcement.

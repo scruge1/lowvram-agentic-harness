@@ -23,6 +23,11 @@ blessed-SSOT workflow. Do not intercept ordinary tasks by default.
    the constraint. Verify the result against the same workload and correctness
    checks. Keep unmeasured stages explicit; do not add a diagnostic framework to
    tasks without a performance symptom.
+   Capture new ideas in the existing owning queue and refine their outcome,
+   prerequisites, next step, and completion evidence before release. Keep the
+   active objective unless the user explicitly changes it. Queue state does not
+   grant execution authority or reserve resources; release ready work within
+   existing owner and resource limits.
 7. Run `trusted-project admit-prd PROJECT_ID --root TARGET --contract CONTRACT`.
    The drafter, critic, and independent reviewer must be distinct identities.
 8. Compile the reviewed PRD only with
