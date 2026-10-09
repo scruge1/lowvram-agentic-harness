@@ -46,7 +46,7 @@ def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> d
                 value = value.decode("utf-8", errors="replace")
             return (value or "")[-20000:]
 
-        return {
+        result = {
             "argv": argv,
             "exit_code": 124,
             "timed_out": True,
@@ -54,12 +54,17 @@ def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> d
             "stdout_tail": tail(exc.stdout),
             "stderr_tail": tail(exc.stderr),
         }
-    return {
+        print("Release command failed: " + json.dumps(result), file=sys.stderr, flush=True)
+        return result
+    result = {
         "argv": argv,
         "exit_code": completed.returncode,
         "stdout_tail": completed.stdout[-20000:],
         "stderr_tail": completed.stderr[-20000:],
     }
+    if completed.returncode != 0:
+        print("Release command failed: " + json.dumps(result), file=sys.stderr, flush=True)
+    return result
 
 
 def main() -> int:
