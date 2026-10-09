@@ -101,7 +101,7 @@ Delivery is a separate gate after code completion:
 
 Do not call GitHub delivery complete until those publication actions pass.
 
-## Current result
+## Historical qualification — 6 September 2026
 
 The expanded enforcement, integration-bootstrap, E6a activation, E6b PRD admission,
 E6c SSOT compilation, E6d execution/continuity, and SSOT code
@@ -127,7 +127,13 @@ boundary passed on 2026-09-06:
 - the release verifier found no generated SSOT or enforcement state in either source
   example.
 
-The portable core is a tested release candidate. Live Claude Code, Hermes, and Pi
-adapter runs remain open and must not be inferred from offline conformance. Delivery
-is also open because this folder is not a standalone Git repository and no GitHub
-remote, visibility, or distribution license has been selected.
+## Current delivery — 9 October 2026
+
+The standalone repository is published at
+[scruge1/lowvram-agentic-harness](https://github.com/scruge1/lowvram-agentic-harness)
+with public visibility and the MIT license. Parent-linked upgrades are recorded
+in `UPGRADES.md`.
+
+Live Claude Code, Hermes, and Pi adapter acceptance remains separate from offline
+package conformance. Hosted CI, required-check branch policy, and target deployment
+must each have their own current evidence.
