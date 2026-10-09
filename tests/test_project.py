@@ -12,6 +12,7 @@ from harness.project import (
     project_status,
     request_execution,
     resume_project,
+    DEFAULT_BUDGETS,
 )
 
 
@@ -128,6 +129,33 @@ class TrustedProjectActivationTests(unittest.TestCase):
                 "plan",
                 budget_file=self.root.parent / "outside.json",
             )
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows path compatibility")
+    def test_cli_accepts_existing_short_name_budget_path(self):
+        import ctypes
+
+        budget_path = self.root / "budget.json"
+        budget_path.write_text(json.dumps(DEFAULT_BUDGETS), encoding="utf-8")
+        get_short = ctypes.WinDLL("kernel32", use_last_error=True).GetShortPathNameW
+        get_short.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32]
+        get_short.restype = ctypes.c_uint32
+        canonical = str(budget_path.resolve())
+        length = get_short(canonical, None, 0)
+        if not length:
+            self.skipTest("Short names unavailable on this filesystem")
+        buffer = ctypes.create_unicode_buffer(length)
+        self.assertTrue(get_short(canonical, buffer, length))
+        if buffer.value == canonical:
+            self.skipTest("Filesystem provides no distinct short name")
+        result = subprocess.run(
+            [sys.executable, "-B", "-m", "harness.project", "plan",
+             "Plan budget compatibility", "--root", str(self.root.resolve()),
+             "--budget-file", buffer.value],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True, text=True, encoding="utf-8", timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["authority"], "intent_only")
 
     def test_cli_plan_and_status_use_the_same_protocol(self):
         repository = Path(__file__).resolve().parents[1]

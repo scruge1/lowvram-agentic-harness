@@ -54,7 +54,7 @@ def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> d
             "stdout_tail": tail(exc.stdout),
             "stderr_tail": tail(exc.stderr),
         }
-        print("Release command failed: " + json.dumps(result), file=sys.stderr, flush=True)
+        print("Release command timed out: " + json.dumps(result), file=sys.stderr, flush=True)
         return result
     result = {
         "argv": argv,
@@ -63,7 +63,7 @@ def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> d
         "stderr_tail": completed.stderr[-20000:],
     }
     if completed.returncode != 0:
-        print("Release command failed: " + json.dumps(result), file=sys.stderr, flush=True)
+        print("Release command returned nonzero: " + json.dumps(result), file=sys.stderr, flush=True)
     return result
 
 

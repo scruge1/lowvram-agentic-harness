@@ -179,7 +179,14 @@ def _budget_contract(root: Path, budget_file: Optional[Path]) -> Dict[str, Any]:
     while current != root:
         if current.is_symlink():
             raise ProjectError("budget file cannot use symlinks")
-        current = current.parent
+        # Windows short names can identify the root without textual equality.
+        # Walk raw parent segments first when '..' could hide an ancestor link.
+        if ".." not in current.parts and current.resolve() == root:
+            break
+        parent = current.parent
+        if parent == current:
+            raise ProjectError("budget file ancestry cannot reach target root")
+        current = parent
     if not path.is_file():
         raise ProjectError("budget file must be an existing regular target file")
     try:

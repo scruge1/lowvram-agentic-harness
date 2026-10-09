@@ -92,3 +92,11 @@ The first hosted Windows run reached the existing 240-second unit-suite timeout.
 The release driver now reports timeout exit124 with captured output tails so
 failures identify the last test. Time limits and failure acceptance are unchanged.
 A real child-process regression verifies both output streams and timeout failure.
+
+Hosted Windows diagnostics identified a budget-path validation loop: a short-name
+ancestor did not compare equal to the resolved target root, so traversal repeated
+the drive root. The walk now compares canonical identity after checking original
+path links, retains raw parent checks around `..`, and holds at a filesystem root
+that cannot reach the target. Containment and symlink rejection remain in place.
+No deadline is increased. Nonzero command diagnostics are labelled separately
+from timeout so expected rejection checks are not described as package failure.
