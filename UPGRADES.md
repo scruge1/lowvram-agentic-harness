@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Observed process failures — 2026-10-09
+
+Parent commit: `44382fbb713bf66c5ed271282cd110191a7b7355`.
+
+Change: the existing host-run stage trace and trusted-task command records add
+`process_observation`. It distinguishes a returned child status from a host
+timeout or launch failure, keeps the measured duration, and leaves descendant
+quiescence unknown. Actual exits124/127 are distinct from synthetic runner
+statuses124/127. Existing exit handling, retry contracts and gates remain.
+
+Distilled lesson: generic failure reporting can lose the observation needed to
+choose the next diagnostic check. Preserve fixed structured metadata without
+copying commands, output, paths or exception text into that compact object.
+The original traces still contain their existing detailed fields and require
+privacy review before sharing. Missing observations remain unknown; a later
+successful run does not establish the cause of a historical failed attempt.
+
+Validation: actual disposable child exits124/127, a missing executable and a
+one-second host timeout exercise both runners. Stage failures remain abandoned
+with frontier state preserved. Package and hosted checks are separate evidence.
+No installed private reader, runtime, model, queue or permission change follows
+from this public source upgrade. Each consumer still needs normal-path adoption.
+
 ## Native command-hook and bootstrap diagnostics — 2026-10-09
 
 Parent commit: `9b279dd0370f355130f86055db38a8e8a436c355`.
