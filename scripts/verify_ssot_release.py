@@ -25,20 +25,35 @@ SELFTESTS = (
 
 
 def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> dict:
-    completed = subprocess.run(
-        argv,
-        cwd=cwd,
-        env=env,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=timeout,
-        shell=False,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            shell=False,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        def tail(value):
+            if isinstance(value, bytes):
+                value = value.decode("utf-8", errors="replace")
+            return (value or "")[-20000:]
+
+        return {
+            "argv": argv,
+            "exit_code": 124,
+            "timed_out": True,
+            "timeout_seconds": timeout,
+            "stdout_tail": tail(exc.stdout),
+            "stderr_tail": tail(exc.stderr),
+        }
     return {
         "argv": argv,
         "exit_code": completed.returncode,

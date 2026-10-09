@@ -87,3 +87,8 @@ retain previous accepted commits for recovery.
 Scope: public package CI evidence. Required-check branch protection, target
 deployment authority, live smoke tests, and runtime rollback remain separate
 owner gates. A passing hosted check cannot confer blessed authority.
+
+The first hosted Windows run reached the existing 240-second unit-suite timeout.
+The release driver now reports timeout exit124 with captured output tails so
+failures identify the last test. Time limits and failure acceptance are unchanged.
+A real child-process regression verifies both output streams and timeout failure.
