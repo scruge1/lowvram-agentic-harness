@@ -80,8 +80,8 @@ upstream release commits; lint uses Ruff0.16.10.
 
 The package explicitly retains its accepted E4/E7/E9/F lint rule scope. Current
 Ruff defaults include additional rules; their adoption requires a separate
-compatibility review of API behavior and source-pinned adapter bytes. Runtime
-code is unchanged. Maintainers refresh tool pins through tested updates and
+compatibility review of API behavior and source-pinned adapter bytes. The budget
+path repair below is the runtime change. Maintainers refresh tool pins through tested updates and
 retain previous accepted commits for recovery.
 
 Scope: public package CI evidence. Required-check branch protection, target
