@@ -31,7 +31,11 @@ VERIFIER = OWNED + '''import tempfile
 if '--negative-control' in sys.argv:
     with tempfile.TemporaryDirectory(prefix='pi-predicate-negative-') as root:
         code = run_owned(cwd=root)
-    raise SystemExit(0 if code not in (0, 124, 125) else 1)
+    # Only the predicate's documented rejection status qualifies. Interpreter,
+    # invocation, timeout, cancellation, and unexpected failures are not proof.
+    if code != 1:
+        print('Negative control did not report predicate rejection: exit ' + str(code), file=sys.stderr)
+    raise SystemExit(0 if code == 1 else 1)
 raise SystemExit(run_owned())
 '''
 
