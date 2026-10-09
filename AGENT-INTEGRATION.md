@@ -14,6 +14,53 @@ The command detects this package's `ssot-project.json` and `.ssot` names. It can
 semantically identify every custom ledger name. Authority discovery is therefore an
 explicit precondition, not an inferred guarantee.
 
+## Codex command-hook adapter
+
+Use `--host generic` for Codex integration. Its native hook names can differ
+from the function names visible to the model: shell calls and `exec_command`
+match `Bash`; patch calls match `apply_patch`, `Edit`, or `Write`.
+
+For example, this project-local configuration selects the reviewed command
+policy. The policy script must already exist; this package does not install it.
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "^Bash$",
+      "hooks": [{
+        "type": "command",
+        "command": "python3 /absolute/path/check_command.py",
+        "timeout": 10
+      }]
+    }]
+  }
+}
+```
+
+Replace the command with the target's reviewed interpreter and script invocation.
+A command policy can return this structured rejection:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Rejected by the reviewed command policy."
+  }
+}
+```
+
+Review the actual project admission and current hook definition before use.
+A listed handler is not execution proof. Qualification needs its native event,
+the expected input and rejection reason, and evidence of the resulting effect.
+A backend failure alone is not a successful hook rejection. Keep fixture results
+separate from ordinary profile use and other tool paths.
+
+These examples add no runtime enforcement to this package. Consult the current
+[Codex hook documentation](https://learn.chatgpt.com/docs/hooks#tool-coverage)
+for supported names, trust requirements, and coverage limits.
+
 ## Create the target setup SSOT
 
 Run the bootstrap against the root that contains the system being changed:
