@@ -6,6 +6,10 @@ answers in real cited sources**.
 
 Independent pieces, useful together or apart:
 
+For slow or unreliable workflows, start with [evidence-first diagnostics](DIAGNOSTICS.md).
+Agents use this procedure before selecting an optimization. [Upgrade notes](UPGRADES.md)
+bind each distilled change to its parent source version and state its adoption limits.
+
 1. **Local low-VRAM inference** — how to serve a 30B-parameter MoE model (only ~3B
    active per token) on a single 8–11 GB GPU (RTX 2080 / 3060 / 4060) by keeping the
    expert layers in CPU RAM and only the attention/shared layers on the GPU. This is

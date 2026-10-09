@@ -41,6 +41,11 @@ inventory. It may parameterize paths and harness names. It must not delete contr
   generated state, ownership, startup behavior, and platform-specific commands.
 - `SETUP-023`: Capture a reversible pre-change snapshot and a tested rollback path.
   Never overwrite an unknown target configuration with an example file.
+- `SETUP-024`: For performance work, use the target's existing diagnostics first.
+  Bind comparable measurements to the actual workload and runtime. Separate queue,
+  execution, transport, and verification time. Test competing causes before
+  selecting an optimization. Record unmeasured stages. A written diagnostic rule
+  does not prove the target invokes it.
 
 ## Staged implementation
 
