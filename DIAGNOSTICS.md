@@ -54,6 +54,28 @@ A local process exit does not establish remote or descendant quiescence. Preserv
 unknown completion states and the existing owner's retry hold. More parallel work
 can make a constrained queue slower; measure before increasing concurrency.
 
+## Separate platform setup from the requested command
+
+A document-only request can still cause its host to prepare a runtime before
+reading the document. For example, the legacy elevated Windows sandbox can
+apply host permissions during setup. The task's intended output does not bound
+those setup effects. Inspect the existing owner's setup readiness and effect
+authority before repeating a stalled launch.
+
+Unchanged configuration and source hashes do not prove unchanged host
+permissions. Record bootstrap failures separately from command or hook results.
+A matching OS or CLI version also does not prove an optional backend is available;
+use a bounded compatibility check that preserves the required permissions.
+Do not weaken the permission profile just to obtain a passing result.
+
+Persist the selected observation before waiting for cleanup. Record a process's
+exit separately from pipe-drain completion and descendant settlement. Identify
+owned processes before stopping them; do not infer ownership from a similar name.
+
+See the current [Windows sandbox documentation](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+for platform setup effects and compatibility checks. This guidance does not
+authorize machine permission changes or install a sandbox backend.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;

@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Native command-hook and bootstrap diagnostics — 2026-10-09
+
+Parent commit: `9b279dd0370f355130f86055db38a8e8a436c355`.
+
+Change: `AGENT-INTEGRATION.md` documents Codex's `Bash` name for shell and
+`exec_command` hooks, with configuration and rejection examples.
+`DIAGNOSTICS.md` separates platform bootstrap effects, hook rejection, backend
+refusal, process exit, and observation cleanup.
+
+Distilled evidence: a wrong command matcher did not produce a hook event;
+the corrected matcher produced an independently accepted native rejection.
+The isolated test used invocation-only trust and a refusing backend as a safety
+backstop. Separate native startup diagnostics showed permission setup activity
+during a document-only request. These findings do not prove ordinary execution,
+complete enforcement, or a repaired platform.
+
+Scope: documentation and public examples only. No package worker, permission
+profile, hook installation, runtime configuration, service or memory behavior
+changes. Offline package validation is reported in the PR. Each target still
+needs its own admitted setup and normal-path acceptance.
+
 ## Evidence-first diagnostics — 2026-10-08
 
 Parent commit: `9f7a9c3671ae68a45480a80849107c517af22cc1`.
