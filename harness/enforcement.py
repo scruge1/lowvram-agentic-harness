@@ -303,20 +303,33 @@ def _run_command(
             check=False,
         )
         code = completed.returncode
+        outcome = "exited"
+        observed_exit_code = code
         stdout = completed.stdout[-65536:]
         stderr = completed.stderr[-65536:]
     except subprocess.TimeoutExpired as exc:
         code = 124
+        outcome = "timed_out"
+        observed_exit_code = None
         stdout = exc.stdout[-65536:] if isinstance(exc.stdout, str) else ""
         stderr = "command timed out"
     except OSError as exc:
         code = 127
+        outcome = "os_error"
+        observed_exit_code = None
         stdout = ""
         stderr = f"command could not start: {exc}"
+    duration_ms = max(0, int((time.monotonic() - started) * 1000))
     return {
         "argv": argv,
         "exit_code": code,
-        "duration_ms": max(0, int((time.monotonic() - started) * 1000)),
+        "duration_ms": duration_ms,
+        "process_observation": {
+            "outcome": outcome,
+            "observed_exit_code": observed_exit_code,
+            "duration_ms": duration_ms,
+            "descendant_quiescence": "unknown",
+        },
         "stdout": stdout,
         "stderr": stderr,
     }

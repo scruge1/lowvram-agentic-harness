@@ -70,6 +70,9 @@ class WorkflowExperienceTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "verified")
         self.assertTrue((self.root / "artifacts" / "plan-run-trace.json").is_file())
+        trace = json.loads((self.root / "artifacts" / "plan-run-trace.json").read_text(encoding="utf-8"))
+        self.assertEqual(trace["process_observation"]["outcome"], "exited")
+        self.assertEqual(trace["process_observation"]["observed_exit_code"], 0)
         status = project_status(self.root)
         states = {row["id"]: row["state"] for row in status["stages"]}
         self.assertEqual(states, {"plan": "verified", "build": "frontier"})
@@ -105,6 +108,33 @@ class WorkflowExperienceTests(unittest.TestCase):
         self.assertTrue(
             (self.root / ".ssot" / "abandoned" / f"{result['run_id']}.json").is_file()
         )
+
+    def test_trace_distinguishes_actual_exit_from_runner_failure(self):
+        cases = [
+            ("exit124", [sys.executable, "-c", "print('private output'); raise SystemExit(124)"], "exited", 124),
+            ("exit127", [sys.executable, "-c", "raise SystemExit(127)"], "exited", 127),
+            ("missing", [str(self.root / "missing-executable")], "os_error", None),
+            ("timeout", [sys.executable, "-c", "import time; time.sleep(10)"], "timed_out", None),
+        ]
+        for name, command, outcome, observed_exit in cases:
+            with self.subTest(name=name):
+                project = self.root / name
+                shutil.copytree(SOURCE_EXAMPLE, project)
+                result = run_stage_command(
+                    project, "plan", "external-harness", SCRIPT_RUNTIME,
+                    command, timeout_seconds=1,
+                )
+                self.assertEqual(result["status"], "failed")
+                trace = json.loads((project / result["trace"]).read_text(encoding="utf-8"))
+                self.assertEqual(trace["process_observation"], {
+                    "outcome": outcome,
+                    "observed_exit_code": observed_exit,
+                    "duration_ms": trace["duration_ms"],
+                    "descendant_quiescence": "unknown",
+                })
+                self.assertGreaterEqual(trace["duration_ms"], 0)
+                self.assertTrue((project / ".ssot" / "abandoned" / f"{result['run_id']}.json").is_file())
+                self.assertEqual(project_status(project)["stages"][0]["state"], "frontier")
 
     def test_cli_run_keeps_options_out_of_host_command(self):
         self._copy_configured_example()

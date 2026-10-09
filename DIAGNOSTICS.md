@@ -76,6 +76,22 @@ See the current [Windows sandbox documentation](https://learn.chatgpt.com/docs/w
 for platform setup effects and compatibility checks. This guidance does not
 authorize machine permission changes or install a sandbox backend.
 
+## Process observation
+
+The host-run stage trace and trusted-task command records include
+`process_observation`: `outcome` (`exited`, `timed_out`, or `os_error`),
+`observed_exit_code`, `duration_ms`, and `descendant_quiescence`.
+The observed exit is null when the host did not receive a completed-process
+status. An OS error can arise during launch or later subprocess handling;
+this outcome does not prove that no child started. The observed status distinguishes
+a worker's actual exit124 or exit127 from the
+runner's timeout124 or launch-failure127. Existing `exit_code` behavior remains.
+Duration covers launch and subprocess waiting, including output capture; it
+does not measure queue wait, verification, delivery, or separate pipe-drain time.
+Descendant quiescence remains unknown. These fields do not authorize a retry.
+The compact object contains no command, path, output or exception text. The
+surrounding existing trace still contains argv/stdout/stderr and must not be
+published as a sanitized diagnostic without a separate privacy review.
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;

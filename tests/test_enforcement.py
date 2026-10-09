@@ -1,11 +1,13 @@
 import hashlib
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from harness.enforcement import (
     EnforcementError,
+    _run_command,
     doctor,
     handle_hook,
     run_task,
@@ -123,6 +125,25 @@ print(json.dumps({
         self.assertFalse(diagnosis["ready"])
         self.assertIn("non-empty list", diagnosis["issues"][0])
 
+    def test_command_observation_distinguishes_actual_exit_and_host_failure(self):
+        cases = [
+            ([sys.executable, "-c", "raise SystemExit(124)"], "exited", 124, 124),
+            ([sys.executable, "-c", "raise SystemExit(127)"], "exited", 127, 127),
+            ([str(self.root / "missing-executable")], "os_error", None, 127),
+            ([sys.executable, "-c", "import time; time.sleep(10)"], "timed_out", None, 124),
+        ]
+        for argv, outcome, observed_exit, legacy_code in cases:
+            with self.subTest(outcome=outcome, observed_exit=observed_exit):
+                process = _run_command(self.root, {"argv": argv, "timeout_seconds": 1}, {}, {})
+                self.assertEqual(process["exit_code"], legacy_code)
+                self.assertEqual(process["process_observation"], {
+                    "outcome": outcome,
+                    "observed_exit_code": observed_exit,
+                    "duration_ms": process["duration_ms"],
+                    "descendant_quiescence": "unknown",
+                })
+                self.assertGreaterEqual(process["duration_ms"], 0)
+
     def test_negative_control_must_use_same_distinct_program(self):
         self.spec["verifier"]["negative_control"]["argv"] = [
             "{python}",
@@ -137,6 +158,10 @@ print(json.dumps({
         receipt = run_task(self.root, self.spec_path)
         self.assertEqual(receipt["status"], "accepted")
         self.assertEqual(receipt["accepted_attempt"], 2)
+        trace_path = self.root / receipt["attempts"][-1]["process_trace"]
+        observation = json.loads(trace_path.read_text(encoding="utf-8"))["process_observation"]
+        self.assertEqual(observation["outcome"], "exited")
+        self.assertEqual(observation["observed_exit_code"], 0)
         self.assertEqual(receipt["attempts"][0]["issue_class"], "verification_failure")
         self.assertEqual(receipt["research"]["min_sources"], 2)
         self.assertTrue((self.root / self.spec["receipt_output"]).is_file())

@@ -250,14 +250,20 @@ def run_stage_command(
             check=False,
         )
         exit_code = completed.returncode
+        outcome = "exited"
+        observed_exit_code = exit_code
         stdout = completed.stdout[-65536:]
         stderr = completed.stderr[-65536:]
     except subprocess.TimeoutExpired as exc:
         exit_code = 124
+        outcome = "timed_out"
+        observed_exit_code = None
         stdout = exc.stdout[-65536:] if isinstance(exc.stdout, str) else ""
         stderr = "host runner timed out"
     except OSError as exc:
         exit_code = 127
+        outcome = "os_error"
+        observed_exit_code = None
         stdout = ""
         stderr = f"host runner could not start command: {exc}"
     duration_ms = max(0, int((time.monotonic() - started) * 1000))
@@ -277,6 +283,12 @@ def run_stage_command(
             "started_at": started_at,
             "finished_at": _utc_now(),
             "duration_ms": duration_ms,
+            "process_observation": {
+                "outcome": outcome,
+                "observed_exit_code": observed_exit_code,
+                "duration_ms": duration_ms,
+                "descendant_quiescence": "unknown",
+            },
             "argv": command,
             "exit_code": exit_code,
             "stdout": stdout,
