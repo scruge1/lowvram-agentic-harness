@@ -25,26 +25,46 @@ SELFTESTS = (
 
 
 def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> dict:
-    completed = subprocess.run(
-        argv,
-        cwd=cwd,
-        env=env,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=timeout,
-        shell=False,
-        check=False,
-    )
-    return {
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            shell=False,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        def tail(value):
+            if isinstance(value, bytes):
+                value = value.decode("utf-8", errors="replace")
+            return (value or "")[-20000:]
+
+        result = {
+            "argv": argv,
+            "exit_code": 124,
+            "timed_out": True,
+            "timeout_seconds": timeout,
+            "stdout_tail": tail(exc.stdout),
+            "stderr_tail": tail(exc.stderr),
+        }
+        print("Release command timed out: " + json.dumps(result), file=sys.stderr, flush=True)
+        return result
+    result = {
         "argv": argv,
         "exit_code": completed.returncode,
         "stdout_tail": completed.stdout[-20000:],
         "stderr_tail": completed.stderr[-20000:],
     }
+    if completed.returncode != 0:
+        print("Release command returned nonzero: " + json.dumps(result), file=sys.stderr, flush=True)
+    return result
 
 
 def main() -> int:

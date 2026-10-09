@@ -68,3 +68,35 @@ Scope: guidance and packaged instructions. No scheduler, controller, GPU lease,
 execution permission, or runtime changes. Offline package validation and source
 publication are distinct from target adoption. Normal intake, prioritisation,
 release, and completed work must be observed before claiming target enforcement.
+
+## Offline release CI — 2026-10-09
+
+Parent commit: `a21fbfc06092ce46362dfdc8829b6b506d079be8`.
+
+Change: the existing offline release gate now has a GitHub Actions workflow for
+Linux/Python3.11 and Windows/Python3.13. It runs on pull requests and main updates,
+with a 15-minute job limit. Checkout and Python setup are pinned to exact current
+upstream release commits; lint uses Ruff0.16.10.
+
+The package explicitly retains its accepted E4/E7/E9/F lint rule scope. Current
+Ruff defaults include additional rules; their adoption requires a separate
+compatibility review of API behavior and source-pinned adapter bytes. The budget
+path repair below is the runtime change. Maintainers refresh tool pins through tested updates and
+retain previous accepted commits for recovery.
+
+Scope: public package CI evidence. Required-check branch protection, target
+deployment authority, live smoke tests, and runtime rollback remain separate
+owner gates. A passing hosted check cannot confer blessed authority.
+
+The first hosted Windows run reached the existing 240-second unit-suite timeout.
+The release driver now reports timeout exit124 with captured output tails so
+failures identify the last test. Time limits and failure acceptance are unchanged.
+A real child-process regression verifies both output streams and timeout failure.
+
+Hosted Windows diagnostics identified a budget-path validation loop: a short-name
+ancestor did not compare equal to the resolved target root, so traversal repeated
+the drive root. The walk now compares canonical identity after checking original
+path links, retains raw parent checks around `..`, and holds at a filesystem root
+that cannot reach the target. Containment and symlink rejection remain in place.
+No deadline is increased. Nonzero command diagnostics are labelled separately
+from timeout so expected rejection checks are not described as package failure.

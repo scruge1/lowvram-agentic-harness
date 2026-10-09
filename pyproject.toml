@@ -25,3 +25,10 @@ include = ["harness*", "ssot*"]
 
 [tool.setuptools.package-data]
 harness = ["templates/*.md"]
+
+[tool.ruff]
+target-version = "py39"
+
+[tool.ruff.lint]
+# Preserve the rule scope of the accepted release gate across Ruff upgrades.
+select = ["E4", "E7", "E9", "F"]
