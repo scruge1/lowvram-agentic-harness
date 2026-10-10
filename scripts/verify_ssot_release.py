@@ -23,46 +23,86 @@ SELFTESTS = (
     "scripts/autotune_offload.py",
 )
 
+TAIL_BYTES = 80000
+SETTLEMENT_SECONDS = 3
+# Preserve ownership when an exact child does not settle. Never infer that its
+# descendants stopped, and do not let a Popen context manager wait indefinitely.
+UNSETTLED_CHILDREN = []
+
+
+def output_snapshot(stream) -> dict:
+    before = os.fstat(stream.fileno())
+    offset = max(0, before.st_size - TAIL_BYTES)
+    count = before.st_size - offset
+    # Never move the writer's shared file offset. Descendants can still write.
+    if hasattr(os, "pread"):
+        data = os.pread(stream.fileno(), count, offset)
+    else:
+        reader = os.open(stream.name, os.O_RDONLY | os.O_BINARY | os.O_TEMPORARY)
+        try:
+            os.lseek(reader, offset, os.SEEK_SET)
+            data = os.read(reader, count)
+        finally:
+            os.close(reader)
+    after = os.fstat(stream.fileno())
+    decoded = data.decode("utf-8", errors="replace")
+    return {
+        "tail": decoded[-20000:],
+        "observed_bytes": before.st_size,
+        "sampled_bytes": len(data),
+        "sampled_sha256": hashlib.sha256(data).hexdigest(),
+        "truncated": offset > 0 or len(decoded) > 20000,
+        "stable": (before.st_size, before.st_mtime_ns)
+        == (after.st_size, after.st_mtime_ns)
+        and len(data) == before.st_size - offset,
+    }
+
 
 def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> dict:
-    try:
-        completed = subprocess.run(
+    with tempfile.TemporaryFile(mode="w+b") as stdout, tempfile.TemporaryFile(mode="w+b") as stderr:
+        child = subprocess.Popen(
             argv,
             cwd=cwd,
             env=env,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
+            stdout=stdout,
+            stderr=stderr,
             shell=False,
-            check=False,
         )
-    except subprocess.TimeoutExpired as exc:
-        def tail(value):
-            if isinstance(value, bytes):
-                value = value.decode("utf-8", errors="replace")
-            return (value or "")[-20000:]
-
+        timed_out = False
+        settled = True
+        kill_error = None
+        try:
+            child.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            try:
+                child.kill()
+            except OSError as exc:
+                kill_error = type(exc).__name__
+            try:
+                child.wait(timeout=SETTLEMENT_SECONDS)
+            except subprocess.TimeoutExpired:
+                settled = False
+                UNSETTLED_CHILDREN.append(child)
+        captures = {"stdout": output_snapshot(stdout), "stderr": output_snapshot(stderr)}
         result = {
             "argv": argv,
-            "exit_code": 124,
-            "timed_out": True,
-            "timeout_seconds": timeout,
-            "stdout_tail": tail(exc.stdout),
-            "stderr_tail": tail(exc.stderr),
+            "exit_code": 124 if timed_out else child.returncode,
+            "child_exit_code": child.returncode,
+            "child_settled": settled,
+            "stdout_tail": captures["stdout"].pop("tail"),
+            "stderr_tail": captures["stderr"].pop("tail"),
+            "output_snapshots": captures,
         }
+        if kill_error is not None:
+            result["kill_error"] = kill_error
+        if not timed_out and not all(capture["stable"] for capture in captures.values()):
+            result["exit_code"] = 125
+    if timed_out:
+        result.update(timed_out=True, timeout_seconds=timeout, settlement_seconds=SETTLEMENT_SECONDS)
         print("Release command timed out: " + json.dumps(result), file=sys.stderr, flush=True)
-        return result
-    result = {
-        "argv": argv,
-        "exit_code": completed.returncode,
-        "stdout_tail": completed.stdout[-20000:],
-        "stderr_tail": completed.stderr[-20000:],
-    }
-    if completed.returncode != 0:
+    elif result["exit_code"] != 0:
         print("Release command returned nonzero: " + json.dumps(result), file=sys.stderr, flush=True)
     return result
 
