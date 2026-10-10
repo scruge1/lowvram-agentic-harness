@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Runtime and CI lock alignment — 2026-10-10
+
+Parent commit: `6f843658de0874ac204c39ba2daadc6543620b32`.
+
+Change: optional `harness.runtime_lock` checks explicit runtime and CI locks before
+an existing installation step. Shared versions must match and CI must retain all
+runtime distribution hashes. It permits test-only additions and refuses ambiguous
+or unsupported syntax. The public adapter adds explicit CLI paths, bounded reads
+and handled failures to the parent-system source checker.
+
+Distilled lesson: source changes can invalidate earlier CI/runtime alignment while
+the old check remains green. Reconcile against the current maintainer's runtime
+definition, run standalone fixtures explicitly, and repair fixture dependencies
+without weakening assertions. Retain failed attempts and exact tested trees.
+
+Validation: compatibility, version/hash drift, duplicate aliases, unsupported or
+unhashed input, size limits and actual CLI success/refusal are in the existing
+offline unit suite. Package and hosted checks are reported with the PR.
+Scope: read-only source-lock checks; no package installation, release permission
+or deployed-image acceptance. Consumers must adopt it on their actual CI path.
+
 ## Effective admission and process CPU diagnostics — 2026-10-10
 
 Parent commit: `337f2db008b49e07a9e8b6f359f7dbdc9532aca1`.
