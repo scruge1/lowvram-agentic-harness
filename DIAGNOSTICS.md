@@ -68,6 +68,19 @@ Equal limits can select different handlers depending on which condition is teste
 first. Check successful completion, timeout and cancellation separately. Do not
 infer remote cancellation or resource release from a local cancelled future.
 
+Retain output obtained while settling a timed-out child. A second `communicate`
+can return a stored-request acknowledgement or a reply after the original wait
+expired. Preserve available stdout and stderr, their hashes, the observed exit
+status, and whether each observation is partial or complete. A timeout still
+means the original attempt did not complete within its window. Retained output
+does not authorize a resend or establish remote cancellation.
+
+Bound retained evidence and label truncation. Distinguish the hash of retained
+bytes from the hash and size of all available bytes. An evidence cap applied
+after `communicate` is not a streaming memory limit. If local child settlement is
+unknown, keep its owned handle and available partial output; report uncertainty.
+Verify this path separately from a normal return that arrives after the deadline.
+
 Internal transport streaming and visible reply streaming can be separate
 settings. Qualify response headers, complete stream framing and tool-call parsing
 on the existing route before adopting a change. A synthetic formatting result
