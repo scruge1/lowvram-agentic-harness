@@ -54,6 +54,30 @@ A local process exit does not establish remote or descendant quiescence. Preserv
 unknown completion states and the existing owner's retry hold. More parallel work
 can make a constrained queue slower; measure before increasing concurrency.
 
+## Shared resources and timeout boundaries
+
+A foreground request can time out while a background summary holds the same
+single worker slot. Inspect who holds that resource when the request arrives.
+Join request, summary and backend task identities before attributing time to a
+model. Separate queue wait, prompt processing, generation and final delivery.
+
+Review the timers and their handler order. An idle timeout measures silence; a
+total ceiling bounds the attempt; a turn-wait limit can release the caller while
+background work continues. Releasing that wait does not release the worker slot.
+Equal limits can select different handlers depending on which condition is tested
+first. Check successful completion, timeout and cancellation separately. Do not
+infer remote cancellation or resource release from a local cancelled future.
+
+Internal transport streaming and visible reply streaming can be separate
+settings. Qualify response headers, complete stream framing and tool-call parsing
+on the existing route before adopting a change. A synthetic formatting result
+still does not prove native tool execution or a useful reply reached the user.
+
+Measure latency from monotonic spans or event timestamps with established meaning
+and immutability. Align time zones and clock sources before joining logs. A status
+record's `updated_at` can change after completion and measure later bookkeeping.
+Keep the original failure and its boundaries when a later readiness check passes.
+
 ## Separate platform setup from the requested command
 
 A document-only request can still cause its host to prepare a runtime before
