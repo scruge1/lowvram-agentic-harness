@@ -5,6 +5,32 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bound release output collection after a timeout — 2026-10-10
+
+Parent commit: `6bd3a96672c7cd2f91f35d6c4afd9e6708d859f1`.
+
+Change: the release checker sends output to temporary files. It waits for the
+exact child with the existing deadline, then allows three seconds for settlement
+after a timeout and kill attempt. Output reads use a separate reader offset and
+the initially observed size, with at most 80,000 bytes sampled per stream and
+20,000 decoded characters returned. Metadata identifies sampled bytes, their
+hash, truncation and observed stability. Changing snapshots fail the gate.
+An unsettled child remains owned; its exit and descendant state stay unknown.
+
+Distilled lesson: Windows `subprocess.run` can collect pipe output without a
+deadline after killing a timed-out child. A descendant holding the pipe can
+extend the wait. The original one-second deadline returned after 5.169 seconds
+in an inert reproduction. Successful child exit can leave the same pipe open.
+
+Validation: local controls cover both inherited-handle cases, timeout output,
+nonzero exit, bounded large output, changing snapshots and kill denial with
+unknown settlement. Full package and hosted results belong in the PR.
+
+Scope: public release checker only. File output avoids pipe EOF waits; it does
+not cancel descendants, impose a disk quota or prove that later writes stopped.
+The deadline bounds process waiting and sampled output size, not arbitrary
+filesystem stalls, process creation or total operating-system latency.
+
 ## Preserve evidence during timeout settlement — 2026-10-10
 
 Parent commit: `3be10b70e37ca36e1ca6d072571675ba6cd1c966`.
