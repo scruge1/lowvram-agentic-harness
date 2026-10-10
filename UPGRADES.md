@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve evidence during timeout settlement — 2026-10-10
+
+Parent commit: `3be10b70e37ca36e1ca6d072571675ba6cd1c966`.
+
+Change: `DIAGNOSTICS.md` describes output custody during finite child settlement.
+Keep partial and complete observations, bounded retained bytes, hashes, observed
+exit status, and explicit truncation. Preserve uncertainty and the retry hold.
+
+Distilled lesson: a timeout handler can collect an acknowledgement or reply while
+stopping its child, then lose those bytes when it raises an incomplete failure
+record. A test for normal late returns does not cover this exception path.
+
+Validation: an inert reproduction confirmed the loss. The corrected source passed
+three targeted controls for partial and complete settlement evidence, bounded
+output with unknown settlement, and an actual inert child timeout. Public package
+checks are reported separately in the PR.
+
+Scope: public diagnostic guidance only. No runtime, transport, timeout, retry,
+evidence store or target deployment change. Target owners must qualify their
+actual cleanup and durable evidence paths.
+
 ## Scoped migration of a saved tool contract — 2026-10-10
 
 Parent commit: `4bb667f2221d99634a20cedd1bd37b0dda372092`.
