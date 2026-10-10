@@ -74,6 +74,30 @@ These examples add no runtime enforcement to this package. Consult the current
 [Codex hook documentation](https://learn.chatgpt.com/docs/hooks#tool-coverage)
 for supported names, trust requirements, and coverage limits.
 
+## Check byte edits before deriving a pinned source candidate
+
+Python's `bytes.replace` silently returns unchanged bytes when its source value
+is absent. A successful filename edit and inverse comparison can therefore hide
+a missing pin edit. Use the optional pure helper for an expected single edit:
+
+```python
+from harness.source_edit import replace_exact_once
+
+source = b"PIN='old'\n"
+candidate = replace_exact_once(source, b"PIN='old'", b"PIN='new'")
+```
+
+Missing, repeated and overlapping matches, empty needles, unchanged edits and
+non-byte inputs are refused. An explicit deletion is allowed with `new=b""`.
+The helper returns bytes; it does not read, write, publish or start anything.
+
+Check each intended edit, not just the final inverse comparison. If a pin comes
+from a parent map and is absent from the local source, use an explicit reviewed
+map override and verify the complete selected map and its cardinality. A token
+match does not establish semantic pin coverage, admission or runtime behaviour.
+Keep the target's existing candidate hash, protected publication, native startup
+and rollback checks. This package does not install the helper into a target.
+
 ## Keep runtime and CI dependency locks aligned
 
 When a target already uses fully pinned Python runtime and CI locks, qualify them
