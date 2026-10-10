@@ -74,6 +74,36 @@ These examples add no runtime enforcement to this package. Consult the current
 [Codex hook documentation](https://learn.chatgpt.com/docs/hooks#tool-coverage)
 for supported names, trust requirements, and coverage limits.
 
+## Keep runtime and CI dependency locks aligned
+
+When a target already uses fully pinned Python runtime and CI locks, qualify them
+through its existing maintenance and release owner. This optional checker reads
+two explicit files and fails if a runtime package is absent from CI, its version
+differs, or a runtime distribution hash is missing from CI:
+
+```bash
+python -m harness.runtime_lock --runtime /path/to/requirements.lock \
+  --ci /path/to/requirements-ci.txt
+```
+
+CI-only test/build packages and additional distribution hashes are allowed.
+Supported input is UTF-8 text with `name==version` pins, SHA-256 hash lines,
+comments and optional continuation backslashes, up to 2 MiB per file. Duplicate
+normalized package names, unhashed pins, URLs, includes, ranges and conditional
+markers are refused. Compile a supported target-specific lock first; the checker
+is not a general requirements resolver or semantic version comparator.
+
+Run it before dependency installation on the existing CI path if the owner adopts
+it. It does not install packages, change locks, inspect a running image, or select
+runtime successors. Matching source locks does not prove interpreter, platform,
+installed package or deployed image parity. Retain the normal build, actual image
+and rollback checks. This package itself has no required third-party core lock.
+
+When source advances, inspect current tests and their actual invocation. A
+standalone fixture's `__main__` path may need explicit execution alongside pytest.
+Preserve assertions and isolation when repairing fixture imports or dependencies.
+An older green check remains tied to its original source, runtime and test scope.
+
 ## Create the target setup SSOT
 
 Run the bootstrap against the root that contains the system being changed:
