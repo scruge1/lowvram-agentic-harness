@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Scoped migration of a saved tool contract — 2026-10-10
+
+Parent commit: `4bb667f2221d99634a20cedd1bd37b0dda372092`.
+
+Change: optional pure `harness.tool_schema.migrate_known_tool_schema` replaces
+one known saved definition with one reviewed available definition in an exact
+host-supplied scope. Unknown cases keep the original pin. A successful result is
+an independent JSON snapshot. Other tools, persistence and execution stay with
+the target owner. `tool_function_sha256` exposes the bounded canonical function
+fingerprint used for comparison.
+
+Distilled lesson: current installed bytes can coexist with an older restored
+conversation schema. Check the actual forwarded contract before attributing an
+omitted argument to the model. Preserve intentional pinning; qualify a narrow
+known-contract migration through native persistence and request readback.
+
+Validation: seven offline groups cover exact replacement, scope and policy
+holds, unknown content, unavailable or foreign tools, snapshot isolation,
+idempotence, malformed wrappers, non-JSON/nonfinite data and bounded output.
+Package and hosted results are reported in the PR. This public export installs
+nothing in a target and grants no authority. Actual target adoption, argument
+compliance, useful work and delivery remain separate evidence requirements.
+
 ## Exact byte-edit preconditions — 2026-10-10
 
 Parent commit: `5d4844a0f6b27afb1e2b169fe8258179128169c6`.

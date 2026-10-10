@@ -98,6 +98,32 @@ match does not establish semantic pin coverage, admission or runtime behaviour.
 Keep the target's existing candidate hash, protected publication, native startup
 and rollback checks. This package does not install the helper into a target.
 
+## Check the tool contract that the model actually receives
+
+Installed plugin bytes and an unchanged core version do not prove that a
+conversation uses the new tool schema. A host can intentionally restore saved
+definitions after rebuilding an agent. Compare the target function hash at the
+actual request boundary with the reviewed definition and the saved session pin.
+Missing observations remain unknown. Keep intentional pinning for other tools.
+
+The optional pure `harness.tool_schema.migrate_known_tool_schema` accepts one
+reviewed old-to-new function hash, one tool name and one exact scope. Unknown
+scope, hashes, shape or unavailable fresh definitions return the original pin.
+A matching case returns an independent JSON snapshot; inputs stay unchanged.
+Only ordinary `{"type": "function", "function": ...}` definitions are supported,
+bounded to128KiB after JSON serialization. `tool_function_sha256` hashes the
+canonical UTF-8 JSON **function field**, excluding the fixed outer wrapper.
+
+The host supplies authenticated scope and reviewed expectations. Model output
+cannot establish these values or raise authority. The host must first confirm
+that the fresh definition is registered and enabled, preserve other definitions
+and their order, and retain admission and execution checks. Returning a schema
+does not persist it. Verify the native saved pin and actual forwarded function
+hash before calling adoption complete. The helper performs no IO, reset, reload,
+session creation or execution and does not provide a concurrent admission fence.
+An explicit required argument is a contract declaration; observe actual caller
+arguments and successful use before claiming compliance or enforcement.
+
 ## Keep runtime and CI dependency locks aligned
 
 When a target already uses fully pinned Python runtime and CI locks, qualify them
