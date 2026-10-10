@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Shared-resource timing diagnostics — 2026-10-10
+
+Parent commit: `8254cd8f0d6fafa17f22bb9191b1605ec4cf3d3a`.
+
+Change: `DIAGNOSTICS.md` explains background/foreground contention, timer handler
+order, internal versus visible streaming, and immutable latency measurements.
+Use existing task identities and stage timings to distinguish queue delay from
+model or transport failure before selecting an optimization.
+
+Distilled lesson: releasing a caller's wait does not release the resource held by
+its background task. Equal timer limits can choose different handlers. A mutable
+status update is not an event completion timestamp. A successful synthetic stream
+check is separate from native execution and user-visible delivery.
+
+Scope: public diagnostic guidance only. No runner, deadline, model, provider,
+queue, service or target configuration changes. Offline package checks and hosted
+checks are reported with the PR; each consumer still needs normal-path adoption.
+
 ## Observed process failures — 2026-10-09
 
 Parent commit: `44382fbb713bf66c5ed271282cd110191a7b7355`.
