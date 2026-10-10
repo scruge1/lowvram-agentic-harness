@@ -116,6 +116,41 @@ Descendant quiescence remains unknown. These fields do not authorize a retry.
 The compact object contains no command, path, output or exception text. The
 surrounding existing trace still contains argv/stdout/stderr and must not be
 published as a sanitized diagnostic without a separate privacy review.
+
+## Per-process CPU samples
+
+Cumulative CPU time is not current CPU load. Sample the same process generation
+twice and divide its CPU-time change by elapsed monotonic time. Record PID plus
+creation identity, the interval, and the normalization basis. The following
+calculation uses 100% for one logical CPU; a multithreaded process can exceed 100%.
+Host-normalized percentages require a separately stated logical CPU count.
+
+```python
+def process_cpu_percent(before, after):
+    # Samples: (process_generation, monotonic_seconds, cpu_seconds).
+    generation0, time0, cpu0 = before
+    generation1, time1, cpu1 = after
+    elapsed = time1 - time0
+    cpu_delta = cpu1 - cpu0
+    if generation0 is None or generation0 != generation1:
+        raise ValueError("Missing or changed process generation")
+    if elapsed <= 0 or cpu_delta < 0:
+        raise ValueError("Incomparable process samples")
+    return 100.0 * cpu_delta / elapsed
+```
+
+For example, 30 CPU seconds in a 60-second interval means 50% of one logical CPU.
+Use the existing platform observer for the samples; this calculation does not
+create a sampler or manage processes. Reject missing or changed identities rather
+than joining a reused PID. Wall-clock intervals can change with clock adjustments;
+if only those intervals exist, retain that limitation with the result.
+
+High CPU use identifies an investigation target. It does not establish ownership,
+the cause of a failed task, or permission to stop a process. Inspect the existing
+owner, launch evidence and effect boundary before cleanup. A later readiness
+response can coexist with an older helper still running; retain both observations
+and leave unmeasured permission changes or descendant settlement unknown.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;

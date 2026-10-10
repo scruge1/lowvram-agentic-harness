@@ -57,6 +57,19 @@ the expected input and rejection reason, and evidence of the resulting effect.
 A backend failure alone is not a successful hook rejection. Keep fixture results
 separate from ordinary profile use and other tool paths.
 
+Inspect effective admission as well as configuration. For example, native
+registry metadata can contain both:
+
+```json
+{"enabled": true, "trustStatus": "untrusted"}
+```
+
+This handler is configured but lacks the required trust. It does not establish
+that its registration or policy ran. Use the target's supported admission path
+and retain the exact reviewed definition. Do not grant trust merely to clear a
+warning. A later readiness result does not establish a past hook invocation or
+successful task. Recheck the actual event and result on the intended route.
+
 These examples add no runtime enforcement to this package. Consult the current
 [Codex hook documentation](https://learn.chatgpt.com/docs/hooks#tool-coverage)
 for supported names, trust requirements, and coverage limits.

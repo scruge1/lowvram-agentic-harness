@@ -5,6 +5,23 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Effective admission and process CPU diagnostics — 2026-10-10
+
+Parent commit: `337f2db008b49e07a9e8b6f359f7dbdc9532aca1`.
+
+Change: `AGENT-INTEGRATION.md` gives a native metadata example where an enabled
+hook remains untrusted. `DIAGNOSTICS.md` adds a portable CPU-delta calculation,
+process-generation checks, monotonic timing and an explicit one-logical-CPU basis.
+
+Distilled lesson: configured hooks, runtime readiness, actual invocation and task
+results are separate observations. Busy processes can coexist with readiness.
+CPU use does not establish process ownership, historical failure cause or cleanup
+authority. Preserve old failures and unknown effects when later checks succeed.
+
+Scope: public guidance and a pure calculation example. No sampler, hook trust,
+runtime binding, process stop, permission or service change. Offline package and
+hosted checks are reported with the PR; normal-path target adoption remains open.
+
 ## Shared-resource timing diagnostics — 2026-10-10
 
 Parent commit: `8254cd8f0d6fafa17f22bb9191b1605ec4cf3d3a`.
