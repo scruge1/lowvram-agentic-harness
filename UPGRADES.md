@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Exact byte-edit preconditions — 2026-10-10
+
+Parent commit: `5d4844a0f6b27afb1e2b169fe8258179128169c6`.
+
+Change: optional `harness.source_edit.replace_exact_once` refuses absent,
+repeated, overlapping or ineffective byte edits. Integration guidance explains
+why a filename-only inverse comparison can conceal a missing inherited pin and
+why selected-map checks remain necessary.
+
+Distilled lesson: a successful source hash or inverse comparison does not prove
+that every intended edit happened. Assert each edit's precondition and verify
+the target's full native pin selection before claiming startup acceptance.
+
+Validation: six offline unit groups cover the missing inherited-pin case,
+ambiguous and overlapping matches, ineffective edits, input types, exact binary
+preservation and explicit inverse deletion. Package and hosted checks are
+reported with the PR.
+Scope: pure in-memory source check only. No file publication, service operation,
+admission or target adoption is provided by this upgrade.
+
 ## Runtime and CI lock alignment — 2026-10-10
 
 Parent commit: `6f843658de0874ac204c39ba2daadc6543620b32`.
