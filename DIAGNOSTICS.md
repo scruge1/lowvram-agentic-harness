@@ -56,6 +56,31 @@ can make a constrained queue slower; measure before increasing concurrency.
 
 ## Shared resources and timeout boundaries
 
+Separate a worker's job-idle limit, replacement-startup limit, and the host's
+total attempt limit. A job can stop reporting progress while the process remains
+alive. Retiring that worker and starting another are separate operations. A
+replacement that misses its readiness deadline does not establish why the first
+job stalled or why the replacement failed.
+
+Retain the native event times, worker identity, retry number, selected deadlines,
+retirement result, replacement readiness, and final owned-child settlement. Use
+explicit timestamp offsets when joining events. Keep diagnostic suggestions such
+as memory pressure separate from measured causes. Preserve unknown file,
+function, CPU, and garbage-collection attribution. Check the existing owner and
+resource evidence before choosing another run or changing a limit.
+
+After a failed analyzer run, require normal publication and freshness checks
+before using its graph for impact analysis. An outer controller's successful
+exit, partial parse files, progress percentages, and a core function's return
+are separate observations; none establishes a usable published graph.
+
+For a comparison, retain the original input guard. A file skipped by the language
+parser can still contribute to scanned paths or graph structure. Establish which
+stage excludes it before normalizing a changed-file list. Matching commit IDs and
+dirty-file lists do not freeze file contents. A later attempt on current input
+must keep its own freshness checks and cannot establish speedup against a
+different input generation.
+
 A foreground request can time out while a background summary holds the same
 single worker slot. Inspect who holds that resource when the request arrives.
 Join request, summary and backend task identities before attributing time to a
