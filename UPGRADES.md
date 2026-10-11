@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Separate worker recovery from graph acceptance — 2026-10-11
+
+Parent commit: `bc49e9c9e6787df8a1871f317742ad5532238dd8`.
+
+Change: `DIAGNOSTICS.md` separates job-idle, replacement-startup, and total
+attempt deadlines. It asks for native events and owned-child settlement, keeps
+runtime suggestions distinct from measured causes, and requires normal graph
+publication and freshness before impact analysis. Input comparisons distinguish
+parser filtering from scanned-path and graph-structure filtering.
+
+Distilled lesson: a parser can hit its idle limit and its replacement can fail
+readiness before the outer attempt expires. A successful controller exit still
+does not establish analyzer completion. A parser-skipped file can affect graph
+input, so a changed dirty list cannot be dismissed without source evidence.
+
+Validation: source review of existing filter, graph, parser, and worker paths,
+plus retained events from a finite failed attempt. Public offline package checks
+are reported separately in the PR; no new runtime test or retry is introduced.
+
+Scope: diagnostic guidance only. No analyzer, worker, deadline, ignore rule,
+provider, model, scheduler, installation, or target-authority change. Target
+instruction loading and normal task adoption remain separate acceptance gates.
+
 ## Bound release output collection after a timeout — 2026-10-10
 
 Parent commit: `6bd3a96672c7cd2f91f35d6c4afd9e6708d859f1`.
