@@ -161,6 +161,31 @@ stderr and the exit status before parsing stdout. Preserve that failed attempt.
 After a source correction, review and select the corrected packet explicitly;
 do not weaken the hash check or replay the original attempt.
 
+## Verify evidence reaches the worker
+
+A stored task can fit its body limit while its tool response exceeds a smaller
+delivery limit. Metadata, repeated body views and serialization can increase the
+response size. The host may then replace it with a preview and a file reference.
+A successful tool call does not prove that the model received the evidence.
+
+Compare the stored source, complete serialized tool response and retained
+model-facing messages. Record the units each limit uses: bytes, characters or
+tokens. Check both per-result and per-turn limits, truncation and offload behavior.
+If the preview names a recovery tool, verify that the worker can actually call it.
+Do not expand file access merely to bypass a failed delivery path.
+
+When a bounded projection fits the task, preserve the raw source separately and
+label the projection as selected excerpts. Keep every review question, authority
+restriction, required fact and explicit unknown. A short response with selected
+phrases present can still omit a requirement. Distinguish this host verification
+from whether the worker can inspect the complete original source.
+
+Rehearse the complete native response through its actual serializer and delivery
+logic using the worker's limits. Leave room for changed metadata. Then verify a
+fresh native response and the retained model-facing content before accepting the
+input path. Source fit, successful execution, correct review content and later
+useful consumption are separate acceptance claims.
+
 ## Process observation
 
 The host-run stage trace and trusted-task command records include

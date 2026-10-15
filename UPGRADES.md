@@ -5,6 +5,28 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Verify worker evidence delivery — 2026-10-16
+
+Parent commit: `09a7b7dc17dcca5500f54642246e84ce3d1a4160`.
+
+Change: `DIAGNOSTICS.md` checks the complete serialized tool response and retained
+model-facing messages, including duplicate context, size units, offload and
+available recovery tools. Compact projections must preserve task requirements,
+authority restrictions and explicit unknowns as well as selected evidence.
+
+Distilled lesson: a valid stored-body hash and successful tool result do not
+establish evidence delivery. A preview can refer to recovery tools that the
+worker cannot use. Fitting a response does not prove semantic completeness.
+
+Validation: the parent workflow retained an actual delivery failure and checked
+a corrected projection against the native serializer and offload function.
+Fresh target input, review quality and later useful consumption remain pending.
+Public validation: seven offline module self-tests and 131 unit tests passed on
+Windows with Python 3.11. These checks do not establish target adoption.
+
+Scope: diagnostic guidance only. No runtime, permissions, tools, model, deadline,
+scheduler or automatic retry changes. No target adoption or publication claim.
+
 ## Verify caller and checker source bindings — 2026-10-15
 
 Parent commit: `74211bc42f2e802224e8457fe0a66e8ce74d2d08`.
