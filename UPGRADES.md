@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Verify caller and checker source bindings — 2026-10-15
+
+Parent commit: `74211bc42f2e802224e8457fe0a66e8ce74d2d08`.
+
+Change: `DIAGNOSTICS.md` adds the two source-binding comparisons and asks for a
+control over the assembled packet. A checker must still refuse the wrong source
+or caller. Bootstrap failures retain their original exit and diagnostic evidence.
+
+Distilled lesson: independently correct file hashes do not prove that a caller,
+checker and selected input form a compatible set. A stale nested pin can refuse
+before structured output, even when the caller selected the intended input.
+
+Validation: the parent workflow retained the original refusal, passed controls
+for the corrected pair and completed its normal publication and startup path.
+Public validation: seven offline module self-tests and 131 unit tests passed on
+Windows with Python 3.11. These checks do not establish target adoption.
+
+Scope: diagnostic guidance and illustrative comparisons only. No runtime,
+permission, model, scheduler, retry policy or target adoption changes.
+
 ## Separate worker recovery from graph acceptance — 2026-10-11
 
 Parent commit: `bc49e9c9e6787df8a1871f317742ad5532238dd8`.

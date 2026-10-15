@@ -138,6 +138,29 @@ See the current [Windows sandbox documentation](https://learn.chatgpt.com/docs/w
 for platform setup effects and compatibility checks. This guidance does not
 authorize machine permission changes or install a sandbox backend.
 
+## Verify bindings between checked sources
+
+A caller and its checker can each match a reviewed file hash while selecting
+incompatible versions. Check the relationship between them as well as each file.
+For a checker that pins its input, verify both edges using host-reviewed values:
+
+```python
+from hashlib import sha256
+
+assert caller_manifest["checker_sha256"] == sha256(checker_bytes).hexdigest()
+assert checker_manifest["input_sha256"] == sha256(input_bytes).hexdigest()
+```
+
+Extract declarations from verified data or source without executing unchecked
+code. Test the assembled packet: a matching pair passes, a stale pair refuses,
+and the required caller identity still applies. File custody, runtime capability
+and action permission remain separate checks.
+
+A checker can refuse before its structured error handler runs. Retain bounded
+stderr and the exit status before parsing stdout. Preserve that failed attempt.
+After a source correction, review and select the corrected packet explicitly;
+do not weaken the hash check or replay the original attempt.
+
 ## Process observation
 
 The host-run stage trace and trusted-task command records include
