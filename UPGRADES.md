@@ -5,6 +5,32 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check required contract text before model transport — 2026-10-16
+
+Parent commit: `268a270abfc27a93b4263ff1ebb9ce9d78f87798`.
+
+Change: `LocalLLM.chat` and the forwarding `ask` path accept optional
+`required_prompt_literals`. The client checks text content from the exact JSON
+payload before transport. Missing contract text refuses locally; metadata alone
+does not satisfy the check. Calls without requirements retain their payload.
+`DIAGNOSTICS.md` provides the public usage example.
+
+Distilled lesson: a controller required two exact labels but omitted both names
+from the model-facing prompt. The answer remained rejected by its validator.
+Correct disclosure and preserve the original attempt; changing the prompt does
+not establish novelty or grant another execution.
+
+Validation: eight transport-mocked regression tests cover the missing contract,
+metadata-only disclosure, actual serialized messages, default payload, invalid
+requirements, non-text content, Unicode and cross-message fragments. All seven
+offline self-tests and the complete unit suite passed on Windows with Python
+3.11. Ruff checks passed for the changed Python files. Hosted validation follows
+source publication; these local checks do not establish target adoption.
+
+Scope: an optional public client guard and diagnostic guidance. Literal presence
+does not establish complete instructions, response correctness, server grammar
+enforcement or target adoption. Existing response and semantic checks remain.
+
 ## Preserve reader compatibility during scheduled rollout — 2026-10-16
 
 Parent commit: `7c857913839cea275b73bb6273f4cf72549ac623`.

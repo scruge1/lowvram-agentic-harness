@@ -39,6 +39,33 @@ Propose the smallest missing timing point. Adding production instrumentation,
 load generation, or configuration changes still follows the target's authority.
 Do not log passwords, tokens, request bodies, or personal data to diagnose timing.
 
+## Check contract disclosure in the model request
+
+When an answer omits a required label, inspect the exact serialized messages
+before changing models or retrying. A host-side contract or metadata field does
+not establish that the model received the label's name. Preserve the original
+prompt and answer, and separate a controller disclosure defect from model
+instruction failure.
+
+The local client can check required literal text in the bytes it will send:
+
+```python
+from harness.llm import LocalLLM
+
+reply = LocalLLM().ask(
+    "Review the supplied report.",
+    system='Required gap labels: ["scope_unknown", "runtime_unknown"].',
+    required_prompt_literals=("scope_unknown", "runtime_unknown"),
+)
+```
+
+The option checks text-message content after JSON serialization and refuses
+locally before transport if required text is absent. Extra message metadata does
+not count. Default calls retain their existing payload. Literal presence is a
+disclosure check; response validation and independent semantic review still
+determine whether the answer meets the contract. A prompt correction alone does
+not grant retry permission or make unchanged evidence new work.
+
 ## Apply the same questions to agent work
 
 | Stage | Useful evidence | Common incorrect conclusion |
