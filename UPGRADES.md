@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve file checks across Windows runtimes — 2026-10-16
+
+Parent commit: `450459f9134e3d166d3a3b856497b9662754ded4`.
+
+Change: `harness.source_snapshot.stable_snapshot` supplies bounded regular-file
+bytes to the existing pure section reader. It compares `fstat` metadata on the
+held source and a second named-file handle, retaining device, inode, mode, link
+count, size, modification time and change time. Both descriptors have explicit
+cleanup. Pathname/handle `ctime` differences do not require removing drift checks.
+
+Distilled lesson: qualify the actual interpreter and operation. Isolated runtime
+startup, remote transport, file stability, HTTP retrieval and native consumption
+are different stages. A later working runtime or snapshot does not change an
+earlier failed attempt into success; continue verification without replaying an
+already completed publication or restart.
+
+Validation: seven focused public tests passed on Windows/Python3.11 and3.13,
+covering real atomic publication, byte limits, replacement-file identity,
+in-place drift, failed-handle cleanup, hard links and relative paths. The full
+local release gate passed all21 checks and all seven offline self-tests on3.11.
+Exact-head platform CI is a separate acceptance check tracked on the pull request.
+
+Scope: an explicit read-only filesystem helper, with no credentials, inference,
+network, persistent state or automatic retry. The caller owns source authorization.
+This is not an OS deadline, continuous lock, native-reader adoption or deployment
+claim. Separate private runtime evidence does not qualify this public package.
+
 ## Return complete bounded source sections — 2026-10-16
 
 Parent commit: `8596174d435da292ef3f0d8a54eaeacc1b87ca83`.

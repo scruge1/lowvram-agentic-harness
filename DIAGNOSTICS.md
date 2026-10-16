@@ -273,6 +273,32 @@ identity, freshness and admission checks; these hashes do not establish them.
 Keep source-format checks specific to the target rather than treating this as a
 general Markdown parser. Package tests do not qualify a native reader or broker.
 
+## Compare file metadata through the same API
+
+Qualify source reads on the actual service interpreter. A working maintenance
+interpreter does not prove the service has the same file-metadata behavior.
+Windows pathname `stat` and handle `fstat` can report different `ctime` values
+for the same unchanged file. Keep the timestamp check; compare two handle
+snapshots instead. See the [CPython issue](https://github.com/python/cpython/issues/157671)
+and [Windows timestamp documentation](https://docs.python.org/3.13/library/os.html#os.stat_result.st_ctime).
+
+```python
+from pathlib import Path
+from harness.source_snapshot import stable_snapshot
+from harness.source_read import complete_section
+
+snapshot = stable_snapshot(Path("PROJECT-STATE.md").absolute())
+view = complete_section(snapshot["source"], "Current")
+```
+
+The caller must authorize that exact canonical path. The snapshot refuses
+observed file replacement, metadata drift, aliases, multiple links and byte-limit
+violations. It compares all seven identity/size/time fields before and after the
+read and through a second handle; both handles are closed on failure. It grants
+no authority, owner attestation, continuous pathname lock or OS time bound.
+After a wrapper failure, retain the original outcome and inspect its actual
+error stage before changing the runtime, dropping a check or replaying effects.
+
 ## Process observation
 
 The host-run stage trace and trusted-task command records include
