@@ -5,6 +5,35 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Review the requested conclusion as well as individual claims — 2026-10-17
+
+Parent commit: `3f15bc680d47bbd3f785ab9e0f66a10af503e793`.
+
+Change: `DIAGNOSTICS.md` distinguishes claim support, question completeness,
+native reviewer outcome and later idle behavior. It requires protected task
+context in the actual review request and preserves prompt and retry limits.
+
+Distilled lesson: a real scheduled local producer and separate reviewer call
+completed, and the next two ordinary ticks made no model call for the retained
+held attempt. The answer preserved citations and uncertainty but omitted the
+requested central distinction. An independent review identified that omission;
+the native reviewer held for a different reason. Its settled explicit hold was
+stored under an aggregate held-or-uncertain state. Keep those observations and
+reasons separate. Operational success does not establish accepted content.
+
+Source-workflow validation: retained raw responses, exact request and source
+bindings, normal scheduler events and unchanged history/state/queue snapshots
+were independently compared. This qualifies one pipeline and two idle cycles,
+not sustained useful operation, every input route or revised reviewer policy.
+The owner-question disclosure correction remains a separate source candidate.
+
+Public validation: the existing release checker passed all 21 checks, including
+the unit-test command and seven offline self-tests, on Windows/Python3.11.
+`git diff --check` passed. Hosted checks follow publication.
+
+Public scope: diagnostic guidance only; no executable, model, scheduler, retry
+or prompt-limit change. Target policy adoption remains separately qualified.
+
 ## Bind installation checks to actual file roles — 2026-10-16
 
 Parent commit: `a0f33e626259ef6cd62957c6a62695c29d06768c`.

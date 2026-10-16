@@ -66,6 +66,24 @@ disclosure check; response validation and independent semantic review still
 determine whether the answer meets the contract. A prompt correction alone does
 not grant retry permission or make unchanged evidence new work.
 
+Check question completeness separately from support for individual claims. A
+response can cite every stated claim correctly while omitting the conclusion
+the user requested. Bind the review to the protected owner question and verify
+that the serialized reviewer request contains that task context. A model-supplied
+restatement does not establish the owner's requirement. If the host compiles
+review criteria, label that projection and bind it to the original question's
+hash. Preserve the original requirements and raw source. Keep existing prompt
+limits; measure the complete request and remove duplicated instructions rather
+than clipping requirements or source evidence.
+
+Preserve the producer answer, reviewer decision and any independent assessment
+with their separate reasons. A settled `hold` is not a timeout merely because an
+aggregate state groups held and uncertain attempts together. Verify the normal
+next tick: it should preserve the attempt and make no model call for unchanged
+held work. One successful pipeline and an idle tick do not prove sustained
+useful work or accepted content. A wording correction alone does not admit a
+retry of the retained attempt.
+
 ## Apply the same questions to agent work
 
 | Stage | Useful evidence | Common incorrect conclusion |
