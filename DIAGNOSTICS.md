@@ -188,6 +188,25 @@ stderr and the exit status before parsing stdout. Preserve that failed attempt.
 After a source correction, review and select the corrected packet explicitly;
 do not weaken the hash check or replay the original attempt.
 
+## Exercise the operation used by the runtime
+
+An adapter can build a valid output schema while its actual operation still
+requires another workflow's route or source prefix. Test the exported operation
+that the runtime calls, with the exact assembled packet and owner binding.
+Inspect its route, source-prefix, request, model and endpoint checks.
+
+Use the target adapter's existing inspection path. A deliberate freshness
+refusal can establish that argument checks passed before SDK setup. It does not
+establish SDK preparation. Then, where supported, prepare the exact request
+through the SDK while stopping before provider dispatch. Record the reached
+boundary, prepared-request count, provider-payload count, tool state, session
+persistence and child settlement. Keep each claim within that boundary.
+
+Do not weaken route checks or create a second runner to make a probe pass.
+A failure before counters are created leaves them unobserved, not measured
+zero. Preparation without a provider payload is not a model answer or review
+verdict. Preserve the original failed attempt and its admission state.
+
 ## Verify shared-history readers before new writes
 
 A new record can pass a new parser while an older scheduled reader rejects it.

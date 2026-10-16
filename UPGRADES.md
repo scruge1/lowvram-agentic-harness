@@ -5,6 +5,32 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Qualify the actual adapter operation — 2026-10-16
+
+Parent commit: `f6db4a7ed8becbf9e45f674f6383afc2583f799d`.
+
+Change: `DIAGNOSTICS.md` separates schema checks, actual operation argument
+checks and SDK preparation before provider dispatch. Reuse the existing target
+inspection path and finite runner; retain strict route and source bindings.
+
+Distilled lesson: a reused reviewer built a valid schema but its operation
+still required the previous workflow's route. It failed before producing a
+verdict or recording preparation counters. A schema-only test missed that
+guard. Null counters must remain unobserved, not be reported as measured zero.
+
+Validation in the source workflow: tests exercised the actual corrected export
+up to a deliberate freshness refusal. A separate native SDK inspection then
+recorded one prepared request, zero provider payloads, no tools or session file,
+and a settled child. The original held attempt remained unchanged. Those checks
+do not prove a model verdict, server grammar, semantic quality or live adoption.
+
+Public validation: the full unit suite and all seven offline self-tests passed
+on Windows with Python 3.11. Hosted validation follows source publication.
+
+Scope: public guidance only; executable behaviour is unchanged. No runtime,
+provider, permission, retry policy or scheduler change follows from this
+documentation.
+
 ## Check required contract text before model transport — 2026-10-16
 
 Parent commit: `268a270abfc27a93b4263ff1ebb9ce9d78f87798`.
