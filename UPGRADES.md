@@ -20,8 +20,9 @@ preserve the original exception, cleanup, admission and retry behavior.
 
 Validation: ten independent synthetic differential controls passed for the
 parent workflow's candidate diagnostics, including failure paths, cleanup and
-logger failures. The original live cause remains unknown; the candidate is not
-yet deployed. This public change is guidance and example code only.
+logger failures. At that source qualification, the live cause was unknown and
+the candidate was not deployed. These controls do not establish live diagnosis
+or adoption. This public change is guidance and example code only.
 Public validation: all seven offline module self-tests and 131 unit tests passed
 on Windows with Python 3.11. No target adoption follows from these checks.
 
