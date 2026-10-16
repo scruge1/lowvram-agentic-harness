@@ -252,6 +252,27 @@ fresh native response and the retained model-facing content before accepting the
 input path. Source fit, successful execution, correct review content and later
 useful consumption are separate acceptance claims.
 
+## Bound a complete source section
+
+If an instruction source exceeds the reader's body cap, refuse it or maintain a
+smaller complete source section. A prefix is not a complete section. Preserve
+the original requirements and history, and distinguish the hash of the whole
+input from the hash of the returned body.
+
+```python
+from harness.source_read import complete_section
+
+view = complete_section(approved_source_bytes, "Current", max_body_bytes=4096)
+context = view["body"].decode("utf-8")
+```
+
+This pure helper matches exact literal H2 lines, preserves source bytes and line
+ranges, and refuses absent, duplicate or oversized sections. It performs no file
+or network access. The owner still supplies a stable authorized source snapshot,
+identity, freshness and admission checks; these hashes do not establish them.
+Keep source-format checks specific to the target rather than treating this as a
+general Markdown parser. Package tests do not qualify a native reader or broker.
+
 ## Process observation
 
 The host-run stage trace and trusted-task command records include

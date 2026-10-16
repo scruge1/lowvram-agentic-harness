@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Return complete bounded source sections — 2026-10-16
+
+Parent commit: `8596174d435da292ef3f0d8a54eaeacc1b87ca83`.
+
+Change: `harness.source_read.complete_section` returns one complete literal H2
+section from immutable UTF-8 bytes, with body/source hashes and line bounds.
+Absent, duplicate or oversized sections refuse; no prefix or summary is returned.
+The helper performs no filesystem, network, inference or authority operation.
+
+Distilled lesson: a canonical document can contain a small Current section and
+large historical evidence. Keep the complete Current within its existing body
+cap while preserving requirements and history. A section hash is different from
+a full-source hash, and a fresh source read does not prove live runtime truth.
+
+Validation: seven focused public unit tests cover exact body/line/hash binding,
+one-byte budget edges, UTF-8 bytes, CRLF/final lines, ambiguity, invalid inputs
+and a body containing the entire source. The complete unit suite and all seven
+offline self-tests passed on Windows/Python3.11. Private source-reader tests and a local canonical
+read are separate evidence; no native broker adoption is claimed here.
+
+Scope: a pure portable public helper and guidance. It is not a Markdown parser,
+stable filesystem snapshot, remote attestation, authentication, active runtime
+check or deployment. Existing target readers require their own owner adoption.
+
 ## Qualify the actual adapter operation — 2026-10-16
 
 Parent commit: `f6db4a7ed8becbf9e45f674f6383afc2583f799d`.
