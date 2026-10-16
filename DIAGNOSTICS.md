@@ -161,6 +161,26 @@ stderr and the exit status before parsing stdout. Preserve that failed attempt.
 After a source correction, review and select the corrected packet explicitly;
 do not weaken the hash check or replay the original attempt.
 
+## Verify shared-history readers before new writes
+
+A new record can pass a new parser while an older scheduled reader rejects it.
+Check the active readers of that same history, including the scheduled entry and
+recovery path. Validate retained records and a detached candidate with their
+original bindings. Do not persist a test row or call a model to check format fit.
+Run available pure adapter schema checks on the exact packet too. A successful
+constructor or loader does not prove that a later route guard accepts the input.
+
+Select compatible readers before the first new-format write. Verify the actual
+scheduled entry, source pins, cadence and resource limits. A successful manual
+run under a lock does not make an older timer compatible after that lock closes.
+Preserve unrelated scheduled jobs and verify their bytes separately.
+
+After a new-format row exists, recovery must keep a compatible reader or use a
+separately selected admission hold. Do not restore an incompatible parser,
+delete history or reset an uncertain reservation to make validation pass.
+Check the first normal scheduled result and a later idle tick. Installed code
+and a valid schedule do not establish useful advice or continuous operation.
+
 ## Verify evidence reaches the worker
 
 A stored task can fit its body limit while its tool response exceeds a smaller

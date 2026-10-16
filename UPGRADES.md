@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve reader compatibility during scheduled rollout — 2026-10-16
+
+Parent commit: `7c857913839cea275b73bb6273f4cf72549ac623`.
+
+Change: `DIAGNOSTICS.md` checks every active reader of shared history before a
+new-format write. It separates detached format validation, installed scheduler
+selection, a normal scheduled result and later idle behaviour.
+
+Distilled lesson: a successful manual run can leave the next old timer unable
+to read its result. Publish compatible readers first. After the new record is
+stored, recovery must preserve compatible parsing and the original history.
+
+Validation: the parent workflow reproduced rejection by the old parser, checked
+retained history and a detached candidate, and read back the installed scheduled
+entry. These checks establish format and rollout evidence; they do not establish
+model correctness, later useful consumption or continuous operation.
+
+Public validation: all seven offline self-tests passed on Windows with Python
+3.11. The change is documentation only; executable behaviour is unchanged.
+
+Scope: public diagnostic guidance only. No runtime, permission, model, scheduler,
+retry policy or target adoption changes are made by this documentation.
+
 ## Preserve safe failure-stage diagnostics — 2026-10-16
 
 Parent commit: `d539d832e571044d150f8a963e99be22228e27a0`.
