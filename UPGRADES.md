@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve safe failure-stage diagnostics — 2026-10-16
+
+Parent commit: `d539d832e571044d150f8a963e99be22228e27a0`.
+
+Change: `DIAGNOSTICS.md` adds a portable logging example and checks for an error
+whose underlying stage is hidden by a generic response. Keep fixed stage labels,
+allowlisted exception classes and retained-buffer metadata separate from raw
+errors and operational outcome claims.
+
+Distilled lesson: a protective hold can be correct while its cause remains
+unknown. Diagnose the original attempt before another submission. Logging must
+preserve the original exception, cleanup, admission and retry behavior.
+
+Validation: ten independent synthetic differential controls passed for the
+parent workflow's candidate diagnostics, including failure paths, cleanup and
+logger failures. The original live cause remains unknown; the candidate is not
+yet deployed. This public change is guidance and example code only.
+Public validation: all seven offline module self-tests and 131 unit tests passed
+on Windows with Python 3.11. No target adoption follows from these checks.
+
 ## Verify worker evidence delivery — 2026-10-16
 
 Parent commit: `09a7b7dc17dcca5500f54642246e84ce3d1a4160`.

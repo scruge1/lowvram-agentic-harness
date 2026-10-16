@@ -203,6 +203,42 @@ The compact object contains no command, path, output or exception text. The
 surrounding existing trace still contains argv/stdout/stderr and must not be
 published as a sanitized diagnostic without a separate privacy review.
 
+## Errors hidden by a generic response
+
+A protective error can be correct while concealing the failing stage. Preserve
+the original attempt and inspect existing records first. If they contain only
+the generic response, add diagnostics at the catch boundary that still has the
+original exception. Keep the public response, admission checks, cleanup,
+deadlines and retry policy unchanged.
+
+Use fixed host stage labels and an allowlist of exception classes. Do not log
+exception text, locals, source lines, credentials, prompts or raw stderr. For
+example, inside the existing exception handler:
+
+```python
+# stage is a fixed host label, such as "spawn" or "validate_result".
+try:
+    name = type(error).__name__
+    safe_name = name if name in {"ValueError", "OSError", "TimeoutError"} else "OtherError"
+    logger.warning("operation_failed stage=%s exception_class=%s", stage, safe_name)
+except BaseException:
+    pass  # A failed diagnostic must not replace the original failure.
+# Continue the existing failure and cleanup path.
+```
+
+An allowlisted module label and line number can identify a failing check without
+exporting a path or traceback text. If recording stream metadata, label hashes
+and sizes as the **retained capped buffers**. Overflow or unsettled readers can
+leave the full stream unknown. Do not call a buffer snapshot an exit, cleanup or
+remote-outcome proof. Absence of a matching task at one snapshot is scoped
+evidence, not permission to resubmit an uncertain request.
+
+Check the diagnostic change against the same success and failure paths. Compare
+return values, exceptions, process calls, lock release and cleanup with the
+previous source. Also check that a failed logger preserves those outcomes.
+Source tests qualify the diagnostic change; only a later authorized normal-path
+observation can identify the live cause. Keep the earlier failed case failed.
+
 ## Per-process CPU samples
 
 Cumulative CPU time is not current CPU load. Sample the same process generation
