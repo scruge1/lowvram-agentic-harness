@@ -157,6 +157,13 @@ A matching OS or CLI version also does not prove an optional backend is availabl
 use a bounded compatibility check that preserves the required permissions.
 Do not weaken the permission profile just to obtain a passing result.
 
+Bind file checks to the existing owner's file roles. An advisory lock can have
+a different accepted mode from private inputs or backups. Check the exact lock
+path, regular-file type, owner, group, mode, link count and size. Check the held
+descriptor against the named file and retain the existing lock protocol. A
+reviewed compatibility correction for one fixed lock does not relax private-file
+checks or authorize changing host permissions.
+
 Persist the selected observation before waiting for cleanup. Record a process's
 exit separately from pipe-drain completion and descendant settlement. Identify
 owned processes before stopping them; do not infer ownership from a similar name.
@@ -183,10 +190,21 @@ code. Test the assembled packet: a matching pair passes, a stale pair refuses,
 and the required caller identity still applies. File custody, runtime capability
 and action permission remain separate checks.
 
+When loading reviewed code, verify its selected hash before module initialization,
+then compile and execute those same held bytes. Importing the pathname after a
+successful hash check reads it again; the earlier check does not bind that later
+read. Preserve the existing module identity and relative-path requirements.
+
 A checker can refuse before its structured error handler runs. Retain bounded
 stderr and the exit status before parsing stdout. Preserve that failed attempt.
 After a source correction, review and select the corrected packet explicitly;
 do not weaken the hash check or replay the original attempt.
+
+Export a bounded failure stage and message from the outer owner when the normal
+handler cannot run. Preserve the primary failure stage after a successful receipt
+write; report a receipt-write failure separately. A later read-only reconciliation
+can establish the observed source, scheduler and history state. It does not turn
+the original attempt into success or grant an automatic retry.
 
 ## Exercise the operation used by the runtime
 

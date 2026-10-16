@@ -5,6 +5,34 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bind installation checks to actual file roles — 2026-10-16
+
+Parent commit: `a0f33e626259ef6cd62957c6a62695c29d06768c`.
+
+Change: `DIAGNOSTICS.md` checks the existing owner's exact lock metadata without
+relaxing private-input checks. It also requires checking selected source bytes
+before module initialization, executing those same held bytes, and preserving
+the primary failure stage when a receipt is written successfully.
+
+Distilled lesson: a private-file check can reject a valid existing advisory lock
+with a different mode. Reconcile the actual failed attempt before selecting a
+narrow compatibility correction. Keep the original failure, source pins and
+history; do not change permissions or retry automatically to obtain a pass.
+
+Source-workflow validation: 28 CPU control groups passed, including actual lock
+admission and receipt methods with simulated metadata and storage. They did not
+qualify Linux filesystem effects. A separate corrected native operation verified
+five source replacements and the scheduler entry under the existing locks,
+preserving source-history bindings with zero model calls or history writes.
+That result does not prove later useful work or continuous operation.
+
+Public validation: all seven offline self-tests passed on Windows/Python3.11;
+`git diff --check` passed. Hosted validation follows this documentation commit.
+
+Public scope: diagnostic guidance only. No executable behaviour, installation,
+permission, model, scheduler or retry policy changes in this package. Existing
+target owners must qualify their own operation.
+
 ## Preserve file checks across Windows runtimes — 2026-10-16
 
 Parent commit: `450459f9134e3d166d3a3b856497b9662754ded4`.
