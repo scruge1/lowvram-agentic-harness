@@ -541,6 +541,66 @@ fresh native response and the retained model-facing content before accepting the
 input path. Source fit, successful execution, correct review content and later
 useful consumption are separate acceptance claims.
 
+## Budget each model request separately
+
+A producer request can fit while the independent reviewer request exceeds the
+same limit. The reviewer can include instructions, the original binding, source
+excerpts, the complete candidate, claim IDs and repeated critical fields. Measure
+its final serialized bytes as a separate boundary. Do not infer fit from the
+producer, source-file size or candidate size alone.
+
+This synthetic example builds both requests without files, network or a model:
+
+```python
+import json
+
+
+def bounded_json_request(instruction, body, max_bytes):
+    payload = json.dumps(
+        body, ensure_ascii=False, allow_nan=False,
+        sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+    request = instruction.encode("utf-8") + b"\nDATA\n" + payload
+    if len(request) > max_bytes:
+        raise ValueError("complete request exceeds byte limit")
+    return request
+
+
+evidence = {"facts": ["x" * 100]}  # Synthetic size data, not factual evidence.
+limit = 240
+producer = bounded_json_request("Produce an advisory.", evidence, limit)
+assert len(producer) <= limit
+review_body = {
+    "binding": {"request_id": "synthetic-1", "generation": "a" * 64},
+    "candidate": {"advice": "y" * 90},
+    "sources": evidence,
+}
+try:
+    bounded_json_request("Review the complete advisory.", review_body, limit)
+except ValueError:
+    pass  # Refuse this review request; do not dispatch or retry the producer.
+else:
+    raise AssertionError("oversized reviewer request was accepted")
+```
+
+Use the actual serializers and retained model-facing messages in the owning
+system; this example does not reproduce an SDK or grant execution authority.
+Count UTF-8 bytes after escaping, and check outer result-frame limits separately.
+Byte limits and token limits are different constraints.
+
+Exercise small and larger allowed candidates without removing binding fields,
+policy or uncertainty. A narrow margin for one ASCII fixture is not a bound for
+all allowed Unicode, quotes or answer lengths. Recheck the actual request before
+dispatch. Preserve an earlier producer result if review input is refused.
+
+If a compact evidence projection is selected, retain and bind its original
+source. Preserve each requirement, authority limit and explicit unknown. A
+reference such as "keep the required unknowns" is sufficient only when their
+full values remain visible in both actual requests. Do not replace evidence
+with hashes or assume unavailable recovery tools will supply it. Source fit,
+prepared SDK context, physical provider delivery and useful review remain
+separate claims.
+
 ## Retain the exact serialized context
 
 A context hash alone cannot recover the messages it identifies. SDKs can add

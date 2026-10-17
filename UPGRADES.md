@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Budget the downstream review request — 2026-10-17
+
+Parent commit: `8c4c8bf5a52b974dbd645aceceaa96db35cd0844`.
+
+Change: `DIAGNOSTICS.md` adds a standalone serialization example where producer
+input fits and reviewer input refuses. It accounts for the complete candidate,
+binding and evidence rather than inferring fit from one upstream request.
+
+Distilled lesson: check every model boundary with its own actual serializer.
+Keep policy, bindings and explicit unknowns when selecting compact evidence;
+retain the full source and verify both model-facing requests. A narrow ASCII
+fixture margin does not bound every allowed output. Preserve an already consumed
+producer result when review input is too large; no automatic producer replay.
+
+Validation: run the synthetic example and existing offline release gate before
+publication. This exports pure example code and guidance only. It does not
+install a projection, change limits, run inference or prove target adoption,
+provider delivery, review quality or continuous useful work.
+
 ## Defer shared-slot work before reservation — 2026-10-17
 
 Parent commit: `ed0b668dfd1c23c51b02d3edb19219dc21646dae`.
