@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve grouped numbers in diagnostic projections — 2026-10-17
+
+Parent commit: `951725fd8cf1fe6469dd18240425c5080da0c373`.
+
+Change: `DIAGNOSTICS.md` includes runnable standard-library code that keeps
+complete comma-grouped quantities and rejects malformed, signed and scientific
+suffix matches. Structured telemetry remains the preferred input. No runtime
+parser, collector, controller or new inference dependency is installed.
+
+Distilled lesson: a numeric-only metadata projection can preserve privacy while
+still reporting a false value. Token suffixes cannot establish a context budget
+or explain a slow summary. Retain the failed projection, distinguish a
+tool-enabled request from actual tool execution, and leave provider queue and
+generation time unmeasured when the evidence does not separate them.
+
+Validation: run the embedded example and the existing complete offline release
+gate before publication. Exact-commit hosted checks are recorded after they
+finish. These package checks do not repair old observations or prove parser
+adoption, semantic fidelity or performance on another runtime.
+
 ## Match owner callback invocation contracts — 2026-10-17
 
 Parent commit: `76ca83040d32397d928c9a6fde1b80ec02af17c4`.

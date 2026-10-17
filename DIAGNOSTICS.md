@@ -608,6 +608,44 @@ owner, launch evidence and effect boundary before cleanup. A later readiness
 response can coexist with an older helper still running; retain both observations
 and leave unmeasured permission changes or descendant settlement unknown.
 
+## Preserve complete numeric values in log projections
+
+Prefer structured counters from the existing observer. When a bounded log
+projection is necessary, preserve the complete numeric literal. A pattern that
+starts after a comma can turn `12,345 tokens` into `345 tokens` and suggest a
+false context limit. This small example supports nonnegative decimal quantities
+with optional standard comma grouping; signed, scientific and malformed forms
+remain unmatched:
+
+```python
+from decimal import Decimal
+import re
+
+UNIT_VALUE = re.compile(
+    r"(?<![\w.,+\-\u2212])"
+    r"(?P<number>(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?)"
+    r"\s*(?P<unit>tokens|ms|seconds)\b",
+    re.IGNORECASE,
+)
+
+def numeric_units(text):
+    return [
+        (Decimal(match["number"].replace(",", "")), match["unit"].lower())
+        for match in UNIT_VALUE.finditer(text)
+    ]
+
+assert numeric_units("12,345 tokens; 2.5 seconds") == [
+    (Decimal("12345"), "tokens"), (Decimal("2.5"), "seconds")
+]
+assert numeric_units("12,34 tokens; -7 tokens; 1e3 tokens; 1.2.3 ms") == []
+```
+
+Keep the original failed projection and mark its numeric conclusions unqualified.
+Correcting the parser does not correct an old measurement or justify another
+runtime query. A recognized number and unit still do not identify the counter's
+meaning, request, model, timing stage or cause. Bind those through the existing
+source and observation contract before selecting an optimization.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;
