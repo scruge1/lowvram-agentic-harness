@@ -541,6 +541,39 @@ fresh native response and the retained model-facing content before accepting the
 input path. Source fit, successful execution, correct review content and later
 useful consumption are separate acceptance claims.
 
+Resolve the effective limit before treating a rehearsal refusal as a runtime
+failure. A test can deliberately use a conservative floor while the native
+runtime scales its budget with the context window. Check constructor behavior,
+profile configuration, tool registration overrides and the actual delivery path.
+Label substituted registry entries or configuration readers as fixtures. Check
+both result and turn budgets. Do not raise a production limit to fix a refusal
+that occurred only under a fixture's smaller limit.
+
+## Make the worker's completion action explicit
+
+If complete evidence arrives but a worker generates text until its deadline,
+inspect its actual loaded instructions and native tool sequence. A prose answer
+is not necessarily the workflow's required review transition. Test a narrow
+instruction change through the existing role surface before adding an engine,
+changing models or increasing the deadline. The
+[advisory review example](examples/advisory-review-instructions.txt) asks an
+already admitted worker to submit a short review through its existing tool, then
+stop. Its word limit is guidance, not a host-enforced token or time bound.
+
+Keep source, model settings, tools and deadline comparable. Preserve the failed
+run. An existing owner may select one continuation with exact task, origin,
+failed-row and source bindings; that does not create a general retry policy.
+Check the new prompt, complete evidence, tool arguments and return, final stop,
+process settlement, independent content review and delivery separately. One
+successful continuation does not establish causal improvement or sustained work.
+
+Inspect the owner's completion operation before using it to close the task.
+Completion can remove scratch workspaces, create a separate approval history
+row, recompute dependencies or invoke hooks. Keep durable evidence in its
+existing owner-controlled location before selecting those effects. Do not delete
+receipts merely to make an accepted advisory show a completed status. A reviewed
+result and its native task status can remain distinct and explicit.
+
 ## Budget each model request separately
 
 A producer request can fit while the independent reviewer request exceeds the

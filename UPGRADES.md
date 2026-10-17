@@ -5,6 +5,36 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Separate review output, completion and evidence retention — 2026-10-17
+
+Parent commit: `f54fdd564b161b2c74c42ed6098e0cb01ef48b51`.
+
+Change: export a small advisory-role instruction example and extend
+`DIAGNOSTICS.md` to check the effective native delivery budget, required workflow
+transition and task-completion side effects. The example uses already admitted
+`kanban_request_review` and `kanban_block` tools. It is advisory-only text, not a
+new dispatcher, authority source or hard output budget.
+
+Distilled evidence: one local worker received complete evidence but timed out
+without a review transition. A selected role instruction and one owner-controlled
+continuation produced a 70-word review, native review transition and normal exit
+within the unchanged deadline. The failed history remained. Actual prompt and
+tool-message checks confirmed role and evidence delivery; independent review
+accepted the answer only within its supplied source scope. This single case does
+not isolate causality or prove general reliability or continuous useful work.
+
+A conservative input rehearsal also refused a history size that the normal
+context-scaled budget retained. No production budget change was needed. Separately,
+native task completion would have deleted scratch evidence, so explicit advisory
+acceptance and preserved native review state remained distinct. Reuse owner
+evidence retention; do not add a new store or disable cleanup globally.
+
+Validation: prompt and documentation changes only. The existing offline release
+gate passed all 21 checks, including seven self-tests, on Windows/Python3.11;
+lint also passed. Target owners must verify actual role
+loading, admission, output, settlement and delivery; this example grants none of
+those claims and does not approve a general retry.
+
 ## Check source pins against real read budgets — 2026-10-17
 
 Parent commit: `6987e260f1e6a19d9c8fd73b356ee560f2e683fa`.
