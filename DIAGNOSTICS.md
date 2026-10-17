@@ -298,6 +298,53 @@ the review. Check a complete answer, an incomplete answer and individual missing
 requirements. Keep source support and answer completeness separate; a coverage
 component alone cannot authorize final acceptance or execution.
 
+## Give a source reviewer explicit claim text
+
+If a reviewer receives claim IDs separately from a large answer, check whether it
+must repeatedly resolve each ID back to a field. Compare a direct ordered claim
+view against that representation while keeping the answer, sources, model,
+instructions, output schema and budgets fixed. Treat this as a hypothesis until
+the comparison runs; smaller input alone does not prove better or faster work.
+
+Build the view on the host from the validated, bound answer. A recommendation
+enum can use its existing owner-defined meaning. Keep the raw enum separately;
+do not invent a meaning from model output:
+
+```python
+raw_fields = {
+    "recommendation": "keep",
+    "observation": "The observation is dated.",
+}
+# Selected and validated by the existing protected owner, not by the reviewer.
+enum_meanings = {
+    "keep": "Preserve the documented rule; no new action permission is granted.",
+}
+claim_units = [
+    {"id": field, "text": enum_meanings[text]
+     if field == "recommendation" else text}
+    for field, text in raw_fields.items()
+]
+raw_recommendation = raw_fields["recommendation"]
+assert claim_units[1]["text"] == raw_fields["observation"]
+assert raw_recommendation == "keep"
+```
+
+Use the existing validated field extractor and ordering. Reject an enum without
+an admitted meaning. Retain the original answer bytes and citations unchanged,
+even when the source-phase view omits duplicate metadata. Verify their exact
+source association first. Bind the view to the original request, answer bytes,
+source windows and selected owner-contract version. Reconstruct it from those
+protected inputs at acceptance; model-supplied IDs or hashes cannot define it.
+
+Keep source-free answer completeness separate from source support. Give neither
+component the other's verdict as evidence. Preserve explicit unknowns as typed
+unknowns, and retain raw model selections separately from host-derived text.
+Check a complete positive and a relevant contradiction through the actual
+adapter. A bounded pair is not general reviewer accuracy, deployment or useful
+continuous operation. If owner policy later changes, version it and interpret
+old history under its original contract. Do not add a citation or wording patch
+for each failed response.
+
 ## Compare Python source with the same parser
 
 AST dump formats can differ between Python runtimes. A fingerprint mismatch

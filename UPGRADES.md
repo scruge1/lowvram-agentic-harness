@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Supply explicit claim text and preserve raw answers — 2026-10-17
+
+Parent commit: `8d14a1f13696a3a60f9f287612aed09ca05c4fb9`.
+
+Change: the diagnostic guide includes a small host-side code example for an
+ordered claim view. It retains non-enum text exactly, uses only an existing
+owner-defined recommendation meaning and preserves the raw enum separately.
+It requires original answer/citation custody, source association, owner-version
+binding and acceptance-time reconstruction. Reuse the existing field extractor;
+this adds no new runtime helper, controller, registry or model dependency.
+
+Distilled lesson: valid references and complete retained lines can still leave
+the model resolving indirect field IDs or an ambiguous enum. One bounded private
+positive/contradiction comparison passed after direct claim text replaced that
+indirection, with the answer, sources, schema, model, instructions and budgets
+fixed. The positive had relevant witnesses for all factual clauses; the negative
+refused the actual unsafe clause. Earlier failures remain retained. This is not
+a general causal, performance or semantic-accuracy claim.
+
+Validation: documentation-only change; the existing full offline release gate
+and exact-head hosted checks are recorded after they run. Package checks and a
+bounded private pair do not prove target adoption or useful continuous work.
+Owner-policy changes still require versioned native admission and ordinary work.
+
 ## Resolve complete numbered source lines — 2026-10-17
 
 Parent commit: `a6881b052adced5daf5c5496378b1fe48ef11fc8`.
