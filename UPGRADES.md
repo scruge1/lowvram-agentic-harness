@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Resolve complete numbered source lines — 2026-10-17
+
+Parent commit: `a6881b052adced5daf5c5496378b1fe48ef11fc8`.
+
+Change: `harness.line_evidence.resolve_numbered_line` verifies a bounded numbered
+window against expected excerpt and unnumbered-content hashes. It resolves one
+exact integer line reference and retains the complete line with its hashes.
+Blank and Markdown heading lines refuse as factual witness locations. The helper
+does not read files, execute source, authenticate supplied references or judge
+whether a line supports a claim.
+
+Distilled lesson: a fixed-length source quote can omit the clause that matters.
+Selecting a location and deriving complete text avoids that byte loss. A later
+model test still selected a wrong supporting line, despite correct full-line
+retention. That result remained held; a valid location did not become semantic
+acceptance. Keep raw model selections separate from host-derived source text.
+
+Public validation: eight focused tests cover late clauses, Unicode identity,
+exact numbering, both hash bindings, integer and span validation, headings,
+inclusive byte/line limits and source-free error messages. Full release and
+exact-head hosted results are recorded after validation. No private reviewer
+adoption or general semantic accuracy follows from this portable helper.
+
 ## Compare paired source bytes with one Python parser — 2026-10-17
 
 Parent commit: `7701943e57ef354aa583813a5d058224b292f614`.

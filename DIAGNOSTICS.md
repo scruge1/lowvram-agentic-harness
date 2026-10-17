@@ -1,5 +1,33 @@
 # Evidence-first diagnostics
 
+## Retain complete source lines
+
+A short source quote can stop before a necessary qualification. Prefer a model
+selection such as `{source_index, line_number}` and let the host derive the
+complete selected line from its existing bound source window:
+
+```python
+from harness.line_evidence import resolve_numbered_line
+
+derived = resolve_numbered_line(
+    numbered_excerpt, bound_reference["span"], line_number,
+    excerpt_sha256=bound_reference["excerpt_sha256"],
+    content_sha256=bound_reference["content_sha256"],
+)
+```
+
+The window contains exact contiguous `N: text` lines, at most64 lines and8,000
+UTF-8 bytes. Its content hash covers unnumbered lines joined with LF. Keep the
+expected hashes in the existing owner-bound request; model-supplied replacement
+hashes do not authenticate a source. The helper checks consistency with the
+supplied reference and performs no file reads or whole-file verification.
+
+Retain original model selections alongside the derived text, source identity and
+request binding. Recompute derived evidence before acceptance. Reject blank and
+Markdown heading-only factual witnesses. A present complete line can still be
+irrelevant or omit another clause's support: location, hashes and valid JSON do
+not establish entailment, current runtime state or execution authority.
+
 When a task reports slowness, investigate the measured constraint before changing
 code, adding capacity, replacing a model, or introducing a cache. Apply this rule
 at task intake and before selecting an optimization. Use the existing project
