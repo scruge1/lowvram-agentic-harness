@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Compare paired source bytes with one Python parser — 2026-10-17
+
+Parent commit: `7701943e57ef354aa583813a5d058224b292f614`.
+
+Change: `harness.source_compare.compare_named_functions` takes both byte strings
+and selected top-level function names. It records byte identity separately from
+same-parser AST comparisons, binds both source hashes and records the parser
+version. Missing, nested-only or duplicate names refuse. Source is not executed.
+
+Distilled lesson: a read-only installed-source capture produced different AST
+hashes even for a byte-identical caller. Those cross-runtime hashes were not
+accepted as code-difference evidence. Matching the observed checker hash to an
+exact retained copy allowed both versions to be parsed in one process; all five
+selected functions then matched. Original false comparison flags were preserved
+and their interpretation was superseded. This did not establish current process
+population, loaded code, downstream execution or refresh permission.
+
+Public validation: eight focused tests cover formatting, body changes, changed
+globals outside selected functions, no execution, ambiguity, async functions,
+Unicode byte limits and invalid inputs. The complete release gate and exact-head
+platform checks are recorded separately after validation/publication. AST hashes
+are not portable semantic proofs or whole-program equivalence.
+
 ## Qualify the decoder's empty-array representation — 2026-10-17
 
 Parent commit: `21e35857ef2655bdac6a8882d810df217f777212`.

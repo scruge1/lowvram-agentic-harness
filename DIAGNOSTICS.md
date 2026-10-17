@@ -270,6 +270,32 @@ the review. Check a complete answer, an incomplete answer and individual missing
 requirements. Keep source support and answer completeness separate; a coverage
 component alone cannot authorize final acceptance or execution.
 
+## Compare Python source with the same parser
+
+AST dump formats can differ between Python runtimes. A fingerprint mismatch
+from two machines does not establish a code change, even with line attributes
+excluded. First compare full source hashes. When selected function structure
+matters, parse both exact source byte strings together:
+
+```python
+from harness.source_compare import compare_named_functions
+
+result = compare_named_functions(
+    b"def f(): return 1\n",
+    b"# moved\ndef f(): return 1\n",
+    ["f"],
+)
+assert result["all_selected_functions_equal"]
+assert not result["source_bytes_equal"]
+```
+
+The helper records both source hashes, the parser version and each selected
+function's AST hash. Missing, nested-only or duplicate top-level names refuse.
+It parses source without executing it. Keep native-file provenance separate:
+a retained copy can represent an observed file only when its full byte hash
+matches that dated observation. Matching selected functions says nothing about
+changed globals, other functions, loaded runtime identity or actual behaviour.
+
 ## Check the decoder's schema subset
 
 A valid JSON Schema does not prove that a decoder enforces every constraint.
