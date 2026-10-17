@@ -271,6 +271,40 @@ A failure before counters are created leaves them unobserved, not measured
 zero. Preparation without a provider payload is not a model answer or review
 verdict. Preserve the original failed attempt and its admission state.
 
+## Check the owner's actual callback arguments
+
+Two components can pass their own checks and still disagree at the boundary.
+For example, an owner may call `read(path)` while its supplied reader requires
+`read(path, limit)`. Check every actual call shape before publication. A missing
+default can fail before the owner acquires its first lock or emits state evidence.
+
+Keep the strict reader unchanged. If the existing owner contract supplies a
+default limit, adapt only that calling convention:
+
+```python
+from inspect import signature
+
+
+def bind_owner_reader(strict_read):
+    def owner_read(path, limit=2_000_000):
+        return strict_read(path, limit)
+
+    for arguments in (("owner.lock",), ("state.json", 64_000)):
+        signature(owner_read).bind(*arguments)
+    return owner_read
+```
+
+The signature check does not call the reader. Use call shapes from the actual
+owner, including keyword arguments where applicable. Then exercise that owner
+with authorized fixtures, stopping before unselected effects. Include legitimate
+empty lock files when the existing reader permits them. Retain its size, path,
+ownership, permission and stable-read checks. Verify both forward and recovery
+bindings if they share the adapter.
+
+An argument check proves neither an OS lock nor a publication. Preserve a failed
+invocation as failed; absent state or receipt fields are unobserved. A corrected
+adapter needs its own selected invocation and native result.
+
 ## Separate quote selection from attribution
 
 When evidence must quote an answer, let the model select the quote and derive

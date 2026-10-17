@@ -5,6 +5,28 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Match owner callback invocation contracts — 2026-10-17
+
+Parent commit: `76ca83040d32397d928c9a6fde1b80ec02af17c4`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that supplies
+an existing owner's default read limit and checks its actual positional call
+shapes without performing a read. It preserves the strict reader and requires
+actual owner-path checks, legitimate empty-file handling and both forward and
+recovery bindings. No new runtime helper or controller is added.
+
+Distilled lesson: individually qualified components can disagree about callback
+arguments. A live refusal before the first lock exposed a required argument
+where the owner expected a default. The narrow adapter correction preserved
+reader policy. Source checks, a selected guarded publication and later normal
+work are separate evidence; a successful publication does not accept a model's
+answer. The original failed invocation must remain failed.
+
+Validation: run the example's invocation checks and the existing full offline
+release gate before publication. Exact-commit hosted checks are recorded after
+they finish. These package checks do not qualify another host's owner, locks,
+publication, model output or continuous operation.
+
 ## Supply explicit claim text and preserve raw answers — 2026-10-17
 
 Parent commit: `8d14a1f13696a3a60f9f287612aed09ca05c4fb9`.
