@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Derive quote attribution on the host — 2026-10-17
+
+Parent commit: `0b285ba995e76087a0d4f20be588c6c793526b9a`.
+
+Change: `harness.quote_evidence.attribute_quote` resolves an exact model-selected
+quote against host-bound fields. It refuses absent or multiple-field matches,
+returns every UTF-8 byte span within the unique field, and records field and
+quote hashes. It preserves overlapping occurrences without normalization.
+The raw response, request and candidate bindings remain the caller's responsibility.
+
+Distilled lesson: choosing a field identifier can be unnecessary model work.
+Separate quote selection from deterministic attribution. Exact membership still
+does not prove that a quote supports the requested conclusion. An earlier answer
+with unrelated but exact quotes stays incorrect after attribution.
+
+Private source validation: one incomplete-answer and one complete-answer model
+test matched their expected coverage decisions; all three positive quotes were
+independently checked for relevance. This is a limited component pair, not broad
+accuracy, source support, useful continuous operation or target adoption.
+
+Public validation: all 21 release checks passed on Windows/Python3.11, including
+the unit suite and seven offline self-tests. Eight focused tests cover ambiguity,
+absent matches, Unicode byte offsets, overlaps, unchanged inputs, invalid inputs
+and the distinction between membership and meaning. Local Ruff0.11.8 and
+`git diff --check` passed; pinned hosted lint remains a separate check.
+The helper has no I/O, inference, scheduler, persistent state or admission effect.
+
 ## Review the requested conclusion as well as individual claims — 2026-10-17
 
 Parent commit: `3f15bc680d47bbd3f785ab9e0f66a10af503e793`.

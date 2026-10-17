@@ -243,6 +243,33 @@ A failure before counters are created leaves them unobserved, not measured
 zero. Preparation without a provider payload is not a model answer or review
 verdict. Preserve the original failed attempt and its admission state.
 
+## Separate quote selection from attribution
+
+When evidence must quote an answer, let the model select the quote and derive
+its field on the host. Give the host exact fields from the bound candidate,
+not a field map supplied by the model:
+
+```python
+from harness.quote_evidence import attribute_quote
+
+derived = attribute_quote("The queue is empty.", {
+    "observation": "The queue is empty.",
+    "scope": "The service status is unknown.",
+})
+assert derived["field"] == "observation"
+assert derived["utf8_spans"] == [{"start": 0, "end": 19}]
+```
+
+Absent or multiple-field matches refuse. Repeated matches in one field retain
+all UTF-8 byte spans, including overlaps. Keep the raw response unchanged and
+store derived evidence separately, bound to the request, candidate and extractor
+source hashes. Hash shape alone does not prove those bindings.
+
+Attribution does not establish relevance. An unrelated exact quote still fails
+the review. Check a complete answer, an incomplete answer and individual missing
+requirements. Keep source support and answer completeness separate; a coverage
+component alone cannot authorize final acceptance or execution.
+
 ## Verify shared-history readers before new writes
 
 A new record can pass a new parser while an older scheduled reader rejects it.
