@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Keep production declarations in operation checks — 2026-10-17
+
+Parent commit: `0e047ae400b4ad6f7973e40fafc24d74b0b71344`.
+
+Change: `DIAGNOSTICS.md` extends the existing source-binding and owner-operation
+procedures. Fixtures must preserve the actual pin declarations and supply the
+reviewed old or new bytes at the read boundary. Recovery checks must reach the
+outer selection guard with the fields and values its later operation requires.
+
+Distilled lesson: replacing a production hash in a fixture can hide a wrong
+baseline selection. Testing only a later helper can miss an impossible exact-key
+guard. Preserve both original failures; qualify the corrected packet and its
+fresh recovery path separately. A normal start receipt is not general recovery
+acceptance or permission to reuse a consumed attempt.
+
+Validation: run the existing complete offline self-tests and release checks
+before publication. This is guidance applied to existing code examples; it adds
+no runtime component, target acceptance claim or private deployment material.
+
 ## Preserve grouped numbers in diagnostic projections — 2026-10-17
 
 Parent commit: `951725fd8cf1fe6469dd18240425c5080da0c373`.

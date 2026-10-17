@@ -236,6 +236,12 @@ code. Test the assembled packet: a matching pair passes, a stale pair refuses,
 and the required caller identity still applies. File custody, runtime capability
 and action permission remain separate checks.
 
+Keep the production pin declarations intact in those tests. Supply reviewed
+bytes at the read boundary instead of replacing the expected hash with the hash
+of whatever the fixture supplies. Check the actual old input at its old path,
+then verify that substituting the new input at that path refuses. A test that
+changes the selected pin can hide an incompatible production declaration.
+
 When loading reviewed code, verify its selected hash before module initialization,
 then compile and execute those same held bytes. Importing the pathname after a
 successful hash check reads it again; the earlier check does not bind that later
@@ -300,6 +306,13 @@ with authorized fixtures, stopping before unselected effects. Include legitimate
 empty lock files when the existing reader permits them. Retain its size, path,
 ownership, permission and stable-read checks. Verify both forward and recovery
 bindings if they share the adapter.
+
+Exercise the outer recovery entry with its complete valid selection too. A pure
+helper can pass while an earlier exact-key guard rejects fields that the entry
+later requires. Verify that the supplied values reach the real validation and
+that a wrong value refuses. Stop before unselected effects; this does not prove
+native recovery, and a consumed start attempt cannot serve as a fresh recovery
+start.
 
 An argument check proves neither an OS lock nor a publication. Preserve a failed
 invocation as failed; absent state or receipt fields are unobserved. A corrected
