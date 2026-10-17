@@ -270,6 +270,30 @@ the review. Check a complete answer, an incomplete answer and individual missing
 requirements. Keep source support and answer completeness separate; a coverage
 component alone cannot authorize final acceptance or execution.
 
+## Check the decoder's schema subset
+
+A valid JSON Schema does not prove that a decoder enforces every constraint.
+Compare the actual provider payload, returned JSON, strict host validation and
+the converter source or compiled grammar for the installed backend.
+
+For example, this representation makes empty evidence explicit:
+
+```json
+{"type": "array", "minItems": 0, "maxItems": 0, "const": []}
+```
+
+In [this pinned converter source](https://github.com/ggml-org/llama.cpp/blob/9dcf84e5ae2718947188b539aab8b9c2b15d3ba1/common/json-schema-to-grammar.cpp),
+array bounds are handled inside the branch requiring `items` or `prefixItems`.
+An array schema without either reaches a generic array fallback. The `const`
+branch instead encodes the exact empty array. This describes that revision;
+verify each target's actual converter and supported schema subset.
+
+Keep host validation strict. A model can make the correct judgment but return
+malformed evidence. Preserve that failed response and its actual rejection;
+do not normalize it into a successful result. Test a fresh request with unchanged
+candidate, criteria and limits after a narrow schema correction. Separate source
+fit and finite model results from universal decoder enforcement or deployment.
+
 ## Verify shared-history readers before new writes
 
 A new record can pass a new parser while an older scheduled reader rejects it.

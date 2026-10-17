@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Qualify the decoder's empty-array representation — 2026-10-17
+
+Parent commit: `21e35857ef2655bdac6a8882d810df217f777212`.
+
+Change: `DIAGNOSTICS.md` supplies an explicit `const: []` empty-evidence schema
+and the exact upstream converter branch that motivates it. It keeps payload,
+decoder conversion, strict host validation and semantic correctness separate.
+
+Distilled lesson: a single-omission review identified the missing explanation
+and supported the other two, but emitted prose inside unsupported evidence.
+The strict parser correctly refused it. The examined converter skips array
+bounds when an array schema has neither items nor prefixItems. Its earlier
+constant branch supports an explicit empty-array literal.
+
+Source-workflow validation: adding only the constant preserved the schema's
+intended meaning in 15 finite validator checks. Three fresh single-omission
+model cases then passed independent checks of the exact judgment pattern,
+relevant quotes, host attribution and valid empty evidence. Candidate bytes,
+criteria, parser and execution limits were unchanged. The old failure remains
+failed. No compiled converter witness, universal accuracy or live adoption is
+claimed. Full source review remains a separate obligation.
+
+Public scope: documentation and a copyable schema literal only. Executable code
+is unchanged from the parent that passed the local 21-check release gate and
+both hosted platform jobs. This change passes `git diff --check`; its own hosted
+checks are recorded separately after publication.
+
 ## Derive quote attribution on the host — 2026-10-17
 
 Parent commit: `0b285ba995e76087a0d4f20be588c6c793526b9a`.
