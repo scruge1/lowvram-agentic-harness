@@ -487,6 +487,68 @@ fresh native response and the retained model-facing content before accepting the
 input path. Source fit, successful execution, correct review content and later
 useful consumption are separate acceptance claims.
 
+## Retain the exact serialized context
+
+A context hash alone cannot recover the messages it identifies. SDKs can add
+timestamps or other fields before the hash boundary. Capture the exact serialized
+text used by that hash once, then retain the text beside the digest. Rebuilding a
+similar object later does not establish which context was prepared.
+
+Retaining only a parsed object can also lose the original field order when
+custody sorts nested keys. An exact JSON string survives that outer sorting.
+Parse it for inspection and hash its original UTF-8 bytes for comparison. Keep
+the existing serializer and hash domain; do not translate between serializers.
+
+This standalone example uses synthetic data and no files, network or model:
+
+```python
+import hashlib
+import json
+
+
+def read_context(receipt, max_bytes=16384):
+    if set(receipt) != {"prepared_json", "prepared_sha256"}:
+        raise ValueError("unexpected receipt fields")
+    text = receipt["prepared_json"]
+    if not isinstance(text, str) or not 0 < len(text.encode("utf-8")) <= max_bytes:
+        raise ValueError("missing or oversized context")
+    if hashlib.sha256(text.encode("utf-8")).hexdigest() != receipt["prepared_sha256"]:
+        raise ValueError("context digest mismatch")
+    context = json.loads(text)
+    if not isinstance(context, dict):
+        raise ValueError("context must be an object")
+    return context
+
+
+prepared = {
+    "model": "synthetic-local-model",
+    "messages": [{"role": "user", "content": "Synthetic input", "timestamp": 1234}],
+    "tools": [],
+}
+# Capture once at the actual boundary, including dynamically added metadata.
+snapshot = json.dumps(prepared, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+receipt = {
+    "prepared_json": snapshot,
+    "prepared_sha256": hashlib.sha256(snapshot.encode("utf-8")).hexdigest(),
+}
+stored = json.dumps(receipt, sort_keys=True, ensure_ascii=False)
+restored = json.loads(stored)
+assert read_context(restored) == prepared
+assert restored["prepared_json"] == snapshot
+
+# The same parsed values with sorted keys do not preserve the original bytes.
+sorted_snapshot = json.dumps(prepared, sort_keys=True, separators=(",", ":"))
+assert json.loads(sorted_snapshot) == prepared
+assert hashlib.sha256(sorted_snapshot.encode("utf-8")).hexdigest() != receipt["prepared_sha256"]
+```
+
+Keep complete-result limits as well as the inner context limit. JSON escaping
+can enlarge the outer frame. Preserve an oversize refusal rather than truncating
+the context or accepting a hash-only fallback. This example checks retention;
+the owner still verifies the expected roles, complete content, source binding,
+freshness and permitted actions. Prepared SDK context and physical provider
+delivery are separate observations. A matching digest grants no authority.
+
 ## Bound a complete source section
 
 If an instruction source exceeds the reader's body cap, refuse it or maintain a

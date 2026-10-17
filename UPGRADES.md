@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Retain the serialized context beside its hash — 2026-10-17
+
+Parent commit: `093cd4f34bcc9c610cb60fb08103a530bf7046ea`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that preserves
+the exact context JSON text across custody that sorts object keys. It bounds the
+retained bytes, checks their digest and recovers the complete object for review.
+
+Distilled lesson: timestamps and other SDK metadata can make later reconstruction
+impossible. A parsed object can lose the insertion order used by the original
+hash. Retain one serialization at the actual hash boundary, with the existing
+serializer and hash domain. Keep failure evidence and existing outer-frame caps;
+do not replace a refused full result with hash-only success.
+
+Validation: run the standalone synthetic example and the complete existing
+offline release gate before publication. This adds guidance and public example
+code, not a runtime collector or private source material. Package checks do not
+prove target adoption, source fidelity, inference or physical provider delivery.
+
 ## Keep production declarations in operation checks — 2026-10-17
 
 Parent commit: `0e047ae400b4ad6f7973e40fafc24d74b0b71344`.
