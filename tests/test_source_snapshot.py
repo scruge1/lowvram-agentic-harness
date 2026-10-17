@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from harness.source_snapshot import stable_snapshot
+from harness.source_snapshot import pinned_snapshot, stable_snapshot
 
 
 class SourceSnapshotTests(unittest.TestCase):
@@ -116,6 +116,44 @@ class SourceSnapshotTests(unittest.TestCase):
     def test_relative_source_is_refused(self):
         with self.assertRaises(ValueError):
             stable_snapshot(Path("source.md"))
+
+    def test_real_large_pin_requires_an_explicit_sufficient_budget(self):
+        source = b"public test bytes\n" * 40000
+        self.path.write_bytes(source)
+        digest = hashlib.sha256(source).hexdigest()
+        with self.assertRaises(ValueError):
+            stable_snapshot(self.path)
+        result = pinned_snapshot(self.path, len(source), digest,
+                                 max_bytes=len(source))
+        self.assertEqual(result["source"], source)
+        self.assertEqual(result["source_sha256"], digest)
+
+    def test_declared_pin_over_budget_refuses_before_open(self):
+        with patch("harness.source_snapshot.os.open") as opening:
+            with self.assertRaises(ValueError):
+                pinned_snapshot(self.path, 1025, "a" * 64, max_bytes=1024)
+        opening.assert_not_called()
+
+    def test_wrong_size_or_hash_pin_is_refused(self):
+        source = self.path.read_bytes()
+        digest = hashlib.sha256(source).hexdigest()
+        for size, expected in ((len(source) + 1, digest),
+                               (len(source), "0" * 64)):
+            with self.subTest(size=size, digest=expected), self.assertRaises(ValueError):
+                pinned_snapshot(self.path, size, expected,
+                                max_bytes=len(source) + 1)
+
+    def test_invalid_pin_or_budget_refuses_before_open(self):
+        cases = ((True, "a" * 64, 10), (1, "A" * 64, 10),
+                 (1, "g" * 64, 10), (1, "a" * 63, 10),
+                 (1, None, 10), (1, "a" * 64, True),
+                 (0, "a" * 64, 10), (1, "a" * 64, 0))
+        with patch("harness.source_snapshot.os.open") as opening:
+            for size, digest, budget in cases:
+                with self.subTest(size=size, digest=digest, budget=budget), \
+                        self.assertRaises(ValueError):
+                    pinned_snapshot(self.path, size, digest, max_bytes=budget)
+        opening.assert_not_called()
 
 
 if __name__ == "__main__":

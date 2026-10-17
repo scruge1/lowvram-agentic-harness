@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check source pins against real read budgets — 2026-10-17
+
+Parent commit: `6987e260f1e6a19d9c8fd73b356ee560f2e683fa`.
+
+Change: `harness.source_snapshot.pinned_snapshot` adds an explicit pin-size and
+byte-budget preflight around the existing stable reader, then checks actual
+bytes against the selected size and hash. Four added tests cover a real file
+larger than the default limit, refusal before I/O, mismatched pins and invalid
+declarations. `DIAGNOSTICS.md` adds runnable budget and UTC examples, cache
+publication checks and separate retrieval/delivery/answer acceptance.
+
+Lineage: the consistent-handle reader already existed in `a0f33e6`. Reuse it;
+do not rediscover a reader or infer target adoption from a public implementation.
+An older adapter can retain a superseded metadata comparison despite a newer
+correct reference. A mocked hash provider can also bypass the real read limit.
+
+Validation: eleven focused tests and the complete local release gate passed
+on Windows/Python3.11:21 checks, including seven offline self-tests. Platform
+CI and target adoption remain separate checks.
+This exports standard-library read-only code and synthetic examples. It adds
+no authority provider, general answer verifier, cache controller, inference or
+runtime rollout. Existing target owners still qualify their own installed path
+and complete result; earlier failed receipts remain failed.
+
 ## Budget the downstream review request — 2026-10-17
 
 Parent commit: `8c4c8bf5a52b974dbd645aceceaa96db35cd0844`.

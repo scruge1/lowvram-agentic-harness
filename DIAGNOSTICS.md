@@ -710,6 +710,100 @@ no authority, owner attestation, continuous pathname lock or OS time bound.
 After a wrapper failure, retain the original outcome and inspect its actual
 error stage before changing the runtime, dropping a check or replaying effects.
 
+## Check the pin against the actual read budget
+
+A valid hash declaration can still select a file that the reader cannot open
+within its byte limit. Check the maintained pin's declared size against the
+selected budget before I/O. Test that path through the actual bounded reader;
+a fixture that supplies hash-approved bytes can hide an incompatible limit.
+
+`pinned_snapshot` reuses the existing consistent-handle reader. Its byte budget
+is mandatory. It checks the declared size before opening the file, then checks
+the actual stable bytes against both the size and SHA256 pin.
+
+```python
+import hashlib
+from pathlib import Path
+import tempfile
+from harness.source_snapshot import pinned_snapshot
+
+payload = b"public source example\n"
+with tempfile.TemporaryDirectory() as folder:
+    source = Path(folder).resolve() / "state.bin"
+    source.write_bytes(payload)
+    snapshot = pinned_snapshot(
+        source, len(payload), hashlib.sha256(payload).hexdigest(), max_bytes=256)
+    assert snapshot["source"] == payload
+    try:
+        pinned_snapshot(source, 257, "a" * 64, max_bytes=256)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("An impossible pin must refuse before reading")
+```
+
+The owner selects the authorized canonical path, pin and budget. The helper
+does not authenticate that owner or increase the budget from the file's own
+size. An oversized pin needs an explicit owner disposition; it is not a reason
+for an automatic larger read or a replay of an uncertain operation. Qualify
+the consumer's real interpreter and entry path as well as maintenance tests.
+
+## Keep comparison time domains explicit
+
+Preserve the original timestamp literal and its offset. Normalize comparison
+values to UTC; refuse missing offsets. A zone conversion can change the calendar
+day. Do not combine a local date with a UTC time or treat a display label as
+evidence that a parser preserved UTC.
+
+```python
+from datetime import datetime, timezone
+
+def utc_timestamp(value):
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.utcoffset() is None:
+        raise ValueError("An explicit timestamp offset is required")
+    return parsed.astimezone(timezone.utc)
+
+source_literal = "2030-07-02T00:15:00+01:00"
+assert utc_timestamp(source_literal).isoformat() == "2030-07-01T23:15:00+00:00"
+assert utc_timestamp("2030-07-01T23:16:00Z") > utc_timestamp(source_literal)
+try:
+    utc_timestamp("2030-07-01T23:16:00")
+except ValueError:
+    pass
+else:
+    raise AssertionError("A naive timestamp must refuse")
+```
+
+This is comparison evidence, not a freshness lease or an OS deadline. Keep
+monotonic time for local wait budgets. After a verification failure, inspect
+the actual runtime before restarting it: a failed time comparison can reject
+a working process. Retain that failed receipt and qualify a later observation
+separately.
+
+## Separate capture, publication and answer accuracy
+
+A normal read can schedule a complete collector while returning an older cached
+snapshot. Fresh capture files can precede publication of that snapshot in memory.
+Use the existing cache readiness interface and coherent source observations;
+do not infer completed publication from file freshness alone. Account for all
+guarded readers that the normal refresh can invoke, even for a single-project
+request. Bound successful status observations and local waiting, and state any
+unbounded blocking I/O. Do not retry failed HTTP calls or relax age checks to
+produce success.
+
+Check each requested source. Returning current instructions does not complete
+a request for a separate project brief. Inspect the complete returned report
+and source fields within the full-frame budget; a report count alone is not
+preservation evidence. Distinguish brief report fields from original document
+bodies and a retained native response from an independent upstream capture.
+
+Keep retrieval, delivery and final-answer accuracy separate. Compare quoted
+dates with their exact source values. A response that grants no action
+permission does not establish whether an existing owner authorization exists.
+The runtime owner must check authority before action. These are acceptance
+requirements, not a claim that this package supplies a general answer verifier.
+
 ## Process observation
 
 The host-run stage trace and trusted-task command records include

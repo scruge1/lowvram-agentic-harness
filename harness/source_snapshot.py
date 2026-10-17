@@ -62,3 +62,25 @@ def stable_snapshot(path, max_bytes=524288):
                 "source_stamp": _stamp(before)}
     finally:
         os.close(descriptor)
+
+
+def pinned_snapshot(path, expected_bytes, expected_sha256, *, max_bytes):
+    """Read an authorized source against a caller-selected pin and byte budget.
+
+    Reject an impossible declared size before I/O. Never infer or increase the
+    budget from the file being read. Matching bytes do not attest the pin's
+    owner, source authority, freshness, or permission to execute its contents.
+    """
+    if (type(expected_bytes) is not int or expected_bytes <= 0
+            or type(max_bytes) is not int or max_bytes <= 0):
+        raise ValueError("Pin size and byte budget must be positive integers")
+    if (type(expected_sha256) is not str or len(expected_sha256) != 64
+            or any(char not in "0123456789abcdef" for char in expected_sha256)):
+        raise ValueError("The source pin requires a lowercase SHA256 digest")
+    if expected_bytes > max_bytes:
+        raise ValueError("Declared source size exceeds the selected byte budget")
+    result = stable_snapshot(path, max_bytes)
+    if (result["source_bytes"] != expected_bytes
+            or result["source_sha256"] != expected_sha256):
+        raise ValueError("Snapshot differs from the selected source pin")
+    return result
