@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Defer shared-slot work before reservation — 2026-10-17
+
+Parent commit: `ed0b668dfd1c23c51b02d3edb19219dc21646dae`.
+
+Change: `DIAGNOSTICS.md` adds a standalone standard-library classification
+example and a procedure for checking backend capacity before reserving new work.
+Explicit exit status, timeout and settlement are separate checks. Busy or unknown
+metadata defers work; unresolved child custody retains the owned handle and
+stops further admission through the existing owner.
+
+Distilled lesson: a timeout after reservation can leave an uncertain attempt.
+An idle status snapshot does not reserve the backend, and a GPU memory queue
+does not establish a request lease. Preserve uncertain history and qualify each
+route and normal dispatch path before claiming wider adoption.
+
+Validation: run the synthetic classification and refusal cases plus the existing
+offline release gate before publication. This exports guidance and pure example
+code, with no backend request, scheduler, lease implementation or private data.
+Package checks do not establish native admission, job completion or continuous
+useful operation.
+
 ## Retain the serialized context beside its hash — 2026-10-17
 
 Parent commit: `093cd4f34bcc9c610cb60fb08103a530bf7046ea`.

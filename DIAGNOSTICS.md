@@ -189,6 +189,60 @@ and immutability. Align time zones and clock sources before joining logs. A stat
 record's `updated_at` can change after completion and measure later bookkeeping.
 Keep the original failure and its boundaries when a later readiness check passes.
 
+## Check capacity before reserving work
+
+When several callers share one model slot, check the existing backend metadata
+before consuming a new attempt. Busy or unknown metadata should defer that work
+without creating a reservation. Keep the existing locked novelty and authority
+checks at dispatch. An idle observation is not an exclusive lease: another
+caller can arrive between the observation and dispatch. Reuse an existing
+request lease when one is qualified; a GPU memory allowance alone is not one.
+
+Use the actual route and its documented metadata schema. Bound the read through
+the existing owned transport. Require explicit successful exit and settlement;
+a settled child can still have timed out or exited unsuccessfully. Preserve an
+unsettled child's owned handle and stop admission through the existing owner.
+Do not start another probe while that custody remains unresolved.
+
+This standalone example classifies an already decoded, bounded metadata result
+for a qualified single-slot schema. The owning reader must reject duplicate
+JSON keys, non-finite values, wrong endpoints and redirects before this step.
+It retains the full result and process evidence separately.
+
+```python
+def capacity_state(receipt, slots):
+    if type(receipt) is not dict or receipt.get("settled") is not True:
+        raise RuntimeError("retain owned handle; metadata custody unresolved")
+    code = receipt.get("exit_code")
+    if type(code) is not int or code != 0 or receipt.get("timeout") is not False:
+        return "unknown"
+    if type(slots) is not list or len(slots) != 1 or type(slots[0]) is not dict:
+        return "unknown"
+    slot = slots[0]
+    if type(slot.get("id")) is not int or slot["id"] != 0:
+        return "unknown"
+    busy = slot.get("is_processing")
+    if type(busy) is not bool:
+        return "unknown"
+    return "busy" if busy else "snapshot_idle"
+
+
+clean = {"settled": True, "exit_code": 0, "timeout": False}
+idle = [{"id": 0, "is_processing": False}]
+assert capacity_state(clean, idle) == "snapshot_idle"
+assert capacity_state(clean, [{"id": 0, "is_processing": True}]) == "busy"
+assert capacity_state({**clean, "exit_code": 1}, idle) == "unknown"
+assert capacity_state({**clean, "timeout": True}, idle) == "unknown"
+assert capacity_state(clean, [{"id": 0, "is_processing": "false"}]) == "unknown"
+```
+
+Place this classification before the existing reservation call, rather than in
+a persistence callback used after reservation. Check the busy and unknown paths
+for zero reservation and queue writes. Qualify the actual loaded function and
+its process owner separately from pure classification. A successful metadata
+read does not prove that the normal dispatch branch ran, a useful job completed,
+all routes use the check, or an uncertain prior attempt can be replayed.
+
 ## Separate platform setup from the requested command
 
 A document-only request can still cause its host to prepare a runtime before
