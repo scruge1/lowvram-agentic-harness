@@ -1428,6 +1428,60 @@ Verify the new process identity, readiness, unchanged settings and released owne
 handles. Restore availability before unrelated qualification work. A connected
 process still needs a separate user-facing behavior check.
 
+## Preserve evidence before workspace cleanup
+
+Inspect the normal completion path before marking a task done. It can remove a
+scratch workspace after committing the task state. A saved summary or a path in
+prose does not prove that settlement receipts survive that cleanup.
+
+Inventory the actual workspace. Include failed runs and consumed attempt markers,
+as well as the successful result. Reuse the existing artifact or attachment store.
+Check which files its API copies: it may require an explicit artifact list.
+
+Derive the destination through the actual store API. Database, profile, workspace
+and attachment roots can have separate settings. A process-local override must
+use a supported setting and remain readable through the normal consumer.
+
+After copying, verify original and destination bytes, registration rows and normal
+retrieval. Keep task/run history unchanged while qualifying preservation. For a
+small fixed inventory, this pure check illustrates the required coverage:
+
+```python
+from hashlib import sha256
+
+
+def require_preserved(required, copied, registered, readable):
+    for name, digest in required.items():
+        if (len(digest) != 64 or
+                any(char not in "0123456789abcdef" for char in digest)):
+            raise ValueError("Invalid required digest")
+        if (copied.get(name) != digest or
+                name not in registered or name not in readable):
+            raise ValueError("Required evidence is not preserved")
+
+
+required = {name: sha256(name.encode()).hexdigest()
+            for name in ("failed-receipt", "success-receipt", "attempt-marker")}
+names = set(required)
+require_preserved(required, dict(required), names, names)
+incomplete = dict(required)
+incomplete.pop("attempt-marker")
+try:
+    require_preserved(required, incomplete, names, names)
+except ValueError:
+    pass
+else:
+    raise AssertionError("Omitted attempt evidence must refuse")
+```
+
+These fixture maps are not storage evidence or permission to delete anything.
+Actual acceptance needs measured bytes and the existing store's readback. File
+and directory flushes do not replace a crash-recovery test. If an attempt refuses,
+retain its outcome and inspect partial effects before selecting a correction.
+The native helper may already clean up its own partial copies; describe that
+behavior accurately. Preserving evidence does not require completing the task,
+and it does not prove automatic result delivery to the original interface.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;

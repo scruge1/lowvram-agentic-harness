@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve completion evidence through the existing store — 2026-10-18
+
+Parent commit: `45685b4cf8235f6d0ea59445ce986bf136168416`.
+
+Change: `DIAGNOSTICS.md` adds a fixed-inventory coverage example and a procedure
+for preserving receipts before normal workspace cleanup. It distinguishes the
+database, profile, workspace and attachment roots, and checks normal retrieval.
+
+Distilled evidence: an actual workspace held two settlement receipts and a
+consumed continuation marker. Neither run declared those artifacts. The first
+preservation operation refused before copying because the native store resolved
+a shared attachment root while the operation required the project root. A
+supported process-local root setting corrected that binding. One later native
+operation copied all three exact files, registered three attachments and verified
+them through the existing list/get/context methods. Original files, task state
+and run history stayed unchanged. The failed operation remains retained.
+
+Validation: the private target's native copy and metadata retrieval passed within
+that scope. The public example and package checks are recorded separately in the
+PR. This adds no runtime API, copier, store or cleanup operation. Worker file-body
+delivery, crash recovery and automatic return to the original chat remain
+separate adoption evidence.
+
 ## Match captured streams to the program — 2026-10-18
 
 Parent commit: `6aa9c8df02f394af160f0f89703759e0dd2aa9cd`.
