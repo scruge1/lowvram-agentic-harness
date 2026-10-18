@@ -1231,6 +1231,71 @@ only that earlier stage. Test an actual data outage separately before claiming
 that other routes continue during it. Use existing telemetry and receipts;
 this procedure adds no scheduler, store or execution authority.
 
+## Check every shared-history reader before a format change
+
+A producer can accept its own new packet while older consumers refuse the
+shared history after its first reservation. Check the exact selected readers,
+including complete-history validation, new-work eligibility and the reservation
+recheck under the owner lock. Testing the producer alone misses this failure.
+
+This small example checks decoder compatibility only. The accepted contract
+comes from protected configuration. It grants no work or write authority.
+
+```python
+KNOWN_CONTRACT = "b" * 64
+
+
+def read_v1(packet):
+    if (set(packet) != {"schema", "request_id"}
+            or packet["schema"] != "work/v1"
+            or not isinstance(packet["request_id"], str)):
+        raise ValueError("unsupported retained packet")
+
+
+def read_v2(packet):
+    if packet.get("schema") == "work/v1":
+        return read_v1(packet)
+    if (set(packet) != {"schema", "request_id", "owner_contract"}
+            or packet["schema"] != "work/v2"
+            or not isinstance(packet["request_id"], str)
+            or packet["owner_contract"] != KNOWN_CONTRACT):
+        raise ValueError("unknown retained contract")
+
+
+packet = {"schema": "work/v2", "request_id": "review-1",
+          "owner_contract": KNOWN_CONTRACT}
+read_v2(packet)  # Producer acceptance alone is insufficient.
+try:
+    for reader in (read_v2, read_v1):
+        reader(packet)
+except ValueError:
+    pass  # Hold before reservation; an older consumer cannot read it.
+else:
+    raise AssertionError("incompatible consumer was missed")
+
+for reader in (read_v2, read_v2):
+    reader(packet)
+try:
+    read_v2(dict(packet, owner_contract="c" * 64))
+except ValueError:
+    pass
+else:
+    raise AssertionError("unknown contract was accepted")
+```
+
+Use the real retained bytes, bindings and source associations in target tests.
+Keep old records unchanged. Do not remove new fields, skip historical rows or
+relabel an uncertain attempt to satisfy an older reader. Preserve route-owned
+current selection and repair types; readable history is not current admission.
+Qualify every repeated history scan, including the actual reservation helper.
+A patch limited to an outer audit can leave that helper broken.
+
+Roll out a coherent protected source closure through the existing owner. Source
+tests do not prove installed compatibility or continuous work. Check the normal
+entry, original-row preservation and later scheduled behaviour before claiming
+that the running worker recovered. Generic failed-cycle logs alone do not
+identify the cause of every failure.
+
 ## Check the method that the composed worker executes
 
 A passing helper test can miss a guard inherited by the real worker. Before

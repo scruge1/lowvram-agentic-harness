@@ -161,6 +161,29 @@ Full platform release CI remains required. Earlier local unit-suite timeouts
 remain unresolved. Target owners still need their actual loaded host, complete
 request, output and normal-cycle evidence; this guidance grants no retry.
 
+## Check every shared-history reader before a format change — 2026-10-18
+
+Parent commit: `a45a6433385b20ba393f07c41a4af3597f7a7440`.
+
+Change: add a portable decoder-compatibility example and the checks needed
+before a new producer format enters shared history. Reuse the existing owner,
+source closure, lock and store. No runtime API or additional registry is added.
+
+Distilled evidence: an actual whole-entry diagnostic located a strict older
+consumer rejecting a retained packet that its newer producer could read. An
+initial outer-audit correction missed repeated scans in new-work eligibility
+and locked reservation. It was held before placement. Three narrow decoder
+candidates preserve all other original function and class ASTs. CPU controls
+cover the exact retained packet, unknown contracts, current-selection and repair
+boundaries, and the actual reservation helper with an in-memory owner double.
+The candidates' native placement, running adoption and useful continuous work
+remain separate qualification steps. Existing generic failed-cycle logs do not
+establish this cause for every cycle.
+
+Validation: the executable example, pinned lint and all seven offline
+self-tests passed. Platform release CI remains required. These checks do not
+qualify a target's runtime adoption.
+
 ## Separate freshness, material identity and failure scope — 2026-10-18
 
 Parent commit: `d4cc688e2caab6b5aebbc4b526da1b9f3b7bfa90`.
