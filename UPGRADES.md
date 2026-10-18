@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check versioned startup paths before publication — 2026-10-18
+
+Parent commit: `fe0386a377e3fb3a115ab483c48cf4bd18c2f400`.
+
+Change: extend `DIAGNOSTICS.md` with checks for candidate self-location,
+independent contract pins and installed startup validation. Distinguish a failed
+wrapper from an issued service-start command. Reuse the existing owner lifecycle
+and recovery evidence. No runtime code, new controller or retry authority is added.
+
+Distilled evidence: an internally consistent generated publication retained an
+older self-location literal. Its first start wrapper failed before issuing the
+service-start command. An exact forward correction passed the candidate guard,
+then the stopped installed guard. One actual start produced a new connected
+process with retained settings and closed owner handles. The failed candidate
+and receipts remain available. Connected readiness does not establish correct
+answers, physical-device use or useful continuous work.
+
+Validation: documentation checks, lint and all seven offline self-tests passed.
+Full platform release CI and target behavior remain separate
+acceptance stages. Earlier local unit-suite timeouts remain unresolved.
+
 ## Verify the composed worker and its independent pins — 2026-10-18
 
 Parent commit: `e8688a7a4bd13661466fe61999b03ed2b72f31ae`.

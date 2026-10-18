@@ -1081,6 +1081,27 @@ phase actually ran, and whether retained work changed. Visiting every route with
 no model call proves bounded traversal and model-free idle for those cycles.
 It does not prove useful work, fairness under load or continuous operation.
 
+## Check versioned startup paths before publication
+
+A new filename and matching manifest hashes can still contain an old literal
+self-location guard. Check the candidate's own expected path, parent references,
+contract hash and generated manifest together. Update only the references whose
+meaning changed; a retained parent version can still be correct.
+
+Run the existing effect-free validation prefix with the candidate bound to its
+intended installed filename before publication. A staging filename can produce a
+different result. Record whether this checked candidate bytes or installed bytes.
+After publication, check the actual installed guard before the first service
+start. Source consistency alone does not prove startup readiness.
+
+Keep the point where the service-start command is issued explicit. A wrapper
+failure before that point is different from an uncertain start command. Preserve
+the failed program and receipts. Use one reviewed forward correction and the
+existing owner lifecycle; do not infer permission to retry an uncertain start.
+Verify the new process identity, readiness, unchanged settings and released owner
+handles. Restore availability before unrelated qualification work. A connected
+process still needs a separate user-facing behavior check.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;
