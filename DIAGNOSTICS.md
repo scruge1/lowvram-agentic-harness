@@ -320,6 +320,55 @@ write; report a receipt-write failure separately. A later read-only reconciliati
 can establish the observed source, scheduler and history state. It does not turn
 the original attempt into success or grant an automatic retry.
 
+## Capture volatile state immediately before use
+
+A shared snapshot can change while an action waits for review. Keep the reviewed
+action, source bytes and target set fixed. Then use the existing owner path to
+capture fresh state and conditionally perform that selected action in one finite
+sequence. Preserve the freshness checks at each effect; do not make an old
+snapshot optional or approve new actions from whatever the next read returns.
+
+This standard-library fixture constructs an output map in memory. The owner
+supplies its fixed scope before either observation. These are independent fixture
+cases, not execution permission or an automatic retry:
+
+```python
+from copy import deepcopy
+from hashlib import sha256
+
+source = b"fixture bytes"
+reviewed_scope = ("construct_fixture", "fixture.txt", sha256(source).hexdigest())
+owner_selected_scope = reviewed_scope
+state = {"rows": ["retained"]}
+early = deepcopy(state)
+state["rows"].append("other work")
+
+
+def construct_output(snapshot, selected_scope):
+    if selected_scope != reviewed_scope or snapshot != state:
+        return None
+    return {"fixture.txt": source}
+
+
+assert construct_output(early, owner_selected_scope) is None
+fresh = deepcopy(state)
+assert construct_output(fresh, owner_selected_scope) == {"fixture.txt": source}
+assert construct_output(fresh, ("different_action",)) is None
+state["rows"].append("changed before use")
+assert construct_output(fresh, owner_selected_scope) is None
+```
+
+Retain separate complete capture and action receipts. Bind the action to the
+actual captured bytes, metadata and full history map, then verify the required
+before/after invariants. Preserve any earlier failed attempt as failed. A new
+conditional attempt needs its own owner selection; never loop until a guard passes.
+
+Use one shared deadline for the sequence, including transport and cleanup. If an
+existing read-only audit hook persists for a Python process, use separate owned
+processes for capture and writing. A new module does not remove that hook. Reuse
+the existing locks, source checks and finite transport rather than adding another
+controller. A current mismatch does not by itself prove a past failure's cause.
+
 ## Exercise the operation used by the runtime
 
 An adapter can build a valid output schema while its actual operation still

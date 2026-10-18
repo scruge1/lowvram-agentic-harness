@@ -5,6 +5,28 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Capture volatile state at use — 2026-10-18
+
+Parent commit: `5dc5393cafbec72221fd1d6b94a4e8c190b90b9c`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library fixture that keeps an
+owner-selected action scope fixed while checking a fresh shared snapshot. It
+demonstrates refusal for old state, a different action and a change before use.
+The example constructs data only; it writes no files or control state.
+
+Distilled evidence: a dated shared-state binding no longer matched a later
+read-only observation. Previously observed rows remained while another row was
+present. The exact historical first failing predicate remained unknown. A
+separately selected finite capture-then-stage sequence retained both complete
+receipts and preserved current history and active sources. Its reader and writer
+checks stayed intact. Separate processes respected the reader's persistent audit
+hook; the sequence used one common deadline.
+
+Validation: the example, pinned Ruff 0.16.10 and all seven offline self-tests
+passed locally. Hosted checks, target source checks, native operation results and
+actual worker adoption remain separate. No public runtime API, authority provider,
+scheduler or automatic retry is added.
+
 ## Separate host envelopes from model inputs — 2026-10-18
 
 Parent commit: `d2db1b98d1f936852f1822e72e79194db1d3fe1d`.
