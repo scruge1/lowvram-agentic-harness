@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Keep review test labels outside model metadata — 2026-10-18
+
+Parent commit: `f14979f3dd69b28a5e3f7b88ea44868dab7e46eb`.
+
+Change: `DIAGNOSTICS.md` adds a standard-library example that creates a new
+opaque test request ID and keeps its case label and expected decision in a
+separate host record. Existing production bindings and receipts stay immutable.
+This is test-preparation guidance, not a new runtime or grading authority.
+
+Distilled evidence: an unselected qualification draft excluded an explicit
+expected-decision field but placed descriptive case names in request IDs.
+The coverage and source input builders copied those bindings into model data.
+Source review held the draft before inference. The relevant boundary is the
+actual model-facing payload, including metadata, rather than a host-side flag
+that says the expected answer was excluded.
+
+Validation: the copyable example ran locally; pinned lint and all seven offline
+self-tests passed. Hosted checks and resulting source publication are recorded
+separately. This change claims neither a corrected native result, a blind
+benchmark nor improved model accuracy.
+
 ## Bind the startup guard's profile environment — 2026-10-18
 
 Parent commit: `9e256a537f57a46ee7d06110f03cabcc3c0711a3`.

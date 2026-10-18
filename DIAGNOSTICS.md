@@ -480,6 +480,42 @@ a retained copy can represent an observed file only when its full byte hash
 matches that dated observation. Matching selected functions says nothing about
 changed globals, other functions, loaded runtime identity or actual behaviour.
 
+## Keep evaluation case labels outside model inputs
+
+A case name such as `missing_comparison` can reveal the intended defect through
+a request ID or binding. Omitting the expected-answer field is not enough.
+Inspect the assembled instructions, user data and metadata that actually reach
+the model, including any case names copied into those fields.
+
+When creating a new detached test request, assign its ID before building the
+binding. Keep the label and expected answer in a separate host record:
+
+```python
+from uuid import uuid4
+
+
+def prepare_review_case(candidate, case_label, expected_decision):
+    request_id = f"review-{uuid4().hex}"
+    model_data = {"request_id": request_id, "candidate": candidate}
+    private_expected = {
+        "request_id": request_id,
+        "case_label": case_label,
+        "expected_decision": expected_decision,
+    }
+    return model_data, private_expected
+```
+
+Send only `model_data` through the existing reviewed request builder. Keep
+`private_expected` outside provider input. Retain the original request ID in
+both records so later grading can join the result. Do not rewrite an existing
+production request, binding or receipt to make it fit this example.
+
+Check the actual prepared payloads, not only the helper's return values. Keep
+candidate content, grading criteria and legitimate wording unchanged; an
+ordinary word such as "complete" in a policy is not itself a leaked case label.
+Opaque IDs alone do not prove a blind evaluation. Preserve any contaminated
+result and separate a corrected test from native adoption or general accuracy.
+
 ## Check the decoder's schema subset
 
 A valid JSON Schema does not prove that a decoder enforces every constraint.
