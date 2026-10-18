@@ -276,6 +276,14 @@ authorize machine permission changes or install a sandbox backend.
 
 A caller and its checker can each match a reviewed file hash while selecting
 incompatible versions. Check the relationship between them as well as each file.
+Bind the bytes produced by the actual runtime encoder. Compact JSON and JSON
+with spaces can decode to the same value while having different hashes. Reuse
+the existing runtime freeze or serialization function. Record artifact and native
+byte counts and hashes separately, then check decoded equality when comparing
+representations. Keep the exact native hash check; do not replace it with
+semantic equality. Retain a failed observation and select any corrected
+qualification explicitly before another attempt.
+
 For a checker that pins its input, verify both edges using host-reviewed values:
 
 ```python

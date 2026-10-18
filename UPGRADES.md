@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bind requests to runtime serialization — 2026-10-18
+
+Parent commit: `ec080a3de3d05f1711d46496c6cf62dbfcfb4cf5`.
+
+Change: extend `DIAGNOSTICS.md` to distinguish a planning artifact's byte identity
+from the existing runtime encoder's byte identity. Reuse that encoder, retain
+both hashes and byte counts, and verify decoded equality while preserving the
+exact native hash guard. No new encoder, store, controller or runtime is added.
+
+Distilled evidence: a loaded qualification refused a compact JSON artifact's
+hash because the existing runtime emitted JSON with spaces. The parsed packet
+and prompt were unchanged. A separately selected correction to the expected
+native identity passed the loaded check. The existing SDK then prepared the
+complete tool-free request without a provider call or inference. The original
+failed observation remained retained. This does not prove provider delivery,
+useful model output or continuous operation.
+
+Validation: documentation only. Local lint and seven offline self-tests passed.
+The local release gate ran 21 checks; its unit suite exceeded the 240-second
+limit while the other 20 checks passed. No successful full local release is
+claimed. Platform CI remains required.
+Target owners must verify their actual serializer, complete native request,
+admission and outputs. This guidance grants no retry or deployment authority.
+
 ## Separate review output, completion and evidence retention — 2026-10-17
 
 Parent commit: `f54fdd564b161b2c74c42ed6098e0cb01ef48b51`.
