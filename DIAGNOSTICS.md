@@ -1094,6 +1094,30 @@ different result. Record whether this checked candidate bytes or installed bytes
 After publication, check the actual installed guard before the first service
 start. Source consistency alone does not prove startup readiness.
 
+Include the consumer's required profile environment in that check. A correct
+file and path can still refuse when its expected home variable is absent. Isolate
+one context difference before changing the guard. In an existing owned validator
+process, scope an in-process override and restore both absent and empty values:
+
+```python
+import os
+
+prior = os.environ.get("APP_HOME")
+try:
+    os.environ["APP_HOME"] = expected_profile  # Host-reviewed string.
+    actual_guard(expected_profile)
+finally:
+    if prior is None:
+        os.environ.pop("APP_HOME", None)
+    else:
+        os.environ["APP_HOME"] = prior
+```
+
+This changes process-wide state; use an isolated validator without concurrent
+consumers. For an existing child-process check, supply its environment directly.
+Keep interpreter, user, path and capabilities explicit when comparing results.
+Passing a fixture context still needs the actual installed check.
+
 Keep the point where the service-start command is issued explicit. A wrapper
 failure before that point is different from an uncertain start command. Preserve
 the failed program and receipts. Use one reviewed forward correction and the

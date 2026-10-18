@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bind the startup guard's profile environment — 2026-10-18
+
+Parent commit: `9e256a537f57a46ee7d06110f03cabcc3c0711a3`.
+
+Change: extend the existing startup diagnostic with a portable scoped-environment
+example. Preserve an absent or empty previous value after success or failure.
+Keep the validator in an owned isolated process and retain the guard's checks.
+This is guidance and example code; no runtime API or execution authority changes.
+
+Distilled evidence: matching candidate bytes and paths passed one fixture while
+the installed check refused. A controlled pair using the same code and context
+isolated the required profile environment. Its refusal matched a pinned source
+predicate. A forward correction then passed the installed guard before the
+contract changed, followed by one connected native start. Original failures and
+recovery evidence were retained. A normal reply still exceeded its requested
+length, so connected startup does not establish complete behavior acceptance.
+
+The existing nested-pin, actual-caller and owner-question procedures already
+covered other failures in this work. Apply those checks to the assembled target;
+do not create another framework for the same requirements.
+
+Validation: documentation review, lint and all seven offline self-tests. Hosted
+release CI and broader target adoption remain separate checks.
+
 ## Check versioned startup paths before publication — 2026-10-18
 
 Parent commit: `fe0386a377e3fb3a115ab483c48cf4bd18c2f400`.
