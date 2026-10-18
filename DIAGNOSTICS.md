@@ -678,6 +678,74 @@ with hashes or assume unavailable recovery tools will supply it. Source fit,
 prepared SDK context, physical provider delivery and useful review remain
 separate claims.
 
+## Separate host envelope size from model input size
+
+Measure the host envelope and each model request independently. A host envelope
+can contain a duplicate answer even when the exact original answer bytes are
+already retained and passed as a separate argument. An explicit reference format
+can remove that duplicate without removing evidence from either model phase.
+
+Keep the original raw-byte digest, binding, complete sources and claim IDs.
+Resolve the reference from the supplied original bytes, then apply the existing
+strict candidate, citation, source, claim-order and join checks. Require one exact
+format and key set; old or mixed formats must refuse. Preserve native controls
+that read fields such as claim IDs. A hash alone cannot supply model evidence:
+the complete answer must still reach each phase that requires it.
+
+This synthetic example measures representation size and byte identity. It uses
+no files, network, model, recovery tool or execution authority:
+
+```python
+import hashlib
+import json
+
+
+def encode(value):
+    return json.dumps(
+        value, ensure_ascii=False, allow_nan=False,
+        sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+
+
+candidate_raw = b'{"advice": "Synthetic documentary advice."}'
+digest = hashlib.sha256(candidate_raw).hexdigest()
+expanded = {
+    "binding": {"request_id": "opaque-example"},
+    "candidate_sha256": digest,
+    "candidate": json.loads(candidate_raw),
+    "sources": [{"text": "Complete synthetic evidence."}],
+    "claims": ["advice"],
+}
+reference = {key: value for key, value in expanded.items() if key != "candidate"}
+reference["kind"] = "host-candidate-reference/v1"
+assert set(reference) == {"kind", "binding", "candidate_sha256", "sources", "claims"}
+assert reference["kind"] == "host-candidate-reference/v1"
+assert hashlib.sha256(candidate_raw).hexdigest() == reference["candidate_sha256"]
+
+restored = {key: value for key, value in reference.items() if key != "kind"}
+restored["candidate"] = json.loads(candidate_raw)
+assert encode(restored) == encode(expanded)
+assert len(encode(reference)) < len(encode(expanded))
+
+
+def model_input(body):
+    return encode({"candidate": body["candidate"], "sources": body["sources"]})
+
+
+assert model_input(restored) == model_input(expanded)
+# Equivalent parsed values do not authorize replacement of retained raw bytes.
+altered_raw = candidate_raw + b" "
+assert json.loads(altered_raw) == restored["candidate"]
+assert hashlib.sha256(altered_raw).hexdigest() != reference["candidate_sha256"]
+```
+
+Keep all existing request and aggregate bounds. A smaller host envelope can
+admit an answer whose model input still exceeds its own cap. Refuse that input
+before dispatch; never trim it or raise the limit to complete the example.
+Compare complete phase bytes before and after the change, then qualify the
+actual decoder, SDK context and normal execution path separately. Source-level
+equivalence does not establish provider delivery, lower latency or model accuracy.
+
 ## Retain the exact serialized context
 
 A context hash alone cannot recover the messages it identifies. SDKs can add

@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Separate host envelopes from model inputs — 2026-10-18
+
+Parent commit: `d2db1b98d1f936852f1822e72e79194db1d3fe1d`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that keeps the
+exact original answer bytes beside an explicit host reference. Complete sources,
+binding and claim IDs remain. The model-input constructor receives the same
+complete answer and evidence. Existing raw-byte and strict format checks remain
+necessary in the owning decoder.
+
+Distilled evidence: a larger structurally valid answer exceeded the host envelope
+limit while its separate model phase inputs fit. The original answer was already
+retained and transported separately. Removing only its duplicate host field
+recovered space; source comparisons showed identical phase bytes. Wrong raw bytes,
+mixed formats, changed source associations and claim order still refused. An
+oversized Unicode source phase also refused under its unchanged limit. This is
+source-level target evidence, not deployed behavior or a general answer-size bound.
+
+Validation: the copyable example checks size, exact reconstruction, identical
+model input and detection of a raw-byte replacement with equal parsed values.
+The example, pinned lint and all seven offline self-tests passed locally.
+Hosted checks and native SDK/model use remain separate acceptance stages.
+No public runtime API, scheduler, provider or execution authority changes.
+
 ## Keep review test labels outside model metadata — 2026-10-18
 
 Parent commit: `f14979f3dd69b28a5e3f7b88ea44868dab7e46eb`.
