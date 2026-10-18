@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Verify the composed worker and its independent pins — 2026-10-18
+
+Parent commit: `e8688a7a4bd13661466fe61999b03ed2b72f31ae`.
+
+Change: extend `DIAGNOSTICS.md` with a runnable standard-library bound-method
+example and a narrow qualification procedure. Check real inherited methods,
+constructor dependencies and independently pinned gate/caller identities.
+Separate negative-result scheduling from positive admission. No runtime API,
+scheduler, storage format or new execution authority is added.
+
+Distilled evidence: test doubles missed a real inherited generation check. A
+later inactive qualification also refused a separately pinned reviewer gate.
+Both failures were retained. A forward correction passed the real composed
+constructor and negative phase while preserving positive old-generation refusal.
+After owner publication, two normal cycles visited all routes without a model
+call or changed work records. No new eligible job ran. These observations prove
+the narrow continuation repair and bounded idle cycles, not accepted advice,
+general fairness or continuous useful operation.
+
+Validation: the executable example, lint and all seven offline self-tests passed.
+Full platform release CI remains required. Earlier local unit-suite timeouts
+remain unresolved. Target owners still need their actual loaded host, complete
+request, output and normal-cycle evidence; this guidance grants no retry.
+
 ## Separate freshness, material identity and failure scope — 2026-10-18
 
 Parent commit: `d4cc688e2caab6b5aebbc4b526da1b9f3b7bfa90`.

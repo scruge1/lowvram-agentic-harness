@@ -1036,6 +1036,51 @@ only that earlier stage. Test an actual data outage separately before claiming
 that other routes continue during it. Use existing telemetry and receipts;
 this procedure adds no scheduler, store or execution authority.
 
+## Check the method that the composed worker executes
+
+A passing helper test can miss a guard inherited by the real worker. Before
+changing admission, inspect the actual class resolution order, bound method,
+loaded module and constructor dependencies. A test double that supplies its own
+reader does not establish the behavior of an inherited production reader.
+
+This small example checks the resolved method without calling it:
+
+```python
+class EvidenceGuard:
+    def check(self, evidence_generation):
+        if evidence_generation != self.generation:
+            raise ValueError("Evidence generation differs")
+
+
+class Worker(EvidenceGuard):
+    generation = "current"
+
+
+worker = Worker()
+expected = EvidenceGuard.check  # Obtained from the independently checked module.
+assert type(worker).check is expected
+assert worker.check.__self__ is worker
+assert worker.check.__func__ is expected
+```
+
+Identity checks need the real loaded object and independently checked source;
+file presence alone is insufficient. Check separately pinned dependencies too:
+updating a factory's source hash does not update a reviewer's own literal gate
+hash or its relative caller path. Exercise the real composed constructor before
+publication. Keep a failed qualification and use a new forward candidate.
+
+Keep a narrow negative classification separate from positive admission. A known
+invalid result can be reported as held without consuming the scheduler's model
+slot, after its required source and custody checks. That must not admit valid
+evidence from the wrong generation, relax required fields, reset an uncertain
+attempt or catch arbitrary integrity failures. Verify both the specific negative
+case and the unchanged positive refusal through the real composed host.
+
+Then observe normal scheduled cycles: which routes were visited, which model
+phase actually ran, and whether retained work changed. Visiting every route with
+no model call proves bounded traversal and model-free idle for those cycles.
+It does not prove useful work, fairness under load or continuous operation.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;
