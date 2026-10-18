@@ -1329,6 +1329,48 @@ updating a factory's source hash does not update a reviewer's own literal gate
 hash or its relative caller path. Exercise the real composed constructor before
 publication. Keep a failed qualification and use a new forward candidate.
 
+Inspect the final work-admission flag after factories and wrappers. A helper
+can return false while a later factory unconditionally replaces it with true.
+Exercise that final selection through eligibility and locked reservation with
+both upstream values. Keep the neutral history-audit selection separate from
+the actual selection that admits new work.
+
+A real metadata change can add no new evidence for the selected question. Read
+the complete protected question beside its supplied excerpts. An assertion left
+in an older question does not establish what a later report contains. For a
+capture-versus-observer comparison, changed aggregate bytes and a path/size
+fingerprint do not establish a new population, consumer or recall witness.
+
+This example preserves capture while withholding new comparison work under one
+fixed owner policy. The policy is trusted source configuration, not model data:
+
+```python
+from dataclasses import dataclass, replace
+
+
+@dataclass(frozen=True)
+class ReviewSelection:
+    material_change_reviewed: bool
+
+
+def final_comparison_selection(captured):
+    # This comparison has no newly qualified comparative evidence.
+    return replace(captured, material_change_reviewed=False)
+
+
+for upstream_flag in (False, True):
+    captured = ReviewSelection(upstream_flag)
+    final = final_comparison_selection(captured)
+    assert captured.material_change_reviewed is upstream_flag
+    assert final.material_change_reviewed is False
+```
+
+This is one question's admission policy. Metadata collection and other eligible
+routes can continue. Future comparative evidence needs the existing owner's
+qualification. Keep raw packets, prior bindings and held attempts unchanged;
+correcting a question alone does not permit replay under another identifier.
+Verify that corrupted history still refuses even when new work is ineligible.
+
 Keep a narrow negative classification separate from positive admission. A known
 invalid result can be reported as held without consuming the scheduler's model
 slot, after its required source and custody checks. That must not admit valid

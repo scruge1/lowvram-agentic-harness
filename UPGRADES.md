@@ -161,6 +161,28 @@ Full platform release CI remains required. Earlier local unit-suite timeouts
 remain unresolved. Target owners still need their actual loaded host, complete
 request, output and normal-cycle evidence; this guidance grants no retry.
 
+## Check final admission against the selected question — 2026-10-18
+
+Parent commit: `e4cf56a52100c277c39318511d64daaa0e1fe892`.
+
+Change: extend the composed-worker diagnostic with a standard-library example
+of final owner selection. Keep metadata capture separate from admission of new
+comparative model work. Inspect the protected question against the complete
+actual excerpts and test the effective factory override, eligibility and locked
+reservation together. No public runtime API or new store is added.
+
+Distilled evidence: an exact retained packet and complete prompt exposed an old
+assertion that the supplied report did not support. The old and current reports
+differed only in aggregate bytes and a path/size fingerprint. A helper-only
+admission change would have been overridden by the final factory. The narrow
+correction changes that final flag and one stale question clause. Actual native
+qualification completed nine owner phases without inference, preserved all
+retained work, and checked all seventeen selected source files. This is component
+acceptance; normal scheduler adoption and useful continuous work remain separate.
+
+Validation: the new executable example, pinned lint and all seven offline
+self-tests passed. Platform release CI remains required.
+
 ## Check every shared-history reader before a format change — 2026-10-18
 
 Parent commit: `a45a6433385b20ba393f07c41a4af3597f7a7440`.
