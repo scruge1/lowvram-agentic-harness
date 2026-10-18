@@ -320,6 +320,48 @@ write; report a receipt-write failure separately. A later read-only reconciliati
 can establish the observed source, scheduler and history state. It does not turn
 the original attempt into success or grant an automatic retry.
 
+## Match captured streams to the program
+
+A failure inside an observer can come from its capture object. For example,
+`contextlib.redirect_stdout(io.StringIO())` replaces a normal text stream with
+an object that has no `reconfigure` method. Importing a script that configures
+UTF-8 output can then raise `AttributeError` before its actual task starts.
+Check the measured exception location and the program's stream calls before
+changing the program or its permissions.
+
+This standard-library example preserves the text-stream method and retains the
+actual encoded bytes in memory:
+
+```python
+import contextlib
+import io
+import sys
+
+buffer = io.BytesIO()
+capture = io.TextIOWrapper(
+    buffer, encoding="utf-8", errors="strict", write_through=True
+)
+try:
+    with contextlib.redirect_stdout(capture):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        print("result: café")
+    capture.flush()
+    raw = buffer.getvalue()
+    assert raw.decode("utf-8").splitlines() == ["result: café"]
+finally:
+    capture.close()
+```
+
+The example checks one UTF-8 configuration. Native newline translation still
+applies; retain original bytes for hashes and normalize only a test's line-ending
+comparison. An in-memory buffer does not provide a terminal or an operating
+system file descriptor. If the target needs those, reuse its existing owned
+pipe or terminal path and check that interface separately.
+
+Fix the observer, keep the original failure, and verify the corrected capture
+against the same target and effect limits. Do not turn that component check
+into whole-program, deployment or useful-work acceptance.
+
 ## Capture volatile state immediately before use
 
 A shared snapshot can change while an action waits for review. Keep the reviewed

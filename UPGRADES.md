@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Match captured streams to the program — 2026-10-18
+
+Parent commit: `6aa9c8df02f394af160f0f89703759e0dd2aa9cd`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example using a real
+text stream over an in-memory byte buffer. It supports the program's UTF-8
+`reconfigure` call and retains encoded output without filesystem writes.
+
+Distilled evidence: a bounded method check stopped at a script's output
+configuration. The observer had substituted `StringIO`, which lacks the method.
+Correcting the observer's stream interface let the same scoped method return its
+existing held result without changing the program or saved work. An earlier
+module-registration adjustment did not resolve that failure. The successful
+component check did not establish whole-entry or scheduler acceptance.
+
+Validation: the example, pinned Ruff 0.16.10 and all seven offline self-tests
+passed locally.
+Hosted checks and target adoption remain separate. No runtime API, new runner,
+model call or authority change is added to this package.
+
 ## Capture volatile state at use — 2026-10-18
 
 Parent commit: `5dc5393cafbec72221fd1d6b94a4e8c190b90b9c`.
