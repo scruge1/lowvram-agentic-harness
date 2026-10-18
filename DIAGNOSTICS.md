@@ -970,6 +970,72 @@ runtime query. A recognized number and unit still do not identify the counter's
 meaning, request, model, timing stage or cause. Bind those through the existing
 source and observation contract before selecting an optimization.
 
+## Separate fresh observations from new work
+
+When a periodic worker repeats the same review, compare its actual admitted
+input before changing the model or scheduler. A capture timestamp or a count of
+changes in the latest run can change while the material being reviewed stays
+the same. Hashing the whole status file can turn housekeeping into new work.
+
+Reacquire the authorized current sources at each assembly. Validate their
+schema, freshness and physical read constraints first. Then form an explicit,
+versioned material projection for that use case. Keep the raw source hashes
+with the observation; the material digest does not replace them. For example,
+this pure projection expects an already validated capture-metadata record:
+
+```python
+import hashlib
+import json
+
+
+def review_material_key(validated):
+    material = {name: validated[name] for name in (
+        "contract", "export_count", "manifest_path_size_sha256")}
+    encoded = json.dumps(material, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+first = {"contract": "capture-metadata/v1", "export_count": 3,
+         "manifest_path_size_sha256": "a" * 64,
+         "captured_at": 100, "changed_this_run": 2}
+refreshed = dict(first, captured_at=200, changed_this_run=0)
+changed = dict(refreshed, manifest_path_size_sha256="b" * 64)
+assert review_material_key(first) == review_material_key(refreshed)
+assert review_material_key(first) != review_material_key(changed)
+```
+
+The field selection is a domain decision, not a universal deduplication rule.
+This example identifies metadata about paths and sizes, not file contents.
+Same-size text edits, complete capture coverage and downstream consumer use
+remain unproved. Include a content identity when the actual task requires one.
+Freshness validation must still run even when the material digest is unchanged.
+
+Reuse the existing owner lock and snapshot path. Acquire current data once for
+an assembly, retain the admitted snapshot, and make loaded guards check that
+immutable snapshot. Repeated current-file reads during one model request can
+mix observations or reject an unrelated capture refresh. For unchanged
+material, reuse the original retained evidence instead of rewriting its date
+or inventing a new work identifier. A finite count or byte quota must hold at
+exhaustion; it does not establish permanent unattended operation.
+
+Keep failure scope narrow. A missing or stale current-data record can use an
+owner-defined data-hold result after source and custody checks. A corrupt
+immutable snapshot, changed code pin, wrong identity or lost lock remains a
+protected failure. Do not catch every `ValueError` around the entire assembly
+and silently continue. Small JSON can also raise `OverflowError` during numeric
+conversion or `RecursionError` during parsing; classify those only at the
+intended current-data boundary. If the implementation uses a typed exception,
+verify the loaded callback and provider use the same class instance.
+
+Check the real normal path after source tests: actual acquisition and retained
+snapshot, complete prepared input, producer and independent reviewer output,
+process settlement, then a later unchanged-material cycle with no duplicate
+model call. A cold assembly or an SDK preparation without inference establishes
+only that earlier stage. Test an actual data outage separately before claiming
+that other routes continue during it. Use existing telemetry and receipts;
+this procedure adds no scheduler, store or execution authority.
+
 ## Compact finding format
 
 Use the existing task record: symptom and objective; observation and runtime;

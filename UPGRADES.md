@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Separate freshness, material identity and failure scope — 2026-10-18
+
+Parent commit: `d4cc688e2caab6b5aebbc4b526da1b9f3b7bfa90`.
+
+Change: extend `DIAGNOSTICS.md` with a portable, standard-library material-key
+example and the checks around it. Reuse existing consistent-file readers and
+owner admission. Recheck current-source freshness for each assembly, retain one
+admitted snapshot, and distinguish unchanged material from status-file churn.
+Keep typed current-data holds separate from immutable-evidence, code and custody
+failures. No new public runtime API, controller or storage format is added.
+
+Distilled evidence: a qualified native assembly reacquired current metadata,
+reused its retained material, and prepared the complete request through one
+settled SDK child without inference. Loaded callback and provider identity was
+checked directly. Narrow parser and route-continuation controls passed source
+tests; a later owner-locked publication preserved all prior work records. These
+facts do not prove a real outage was isolated, useful model output, automatic
+consumer adoption or continuous operation. Normal output and a later duplicate
+check remain separate acceptance stages.
+
+Validation: the executable example, lint and all seven offline self-tests passed.
+Full platform release CI remains required. Earlier local unit-suite timeouts
+are retained; this documentation change does not fix them.
+The example operates on already validated metadata; its path-and-size identity
+does not establish text identity. Target owners must qualify their real source
+contract, loaded boundary, normal work and finite retention policy.
+
 ## Bind requests to runtime serialization — 2026-10-18
 
 Parent commit: `ec080a3de3d05f1711d46496c6cf62dbfcfb4cf5`.
