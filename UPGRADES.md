@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check decorated provider bindings — 2026-10-19
+
+Parent commit: 5a687a0e2fa0fbd7d47210f6943cc04a824b05e3.
+
+Change: DIAGNOSTICS.md adds a runnable standard-library example showing that
+replacing a decorated function's globals does not replace its closed-over body.
+The example keeps structured lookup errors and demonstrates a private provider
+projection without changing the original handler.
+
+Distilled evidence: an actual transaction-local input check failed after a test
+had exercised only an extracted, undecorated body. The installed wrapper still
+closed over the original body and reader. A corrected caller verified that
+relationship, bound the reviewed body to its transaction and reapplied the
+original error wrapper. Nine independent caller and refusal tests passed before
+one new native task ran and received its complete input. Earlier failed attempts
+remain retained. Their original error JSON was not exported; the binding diagnosis
+uses source identity and the observed failure, not an invented error response.
+
+Scope: diagnostic guidance and an isolated example. No runtime handler,
+transaction adapter, permission bypass or automatic retry is added. The owning
+system must qualify its actual decorated path and preserve every native guard.
+Public package checks and private target results are separate evidence.
+
 ## Check the complete effectful caller — 2026-10-19
 
 Parent commit: `8dce3b1074baeb2f60c8456771f9b006372d4989`.

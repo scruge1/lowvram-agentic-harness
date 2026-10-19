@@ -482,6 +482,73 @@ owner-selected operation only when the consumer explicitly binds both records.
 Do not invent missing success flags or rewrite the original failure. Apply this
 check at the next relevant change; do not replay a consumed rollout to test it.
 
+## Check the decorated handler's provider binding
+
+A Python decorator can close over the original function. Constructing a new
+function with different globals changes the wrapper's namespace, but does not
+replace the function stored in its closure. A test of an extracted, undecorated
+body can therefore pass while the installed decorated call uses another reader
+or database connection.
+
+This isolated example reproduces that difference. Its only decorator converts
+lookup failures to structured replies; it has no permission or dispatch logic:
+
+```python
+from functools import wraps
+from types import FunctionType
+
+
+def error_reply(function):
+    @wraps(function)
+    def wrapper():
+        try:
+            return {"ok": True, "task": function()}
+        except LookupError:
+            return {"ok": False, "error": "lookup_failed"}
+    return wrapper
+
+
+def read_task():
+    raise LookupError("the original reader cannot see the pending row")
+
+
+@error_reply
+def show_task():
+    return read_task()
+
+
+def pending_reader():
+    return {"id": "synthetic-pending-row"}
+
+
+namespace = dict(show_task.__globals__, read_task=pending_reader)
+wrong = FunctionType(
+    show_task.__code__, namespace, closure=show_task.__closure__,
+)
+assert wrong() == {"ok": False, "error": "lookup_failed"}
+
+# Rebind this known body and reapply this exact, reviewed error wrapper.
+body = show_task.__wrapped__
+bound = FunctionType(body.__code__, namespace, closure=body.__closure__)
+projected = error_reply(bound)
+assert projected() == {"ok": True, "task": {"id": "synthetic-pending-row"}}
+assert show_task() == {"ok": False, "error": "lookup_failed"}
+namespace["read_task"] = read_task
+assert projected() == {"ok": False, "error": "lookup_failed"}
+```
+
+For an actual adapter, prefer its supported provider or connection seam. Check
+the exact wrapper, wrapped body, closure contents and globals before selecting
+any private projection. Reapply all required guards; a decorator may implement
+authorization as well as error handling. This example is not a generic unwrapping
+or runtime replacement API.
+
+Exercise the complete decorated call with a pending transaction and a structured
+error result. Check its response shape before indexing a field such as task,
+and retain bounded error evidence if the shape is wrong. Keep the installed
+handler unchanged. Source and fixture checks remain separate from actual input
+delivery and a useful worker result.
+
 ## Separate quote selection from attribution
 
 When evidence must quote an answer, let the model select the quote and derive
