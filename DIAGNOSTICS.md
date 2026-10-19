@@ -471,6 +471,17 @@ An argument check proves neither an OS lock nor a publication. Preserve a failed
 invocation as failed; absent state or receipt fields are unobserved. A corrected
 adapter needs its own selected invocation and native result.
 
+When extracting an effectful helper, test the complete caller with explicit
+providers before selecting a rollout. Include namespace initialization,
+variables used after the helper returns, final checks and receipt cleanup.
+Passing the file-write helper alone does not qualify that caller.
+
+After a producer fails, check every retained consumer predicate against its
+actual failed receipt. A separate state qualification can support a later
+owner-selected operation only when the consumer explicitly binds both records.
+Do not invent missing success flags or rewrite the original failure. Apply this
+check at the next relevant change; do not replay a consumed rollout to test it.
+
 ## Separate quote selection from attribution
 
 When evidence must quote an answer, let the model select the quote and derive

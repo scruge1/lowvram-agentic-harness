@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check the complete effectful caller — 2026-10-19
+
+Parent commit: `8dce3b1074baeb2f60c8456771f9b006372d4989`.
+
+Change: `DIAGNOSTICS.md` extends the existing recovery checks to cover the
+complete caller after a helper extraction, including initialization, retained
+local variables, final checks and receipt cleanup. A file-write helper test
+alone does not establish that the full caller can finish.
+
+Distilled evidence: a real producer completed its selected writes, then failed
+when its outer caller referenced variables moved into a helper. A separate
+readback qualified the resulting state. The first later consumer refused
+because another predicate still required an absent producer success flag.
+A reviewed correction bound that predicate to the separate qualification
+while preserving the failed original. The consumed producer was not replayed.
+
+Scope: diagnostic guidance only. This adds no runtime recovery code, automatic
+retry, state qualification or execution permission. Package validation is
+separate from the retained target evidence; future callers still need their
+own complete-path checks and owner-selected native results.
+
 ## Preserve completion evidence through the existing store — 2026-10-18
 
 Parent commit: `45685b4cf8235f6d0ea59445ce986bf136168416`.
