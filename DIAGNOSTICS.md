@@ -482,6 +482,66 @@ owner-selected operation only when the consumer explicitly binds both records.
 Do not invent missing success flags or rewrite the original failure. Apply this
 check at the next relevant change; do not replay a consumed rollout to test it.
 
+## Check the complete source and pin chain before staging
+
+A source update can preserve every function and still break a static hash,
+fixed source map, sibling import or child module origin. Check the actual
+selected bytes through the complete caller before creating remote files.
+A positive test with synthetic module bodies or a substituted verifier result
+does not qualify that dependency chain.
+
+This fixed, synthetic example uses only the standard library. The outer
+selection changes first; the consumer still checks the predecessor's hash:
+
+```python
+from hashlib import sha256
+
+
+def consumer_for(adapter):
+    return (
+        "from hashlib import sha256\n"
+        f"EXPECTED = {sha256(adapter).hexdigest()!r}\n"
+        "def load(raw):\n"
+        "    if sha256(raw).hexdigest() != EXPECTED:\n"
+        "        raise ValueError('adapter source changed')\n"
+        "    namespace = {}\n"
+        "    exec(compile(raw, '<fixed-adapter>', 'exec'), namespace)\n"
+        "    return namespace['answer']()\n"
+    ).encode()
+
+
+def assemble(selection):
+    namespace = {}
+    exec(compile(selection["consumer"], "<fixed-consumer>", "exec"), namespace)
+    return namespace["load"](selection["adapter"])
+
+
+old_adapter = b"def answer(): return 'before'\n"
+new_adapter = b"def answer(): return 'after'\n"
+old_consumer = consumer_for(old_adapter)
+
+assert assemble({"adapter": old_adapter, "consumer": old_consumer}) == "before"
+try:
+    assemble({"adapter": new_adapter, "consumer": old_consumer})
+except ValueError as error:
+    assert str(error) == "adapter source changed"
+else:
+    raise AssertionError("stale consumer pin was accepted")
+
+new_consumer = consumer_for(new_adapter)
+assert assemble({"adapter": new_adapter, "consumer": new_consumer}) == "after"
+```
+
+The example executes fixed source literals, not untrusted input. It demonstrates
+one transitive pin; it does not verify an installed module, file descriptor,
+import path or child process. For a real update, enumerate those edges and
+exercise the actual bootstrap, consumer and child construction with the full
+selected module bytes. Memory or syscall providers must stay explicit.
+Reproduce the retained predecessor failure, then verify the coherent candidate.
+Qualify actual private files separately before publication. Keep any partial
+stages and failed receipts; do not weaken a guard or replay a consumed stage
+to make the result green.
+
 ## Check the decorated handler's provider binding
 
 A Python decorator can close over the original function. Constructing a new

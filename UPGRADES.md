@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Check the complete source and pin chain — 2026-10-19
+
+Parent commit: 4ab3edd1c78376d7789fb70f062ced065adaa9a9.
+
+Change: DIAGNOSTICS.md adds a runnable standard-library example of an outer
+source selection changing while a consumer retains the predecessor's static
+hash. It requires complete actual module bytes before staging, with source
+maps, imports, module origins and child construction included in the check.
+
+Distilled evidence: two source stages created partial private files before
+different transitive guards refused the selections. Provider tests had
+substituted module bodies and verifier results. A complete real-module
+composition reproduced the predecessor failure and qualified a coherent
+candidate. Separate actual file checks, one scheduler-row publication and
+a natural idle cycle then passed. Both failed stages remain preserved.
+
+Scope: diagnostic guidance and a fixed synthetic example. The example is not
+native deployment proof, an arbitrary-code loader or permission to alter a
+consumer pin. Target owners must verify their actual complete chain and
+publication. It does not establish model quality or useful continuous work.
+
 ## Check decorated provider bindings — 2026-10-19
 
 Parent commit: 5a687a0e2fa0fbd7d47210f6943cc04a824b05e3.
