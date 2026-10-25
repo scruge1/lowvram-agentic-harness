@@ -443,7 +443,14 @@ export default function (pi: ExtensionAPI) {
     if (boardAdmissionFailed) return { block: true, reason: 'Kanban admission failed for this task. Preserve the failure and repair board admission before supervised execution.' };
     if (!activeProject || !activeTask) return { block: true, reason: 'Admit the project and select its existing Kanban card before supervised execution. Planning advice is optional.' };
     if (!capabilitiesObserved || !systemToolsQueried || !memoryQueried || !knowledgeQueried) {
-      return { block: true, reason: 'Observe native capabilities and query relevant system tools, local memory and project knowledge before supervised execution.' };
+      const missing: string[] = [];
+      if (!capabilitiesObserved) missing.push('agent_capabilities');
+      if (!systemToolsQueried) missing.push('system_tool_query with relevant terms');
+      if (!memoryQueried) missing.push('mcp__mempalace__mempalace_search or validated_memory_query with a relevant query');
+      if (!knowledgeQueried) missing.push('project_knowledge_query with relevant terms');
+      return { block: true, reason: 'Discovery is incomplete. Missing successful calls: ' + missing.join('; ')
+        + '. Use tool_search to discover a missing tool and its actual argument schema, then call it. '
+        + 'A search for a tool does not execute that tool. Completed observations remain recorded until project selection or session reload resets them.' };
     }
     const project = activeProject, task = activeTask;
     try {
