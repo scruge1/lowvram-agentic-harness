@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Human-terminal optional search setup — 2026-10-25
+
+Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
+
+Use one provider catalog and home-bound settings/authentication interface for
+SearXNG, Exa, Brave, Tavily and keyless DuckDuckGo. Absent settings use only
+DuckDuckGo. Ambient credentials cannot activate an unconfigured provider;
+explicit skip wins. Keep local keys separate from Pi model authentication.
+Expose only presence/state in status, not credentials or a claim of online
+testing. Trusted helpers receive a secret holder with a redacted representation.
+
+Accept keys only through hidden direct-terminal input; abort on getpass echo
+fallback and avoid echoing accidental key arguments in parser errors. Support
+skip, revisit and local removal. Check home identity, owner permissions, file
+redirection, competing setup locks and concurrent drift before atomic writes.
+Brave stays held unless storage rights explicitly cover research artifacts and
+native session history. Official signup/plan guidance is dated and refreshable.
+
+Fourteen focused synthetic Linux tests passed. Windows ran the same fourteen:
+thirteen passed and one native-symlink control was skipped because link creation
+was unavailable. Native Windows owner/DACL handling, POSIX permissions and
+competing locks were exercised. Pinned Ruff0.16.10 and all seven existing offline
+selftests passed. No real credentials, account, provider, model, browser, package
+or service action was used. Normal managed-command dispatch, actual environment
+forwarding, bounded-child handoff and cascade adoption require their own joined
+integration checks. Local permissions are not isolation from same-user code.
+
 ## Observer credentials and independent keyword recall — 2026-10-25
 
 Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
