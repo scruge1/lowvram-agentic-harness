@@ -579,6 +579,60 @@ Upstream references: [Pi configuration](https://github.com/earendil-works/pi/blo
 [Agent Framework](https://pypi.org/project/agent-framework-core/1.21.0/),
 [Harness2](https://github.com/google-research/harness2/tree/1cfe254e8d25b15f37048c3730134686abe60335).
 
+## Advanced owned inference candidate
+
+`harness.model_service` provisions exact upstream llama.cpp and GGUF artifacts
+inside the selected home's storage. It supports explicit plan, provision,
+start, status and stop operations. It uses the permanent bootstrap sibling
+before the agent home exists. The model pin JSON is included as exact static
+data in the installed runtime and Python package.
+Native start uses the complete checkout or generated agent runtime, which supply
+the source-bound process helper.
+
+One CPU-only native test used the pinned Qwen3-VL8B Q4_K_M text route with
+context4096, output32, two threads, two batch threads and one slot. Startup took
+9.740 seconds; one request returned four output tokens in2.769 seconds. Peak
+sampled RSS/HWM was9,040,150,528 bytes. Exact process/socket/lifetime-lease cleanup
+and original model preservation passed. This establishes protocol and lifecycle
+for that fixture. Agent tool use, coding quality, vision, an8GB GPU profile and
+a default newcomer model remain unqualified.
+
+For a reviewed serving experiment, provision runtimes first with
+`bash install.sh --home /data/my-agent --runtimes-only`. In the repository, use
+that permanent Python to create the explicit selection:
+
+```bash
+AGENT_RUNTIME_PY=/data/my-agent-runtimes/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12
+"$AGENT_RUNTIME_PY" - <<'PY'
+import json
+from pathlib import Path
+from harness.model_service import specification
+selected = specification(model="qwen3vl-8b-instruct-q4-k-m", backend="cpu",
+    context=4096, max_output=32, threads=2, batch_threads=2,
+    ram_required_bytes=12 * 1024**3)
+with Path("/data/my-agent-runtimes/model-selection.json").open("x") as stream:
+    json.dump(selected, stream, indent=2)
+PY
+"$AGENT_RUNTIME_PY" -m harness.model_service --home /data/my-agent plan \
+  --specification /data/my-agent-runtimes/model-selection.json
+"$AGENT_RUNTIME_PY" -m harness.model_service --home /data/my-agent provision \
+  --specification /data/my-agent-runtimes/model-selection.json --allow-download
+"$AGENT_RUNTIME_PY" -m harness.model_service --home /data/my-agent start
+"$AGENT_RUNTIME_PY" -m harness.model_service --home /data/my-agent status
+"$AGENT_RUNTIME_PY" -m harness.model_service --home /data/my-agent stop
+```
+
+Review the plan's exact download sizes, hashes, licences and free-space checks
+before `--allow-download`. A matching local artifact can be supplied with
+`--source ARTIFACT_NAME=/absolute/file`; it is copied and hash-checked. Start
+checks the declared available RAM. Status identifies the owned loopback route
+and private API-key file without printing its secret. PID identity, socket
+ownership and inherited lifetime leases protect the explicit owned stop path.
+The stable home lease blocks runtime exchange while this consumer is active.
+CUDA execution stays held until an atomic resource-owner admission route is
+qualified. Agent-home model attachment and qualified first-project behavior
+remain separate work; the ordinary installer still attaches an existing service.
+
 ## Export inventory and remaining work
 
 The comparison covers the substantial19September Pi export, later September

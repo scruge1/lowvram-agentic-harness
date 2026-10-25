@@ -142,6 +142,13 @@ def source_files(source):
                 if file.is_symlink() or not file.resolve().is_relative_to(source.resolve()):
                     raise HomeError(f"Source escaped checkout: {file}")
                 paths.append(file)
+    model_module = source / "harness/model_service.py"
+    model_pins = source / "harness/model-service-pins.json"
+    if model_module.exists() or model_module.is_symlink():
+        if any(not file.is_file() or file.is_symlink() or file.resolve() != file.absolute()
+               or not file.resolve().is_relative_to(source.resolve()) for file in (model_module, model_pins)):
+            raise HomeError("The optional model service requires its canonical module and exact model-service-pins.json data.")
+        paths.append(model_pins)
     if not (source / "adapters/pi/project-workflow/pi_kanban.py").is_file():
         raise HomeError("Use the complete repository checkout; adapter sources are required.")
     return paths
