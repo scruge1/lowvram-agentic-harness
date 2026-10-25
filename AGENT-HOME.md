@@ -73,6 +73,46 @@ and let their exact results reach the next model-input context. A successful
 context tool call alone does not open the gate for a sibling action in the same
 tool-call batch. The existing task, pause, skill and effect checks still apply.
 
+## Launch from any directory
+
+A fresh home includes a command bound to its absolute launcher:
+
+```bash
+/chosen/agent-home/bin/harness-agent --status
+/chosen/agent-home/bin/harness-agent --project /path/to/admitted-project
+```
+
+On Windows use `bin/harness-agent.cmd`. The actual OS HOME stays unchanged.
+The managed home supplies its instructions, model, tools, memory and native
+session directory. An admitted project keeps its working directory. An unrelated
+directory opens the home; launch does not adopt it as a project.
+
+To register a shorter command in an explicitly selected directory:
+
+```bash
+python /chosen/agent-home/agent-home.py command install --bin-dir /chosen/user-bin
+python /chosen/agent-home/agent-home.py command status --bin-dir /chosen/user-bin
+python /chosen/agent-home/agent-home.py command remove --bin-dir /chosen/user-bin
+```
+
+Add `--default-pi` to **install** to request `pi` as well. Existing commands are
+preserved on collision; an available unique command can still be registered.
+Removal checks ownership and exact bytes, retains a backup, and refuses changed
+commands. PATH and shell startup files are not edited. Inspect `type -a pi` or
+`Get-Command pi -All` for shell aliases/functions that process PATH cannot see.
+
+Managed selectors precede Pi arguments. A matching `--home` can confirm the
+binding; a different home, model or provider requires selecting another home.
+Text/JSON modes are supported. RPC, global resume and session overrides are
+explicitly refused pending qualification of their model/owner boundaries.
+Windows command registration requires an ASCII Python interpreter path;
+Unicode home and bin paths are tested. Existing homes need an explicit runtime
+update before using the new command; this release does not migrate them.
+
+Nineteen actual Linux CLI checks passed with an observer in an isolated profile
+and unchanged borrowed dependencies. These establish native prompt routing,
+tools, memory and cwd/session bindings; real model use and resume are separate.
+
 ## What the home contains
 
 | Location | Purpose |
