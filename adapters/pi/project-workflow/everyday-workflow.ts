@@ -84,13 +84,29 @@ export default function (pi: ExtensionAPI) {
         || JSON.stringify(input.verify) !== JSON.stringify(expected))
       return 'A source milestone must declare its operation admission.json and use the installed helper --verify with that relative receipt. A model-supplied predicate is not Git commit or remote proof.';
   };
+  const timeoutBudget = (input: any) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Workflow input must be an object');
+    if (['_action_timeout', '_check_timeout', '_worker_timeout'].some(name => name in input))
+      throw new Error('Use action_timeout_seconds/check_timeout_seconds; hidden timeout overrides are not supported');
+    const action = input.action_timeout_seconds === undefined ? 585 : input.action_timeout_seconds;
+    const check = input.check_timeout_seconds === undefined ? 45 : input.check_timeout_seconds;
+    for (const [name, value] of [['action_timeout_seconds', action], ['check_timeout_seconds', check]]) {
+      if (!Number.isInteger(value) || value < 1 || value > 86385)
+        throw new Error(`${name} must be an integer in 1..86385 (15 seconds reserved inside the core86400 limit)`);
+    }
+    return { outer_timeout_seconds: (action + 15) + 2 * (check + 15) + 60 };
+  };
 
   pi.registerTool({
     name: 'workflow_step', label: 'Supervised workflow step',
-    description: 'Execute one planned file-work action through the portable supervisor. First discover native capabilities and read the matching skill for specialized tools. Supply a short goal, existing working directory, argv action, read-only argv verifier and relative output files. Verifier must use relative output paths: it is also run in an empty directory as a negative control. Use the installed tool environment from the skill, not a guessed Python. Host records plan, negative control and verified receipt. No automatic action replay. Passed predicate is not universal task correctness or permission for physical/privileged actions.',
+    description: 'Execute declared file work through the portable supervisor; an action may contain multiple related steps. Choose action_timeout_seconds/check_timeout_seconds for the expected work (defaults585/45); these are per-call budgets, not a project/session deadline. First discover native capabilities and read matching skills. Supply a short goal, existing cwd, argv action, read-only argv verifier and relative outputs. The same verifier also runs in an empty directory as a negative control. Use the installed tool environment. Host retains plan, budgets and verified receipt; no automatic replay or deadline reset. Passed predicate is not universal correctness or physical/privileged permission.',
     parameters: Type.Object({ objective: Type.String(), cwd: Type.String(),
       action: Type.Array(Type.String()), verify: Type.Array(Type.String()),
       outputs: Type.Array(Type.String()),
+      action_timeout_seconds: Type.Optional(Type.Integer({ minimum: 1, maximum: 86385,
+        description: 'Declared action budget in seconds; default585. Choose for this operation, including related substeps. Host reserves15 more seconds within the core24h command limit.' })),
+      check_timeout_seconds: Type.Optional(Type.Integer({ minimum: 1, maximum: 86385,
+        description: 'Predicate budget in seconds for each negative/positive check; default45. Host reserves15 more seconds per verifier and derives the outer deadline.' })),
       recovery: Type.Optional(Type.Object({
         source_run_id: Type.String({ pattern: '^[a-f0-9]{32}$' }),
         failure_class: Type.Union([
@@ -105,6 +121,12 @@ export default function (pi: ExtensionAPI) {
       required_skills: Type.Optional(Type.Array(Type.String({ description: 'Installed skill names required for specialized work; read each SKILL.md fully first.' }))) }),
     async execute(_id: string, params: any, signal?: AbortSignal) {
       if (signal?.aborted) return { content: [{ type: 'text', text: 'Cancelled before execution.' }], details: { ok: false } };
+      let budget: { outer_timeout_seconds: number };
+      try { budget = timeoutBudget(params); }
+      catch (error) {
+        const record = { status: 'rejected', authority: 'none', reason: String(error) };
+        return { content: [{ type: 'text', text: JSON.stringify(record) }], details: { ok: false, host: record }, isError: true };
+      }
       const result = await new Promise<{ rc: number; out: string; error: string }>((resolve) => {
         const child = execFile(configuration.python, ['-B', helper, configuration.runtime,
           configuration.runtime_manifest_sha256, configuration.engine_sha256, '--interactive-owner'],
@@ -117,7 +139,7 @@ export default function (pi: ExtensionAPI) {
           });
         // Closing the ownership pipe asks the host to stop its owned processes.
         const cancel = () => child.stdin?.end();
-        const deadline = setTimeout(cancel, 780000);
+        const deadline = setTimeout(cancel, budget.outer_timeout_seconds * 1000);
         signal?.addEventListener('abort', cancel, { once: true });
         child.stdin?.on('error', () => cancel());
         child.stdin?.write(JSON.stringify(params) + '\n');
@@ -135,7 +157,7 @@ export default function (pi: ExtensionAPI) {
     nativeDiscoveryReady = false;
     enableInspectionTools();
     return {
-    systemPrompt: event.systemPrompt + '\nEveryday work: answer questions and inspect with native read-only tools directly. For file-changing project work, use workflow_step: short goal, target directory, argv action, read-only argv check, declared outputs. The host manages records and hashes. Do not ask the owner to sign or manage routine task files. Work one useful operation at a time. Failed or uncertain actions are not replayed automatically; inspect evidence before proposing a correction. Existing physical-action, credential and privilege approvals still apply. Tasks needing browser/MCP tools or long-context workers retain their dedicated reviewed harness route; do not fake them with a shell substitute.'
+    systemPrompt: event.systemPrompt + '\nEveryday work: answer questions and inspect with native read-only tools directly. For file-changing project work, use workflow_step: short goal, target directory, argv action, read-only argv check, declared outputs. Choose action_timeout_seconds/check_timeout_seconds for the expected operation, including related substeps; defaults585/45 are not an entire-project or session deadline. The host manages records and hashes. Do not ask the owner to sign or manage routine task files. Failed or uncertain actions are not replayed automatically; inspect evidence before proposing a correction. Existing physical-action, credential and privilege approvals still apply. Tasks needing browser/MCP tools or long-context workers retain their dedicated reviewed harness route; do not fake them with a shell substitute.'
     };
   });
   pi.on('session_start', async () => {
@@ -240,6 +262,8 @@ export default function (pi: ExtensionAPI) {
       return { block: true, reason: 'Call native agent_capabilities first. A successful native registry result is required; shell commands and remembered tools do not establish readiness.' };
     }
     if (event.toolName === 'workflow_step') {
+      try { timeoutBudget(event.input); }
+      catch (error) { return { block: true, reason: String(error) }; }
       const missing = missingSkills(event.input);
       if (missing.length) return { block: true, reason: 'Read the complete installed SKILL.md for: ' + missing.join(', ') + '. Missing, partial or changed skill bytes do not satisfy workflow admission.' };
       const checkpointError = checkpointPlanError(event.input);
