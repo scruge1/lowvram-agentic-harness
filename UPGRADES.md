@@ -305,10 +305,18 @@ seven offline selftests passed. A new archive QA home staged the actual public
 worker under an observed exclusive lease: upstream `e201a443` became reviewed
 effective `48aa2fb3`, original/licence/inventory checks passed, donor unchanged.
 Its data remained settings-only and its installed registry remained empty.
-This is source and byte-staging proof, not a fresh installation. Actual Bun
-foreground startup, zero-POST lifecycle, generated capture/readback and owned
-full-profile admission remain held for separate qualification. No worker was
-imported or launched. No private store, profile or package was migrated.
+That stage proved source and byte staging without launching a worker. Separate
+Linux component qualification then passed with Bun1.4.4 and the patched
+Claude-mem13.29.0: actual foreground startup, health, exact process/source/data
+and listener identity, its own READ lease, foreign-port and registry refusal,
+empty queue drain, exact worker stop and exclusive home cleanup. The isolated
+run recorded zero model POSTs and capture hooks. Independent cleanup passed and
+all six borrowed-artifact hashes remained unchanged.
+
+Only two copied public packages had installed records; seven selected packages
+remained uninstalled. This does not qualify a full fresh installation, full
+profile admission, generated capture/readback or useful recall. Empty drain
+does not prove generation. No private store, profile or package was migrated.
 
 ## Human-terminal optional search setup — 2026-10-25
 
