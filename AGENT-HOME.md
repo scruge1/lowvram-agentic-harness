@@ -628,9 +628,12 @@ was executed. Preparation makes no model request and starts no services.
 The first real report pilot produced a source-bound artifact, but exceeded its
 requested word limit and needed scope corrections. This maintained pattern
 checks those constraints during the task. Its Linux system/managed-Python tests
-passed11 controls each; Windows passed10 with one symlink skip. Board transport
-and package admission were explicit test fixtures; normal target preparation
-and a model-produced report through this exact pattern remain separate evidence.
+passed11 controls each; Windows passed10 with one symlink skip. Seven later
+native checks passed through the actual installed helper, Git/Hermes identity,
+original input/manifest hashes and missing-report/empty-directory refusal. That
+isolated pi-profile home used four exact accepted dependency prefixes. Its hub
+stopped and watched donor files stayed unchanged, with zero model/provider HTTP.
+A model-produced report through this exact pattern remains separate evidence.
 
 ## Advanced owned inference candidate
 

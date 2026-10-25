@@ -27,9 +27,14 @@ implementation audit or code-reuse research task.
 Linux system Python3.12.3 and managed Python3.12.13 passed11 controls each;
 Windows passed10 plus one explicit symlink skip. These exercise actual Git,
 files, CLI and inventory with explicit fixture admission/board transport. No
-model/service call or real native board adoption is implied. Actual normal
-preparation, useful model output and subsequent continuation/recovery remain
-separate acceptance evidence.
+model/service call or real native board adoption is implied by those unit cases.
+Seven subsequent native checks passed in22.808 seconds through the actual
+installed helper and normal Git/Hermes board path, including original hashes
+and both missing-output/empty-directory refusals. One isolated pi-profile home
+used four exact accepted dependencies; its hub stopped, donor files stayed
+unchanged and provider HTTP/model calls stayed zero. Source/installed byte hashes
+and Git line-ending normalization are recorded separately. Useful model output
+through this maintained pattern and later continuation/recovery remain separate.
 
 ## Scoped native session continuation — 2026-10-25
 
