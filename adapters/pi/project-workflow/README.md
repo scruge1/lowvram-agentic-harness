@@ -194,13 +194,24 @@ loader, tool-call runner and native read/grep tools with explicit project
 fixtures. Pi/Hermes/Framework composition with that context gate then passed35
 checks on an isolated real board and native session. Memory readiness was
 explicit fixture data. No model calls, memory-health claim, task execution or
-unpaused model-wakeup proof is supplied by that composition. The final home
-startup with30 tools remains pending. Preserve those boundaries when reporting
-target adoption.
+unpaused model-wakeup proof is supplied by that composition. The final fresh-home
+startup separately passed with eight extensions and30 tools. Preserve the
+different scopes when reporting target adoption.
 
 Fresh homes route MemPalace MCP, capture, validated retrieval and the installed
 `bin/mempalace` command through their home-owned memory-runtime wrapper. Its
 process-local CPU cache binding is required because Chroma MiniLM does not use
 the generic Hugging Face/XDG cache variables alone. A direct environment
-executable skips that binding. Package/cache validation is separate from the
-unqualified full capture/mining/search/readback pipeline and any shared hub.
+executable skips that binding. The separate synthetic connected-memory test
+passed24 controls, including same-open MCP mutation, capture mining, exact six
+chunks/closet witnesses, recall, repeat, tamper refusal and owned shutdown. It
+does not establish private-history claims or new-host freshness.
+
+Reviewed Git milestones use the existing `workflow_step`, not another execution
+tool. Recognized checkpoint actions require a complete current `source-control`
+skill read even if `required_skills` is omitted. Their project root must match
+workflow `cwd`. The declared operation receipt and exact installed-helper
+verifier are required before execution; an arbitrary predicate cannot supply
+Git commit or remote proof. Existing intake, task, project-context, pause,
+failure and process-owner checks still apply. This is a narrow installed-helper
+route, not attribution or enforcement of every shell Git operation.

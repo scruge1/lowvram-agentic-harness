@@ -25,6 +25,9 @@ SELFTESTS = (
 
 TAIL_BYTES = 80000
 SETTLEMENT_SECONDS = 3
+# The added real-Git suite measured68s on Windows. Keep the complete expanded
+# unit suite bounded without reducing coverage or changing runtime deadlines.
+UNIT_TEST_TIMEOUT = 360 if os.name == "nt" else 240
 # Preserve ownership when an exact child does not settle. Never infer that its
 # descendants stopped, and do not let a Popen context manager wait indefinitely.
 UNSETTLED_CHILDREN = []
@@ -112,7 +115,7 @@ def main() -> int:
     results.append(
         run(
             [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
-            timeout=240,
+            timeout=UNIT_TEST_TIMEOUT,
         )
     )
     for path in SELFTESTS:

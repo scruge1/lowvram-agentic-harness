@@ -26,7 +26,7 @@ SCHEMA = "agent-home/v1"
 REQUIRED_TEMPLATES = (
     "AGENTS.md", "CLAUDE.md", "gitignore.template", "agent/AGENTS.md",
     "agent/APPEND_SYSTEM.md", "agent/prompts/personalize.md",
-    "agent/skills/supervised-tasks/SKILL.md", "context/startup-index.md",
+    "agent/skills/supervised-tasks/SKILL.md", "agent/skills/source-control/SKILL.md", "context/startup-index.md",
     "context/profile.md", "context/current.md", "context/lessons.md",
 )
 PINS = {
@@ -320,6 +320,7 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         {"name": "kanban_select", "description": "Resume an existing source-bound work card; selection is not authority."},
         {"name": "mempalace", "description": "Local session memory retrieval through the configured MCP server; hits are guidance."},
         {"name": "supervised-tasks", "description": "Installed skill for declared file work and complete saved-failure recovery."},
+        {"name": "source-checkpoint", "description": "Installed source-control skill and runtime/harness/source_checkpoint.py for exact reviewed Git milestones through workflow_step. Local commit by default; remote delivery requires explicit target and readback."},
         {"name": "validated_memory_query", "description": "Recall only reviewed safe summaries bound to exact current source bytes; empty registry abstains."},
         {"name": "claude_memory_search", "description": "Full profile local Claude-mem SQLite keyword history; package installation does not prove fresh capture."},
         {"name": "kanban_intake_route", "description": "Route every distinct native request aspect before execution; retain original source and owner outcome."},

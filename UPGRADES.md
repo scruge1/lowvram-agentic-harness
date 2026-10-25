@@ -5,6 +5,64 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Reviewed Git source milestones — 2026-10-25
+
+Parent commit: `104dfa8fa9117d5ae6b48d1c6551b6ee7d163413`.
+
+Change: export the existing reviewed source-checkpoint algorithm as a portable
+standard-library helper and install its source-control skill. Exact inventories
+stay inside the actual project's artifact directory. New repositories can save
+their first commit. Unrelated unstaged work stays outside the checkpoint; an
+occupied index requires coordination. Local commits are the default. An explicit
+remote, expected push URL and current branch are required for optional delivery
+and actual ref readback. Partial operations and local commits are retained on
+failure; no automatic replay, reset or force push is added.
+
+The existing supervised Pi route requires the complete skill, matching project
+root, exact receipt output and installed read-only verifier before executing a
+recognized checkpoint command. This keeps current intake, context, task, pause,
+failure and process ownership gates. No new execution tool or commit engine is
+introduced. The original reviewed132b source SHA is
+`141442c0a37a910f95fbfce3addc2d764a67cf497d7b8985abb18d241d95753f`.
+Private paths, allowlist maintenance, secret storage, forced branch/origin and
+private-service checks are not transplanted.
+
+The parallel harness session's25October compact posture was also reviewed.
+The portable template now states the reusable question/permission distinction,
+matched comparison inputs, actual caller/evaluator evidence, receipt-backed
+current context and current runtime metadata. It retains a thin prompt and
+explicit topic/source selection. No private routes or Game/GPU code are copied.
+The private file's byte reduction is not a public whole-prompt savings claim.
+
+Validation:21 real-Git controls and22 actual Pi/Hermes/guarded-workflow checks
+passed. Native execution saved one real source commit and independently read
+back the exact reviewed content. Skill omission, wrong roots/verifiers/outputs,
+reload, intake, pauses, occupied index, failure inspection/recovery and replay
+refusal were exercised. Remote tests used only isolated local bare repositories.
+The actual Pi resource loader also selected the public posture file, delivered
+its complete bytes and six clauses to the session prompt, and retained them
+after reload. No prompt override or generative model call supplied that proof.
+
+Two real push failures required corrections. A configured `push.followTags`
+sent an unrelated annotated tag despite an explicit branch refspec; checkpoint
+pushes now disable tag following. A pre-push hook could change source or HEAD
+after the first check; post-delivery validation now leaves a pending receipt
+instead of marking the operation verified. The original failures and passing
+regressions are retained outside the public tree. Full release/CI results are
+reported in the delivery PR.
+
+The expanded local Windows unit suite exceeded its previous240-second gate.
+A single isolated source-suite measurement passed in68.4seconds, with627 Git
+calls accounting for64.4seconds. This identifies Git round trips as the main
+cost of those new tests; operating-system spawn versus Git work and the later
+SSOT phase remain unseparated. The Windows unit-phase ceiling is now360seconds;
+all tests, child settlement checks, runtime action deadlines and the outer CI
+limit are retained. This budget change is not a runtime performance claim.
+
+A caller's task reference does not establish ownership or grant
+permission. Arbitrary shell attribution, all-session automatic commits, remote
+repository privacy and deployed behavior remain outside this increment.
+
 ## Fresh agent-home bootstrap and current Pi coordination — 2026-10-25
 
 Parent commit: `bc49e9c9e6787df8a1871f317742ad5532238dd8`.

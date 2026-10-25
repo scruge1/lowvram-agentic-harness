@@ -20,6 +20,7 @@ blessed-ssot = "ssot.cli:main"
 trusted-task-integrate = "harness.integration:main"
 trusted-project = "harness.project:main"
 agent-home = "harness.home:main"
+source-checkpoint = "harness.source_checkpoint:main"
 
 [tool.setuptools.packages.find]
 include = ["harness*", "ssot*"]
