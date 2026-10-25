@@ -5,7 +5,7 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
-## Add an explicit reviewed controller CLI migration — 2026-10-25
+## Add an explicit reviewed controller CLI migration - 2026-10-25
 
 Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
 
