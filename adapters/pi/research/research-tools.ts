@@ -119,7 +119,8 @@ export default function (pi: ExtensionAPI) {
       query: Type.Optional(Type.String({ minLength: 1, maxLength: 1000 })),
       url: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
       max_results: Type.Optional(Type.Integer({ minimum: 1, maximum: 10 })),
-      timeout: Type.Optional(Type.Number({ minimum: 2, maximum: 60 })),
+      timeout: Type.Optional(Type.Number({ minimum: 2, maximum: 120,
+        description: 'Total operation seconds: fetch accepts 2–120 (default 60); search/render accept 2–60 (defaults 30/40). Browser fallback also reserves native settlement time; completion is not guaranteed.' })),
       allow_archive: Type.Optional(Type.Boolean({ description: 'Fetch only: permit a public archive candidate after eligible source failures. Archived and abstract results remain partial. Default false.' })),
       artifact_id: Type.Optional(Type.String({ pattern: '^sha256:[a-f0-9]{64}$' })),
       view: Type.Optional(Type.Union(['text', 'metadata', 'tables', 'links', 'headings', 'downloads'].map(value => Type.Literal(value)))),
@@ -131,11 +132,15 @@ export default function (pi: ExtensionAPI) {
     }, { additionalProperties: false }),
     async execute(_id, params, signal, _onUpdate, ctx) {
       try {
+        const timeout = params.timeout ?? (params.action === 'render' ? 40 : params.action === 'fetch' ? 60 : 30);
+        const maximumTimeout = params.action === 'fetch' ? 120 : 60;
+        if (!Number.isFinite(timeout) || timeout < 2 || timeout > maximumTimeout)
+          throw new Error(`Research ${params.action} timeout must be 2 through ${maximumTimeout} seconds.`);
         const selection = selected(ctx);
         const session = ctx.sessionManager.getSessionId();
         const fingerprint = JSON.stringify(selection);
         const value = await invoke(binding(), { ...params, selection, session_id: session },
-          (params.timeout ?? (params.action === 'render' ? 40 : params.action === 'fetch' ? 60 : 30)) * 1000 + 30000, signal);
+          timeout * 1000 + 30000, signal);
         if (ctx.sessionManager.getSessionId() !== session || JSON.stringify(selected(ctx)) !== fingerprint)
           throw new Error('Project selection changed during research; no result was delivered.');
         return { content: [{ type: 'text', text: JSON.stringify(value) }], details: value, isError: !value.ok };

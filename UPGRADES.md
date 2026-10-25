@@ -5,6 +5,97 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Budget the expanded offline unit suite — 2026-10-25
+
+Parent commit: `474020ade49cb735327d2f3554d2544dd774b4ad`.
+
+The full Linux unit suite exhausted its existing 240-second release budget
+after the controller migration journey joined the package. Its retained timeout
+tail showed no assertion failure and ended during an existing runtime-update
+case. The added controller checks measured 59 seconds on Linux and 110 seconds
+on Windows. Set the complete unit-suite budget to 300 seconds on Linux and
+480 seconds on Windows. Keep the 15-minute CI job cap, three-second settlement,
+retained-child ownership, bounded output and all product deadlines unchanged.
+The original timeout remains failed evidence; this change does not claim a
+successful full gate before its exact composite rerun.
+
+## Reserve browser work within the caller's fetch budget — 2026-10-25
+
+Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
+
+An actual joined-source Pi-tool fetch received a successful but empty static
+HTML page after26.339 seconds. The60-second total budget and30-second native
+settlement reserve left only about3.66 seconds to render; rendering timed out.
+Keep that failed request. Reserve at least10 seconds of browser work and a
+small handoff allowance before static candidates and retries consume the
+productive phase. Require the minimum work budget before starting Chromium.
+Archive candidates do not need that reserve. Static timeouts do not authorize
+browser requests without validated, successful HTML.
+
+Expose the existing core fetch limit of120 seconds through the research helper
+and Pi tool as an explicit caller choice. Keep the60-second fetch default,
+search/render limits, absolute deadline, worst settlement reserve and host
+outer timer. Keep all actual attempts and budget allocation in cached evidence.
+A larger caller budget does not promise successful acquisition or complete
+rendered-page coverage.
+
+Forty-two focused Linux checks passed. Windows ran the same checks with one
+declared native-symlink skip; all other checks passed. Regressions retain a slow
+static shell and failed attempts, preserve time for browser work plus full
+settlement, refuse starved and late browser results, and enforce action-specific
+helper limits before loading network clients. Ruff0.16.10 and all seven offline
+self-tests passed. These are source tests, not a successful native rerun. The
+original DDG20-second timeout remains a separate failed observation.
+
+## Add an explicit reviewed controller CLI migration - 2026-10-25
+
+Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
+
+Compatible runtime updates correctly refuse controller changes, so an existing
+home could not adopt the new research setup CLI through that route. Add the
+separate `controller-cli-v1` plan/apply/verify scope to the existing updater.
+Bind the exact reviewed prior/new CLI AST, unchanged controller core/constants,
+old/new source and executing closure/interpreter. Keep ordinary `FIXED_SOURCE`,
+package pins, stable entry/guard, templates, schema and personalized data fixed.
+Reuse the existing staged candidate, exclusive lease, transaction, pending
+sentinel, recovery and rollback instead of adding another updater.
+
+Controller pending/failure states are rejected by the retained old verifier.
+Its actual old status check is exercised with hash-proven unchanged early
+helpers/fixed modules and the original rejection traceback. New verification
+runs the stable doctor, complete redacted research status and existing normal
+managed Pi health. Validate exact provider/field sets, enums, booleans, untested
+status, refreshable canonical ISO dates and known limits without scanning
+arbitrary document text. Empty status and extra credential fields cannot pass.
+
+Isolated Linux fixtures passed the controller activation/verification/rollback
+journey and every retained exchange fault. Windows checks cover source/scope,
+contract refusal and unsupported activation. Real Python3.11/3.12/3.13 checks
+found and corrected empty AST-field serialization differences. A stale fixture
+assumption after the research merge was retained and replaced with an explicit
+distinct predecessor closure. Pinned lint and all seven offline self-tests
+passed. Actual installed migration, service lifecycle and data preservation
+remain a separate native acceptance step; this source change does not claim it.
+
+## Name the remaining discovery calls in blocked execution — 2026-10-25
+
+Parent commit: `eefb72a818a29b16174fa2960d1f64e694451bbc`.
+
+A retained one-hour model continuation repeatedly attempted execution after
+observing capabilities but before querying system tools, memory and project
+knowledge. The generic blocker repeated completed and missing work together.
+List only the exact missing successful calls, name their argument schemas and
+explain that tool discovery does not execute the discovered tool. Completed
+observations remain recorded until normal selection/reload invalidates them.
+All eligibility rules and successful-result checks remain unchanged.
+
+Seven focused checks passed, including the complete extension in the native
+TypeScript VM. The regression observes each prerequisite incrementally, checks
+that completed calls disappear from the blocker, verifies all gates still hold
+until the last success, and verifies readmission resets discovery. Existing
+canonical memory error/empty-result controls remain intact. This verifies host
+feedback and authority retention, not a successful model report.
+
 ## Protect fresh Windows files with token default owners — 2026-10-25
 
 Parent commit: `98076e32e7244981e2dd0052d7e832716cb3a4fc`.

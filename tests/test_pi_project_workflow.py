@@ -118,7 +118,28 @@ const discover = async(memory='native') => {
 const admit = () => invoke('project_admit',{project_root:'/project'});
 const execute = () => fire('tool_call',{toolName:'workflow_step'});
 assert.equal((await execute()).block,true);
-await admit(); await invoke('kanban_create',{title:'Owner-authorized task'}); await discover();
+await admit(); await invoke('kanban_create',{title:'Owner-authorized task'});
+let held = await execute();
+for (const name of ['agent_capabilities','system_tool_query','validated_memory_query','project_knowledge_query'])
+  assert.ok(held.reason.includes(name),'all unobserved prerequisites must be actionable: '+name);
+await fire('tool_result',{toolName:'agent_capabilities',details:{ok:true,snapshot:{}}});
+held = await execute();
+assert.equal(held.block,true);
+assert.equal(held.reason.includes('agent_capabilities'),false,'do not repeat an already completed capability observation');
+assert.ok(held.reason.includes('system_tool_query'));
+await fire('tool_result',{toolName:'system_tool_query',details:{ok:true,results:[]}});
+held = await execute();
+assert.equal(held.reason.includes('system_tool_query'),false);
+assert.ok(held.reason.includes('validated_memory_query'));
+await fire('tool_result',nativeSearch({query:'fixture',filters:{},total_before_filter:0,results:[]}));
+held = await execute();
+assert.equal(held.reason.includes('validated_memory_query'),false);
+assert.ok(held.reason.includes('project_knowledge_query'));
+await fire('tool_result',{toolName:'project_knowledge_query',details:{ok:true}});
+assert.equal(await execute(),undefined);
+await admit(); held = await execute();
+assert.ok(held.reason.includes('agent_capabilities'),'readmission must invalidate completed discovery');
+await discover();
 assert.equal(await execute(),undefined); // No adviser call or consultation-created card.
 const emptySearch = nativeSearch({query:'fixture',filters:{},total_before_filter:0,results:[]});
 const memoryCases = [
