@@ -98,7 +98,14 @@ class LocalLLM:
     def __init__(self, config: dict | None = None):
         self.cfg = config or load_config()
 
-    def chat(self, messages, temperature=None, max_tokens=None) -> str:
+    def chat(self, messages, temperature=None, max_tokens=None,
+             required_prompt_literals=()) -> str:
+        """Optionally require contract text in the exact serialized messages."""
+        if (not isinstance(required_prompt_literals, (list, tuple)) or
+                any(not isinstance(item, str) or not item.strip()
+                    for item in required_prompt_literals)):
+            raise ValueError(
+                "required_prompt_literals must be a list or tuple of nonempty strings")
         url = self.cfg["base_url"].rstrip("/") + "/chat/completions"
         body = {
             "model": self.cfg["model"],
@@ -107,8 +114,21 @@ class LocalLLM:
             "max_tokens": self.cfg["max_tokens"] if max_tokens is None else max_tokens,
             "stream": False,
         }
+        payload = json.dumps(body).encode("utf-8")
+        if required_prompt_literals:
+            wire_messages = json.loads(payload)["messages"]
+            if not isinstance(wire_messages, list):
+                raise ValueError("required prompt text needs a message list")
+            texts = [
+                message["content"] for message in wire_messages
+                if isinstance(message, dict) and
+                isinstance(message.get("content"), str)
+            ]
+            if any(not any(item in text for text in texts)
+                   for item in required_prompt_literals):
+                raise ValueError("model messages omit required contract text")
         req = urllib.request.Request(
-            url, data=json.dumps(body).encode("utf-8"),
+            url, data=payload,
             headers={"Content-Type": "application/json",
                      "Authorization": f"Bearer {self.cfg['api_key']}"},
             method="POST")

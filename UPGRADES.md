@@ -654,6 +654,912 @@ no doctor failures and eight native extensions/30 tools. The hosted Windows
 runner exposed an8.3 TEMP alias in two test fixtures. They now resolve their
 temporary parent before comparing the canonical identity already recorded by
 the installer. Runtime identity and local-provider refusal checks stay intact.
+## Check the complete source and pin chain — 2026-10-19
+
+Parent commit: 4ab3edd1c78376d7789fb70f062ced065adaa9a9.
+
+Change: DIAGNOSTICS.md adds a runnable standard-library example of an outer
+source selection changing while a consumer retains the predecessor's static
+hash. It requires complete actual module bytes before staging, with source
+maps, imports, module origins and child construction included in the check.
+
+Distilled evidence: two source stages created partial private files before
+different transitive guards refused the selections. Provider tests had
+substituted module bodies and verifier results. A complete real-module
+composition reproduced the predecessor failure and qualified a coherent
+candidate. Separate actual file checks, one scheduler-row publication and
+a natural idle cycle then passed. Both failed stages remain preserved.
+
+Scope: diagnostic guidance and a fixed synthetic example. The example is not
+native deployment proof, an arbitrary-code loader or permission to alter a
+consumer pin. Target owners must verify their actual complete chain and
+publication. It does not establish model quality or useful continuous work.
+
+## Check decorated provider bindings — 2026-10-19
+
+Parent commit: 5a687a0e2fa0fbd7d47210f6943cc04a824b05e3.
+
+Change: DIAGNOSTICS.md adds a runnable standard-library example showing that
+replacing a decorated function's globals does not replace its closed-over body.
+The example keeps structured lookup errors and demonstrates a private provider
+projection without changing the original handler.
+
+Distilled evidence: an actual transaction-local input check failed after a test
+had exercised only an extracted, undecorated body. The installed wrapper still
+closed over the original body and reader. A corrected caller verified that
+relationship, bound the reviewed body to its transaction and reapplied the
+original error wrapper. Nine independent caller and refusal tests passed before
+one new native task ran and received its complete input. Earlier failed attempts
+remain retained. Their original error JSON was not exported; the binding diagnosis
+uses source identity and the observed failure, not an invented error response.
+
+Scope: diagnostic guidance and an isolated example. No runtime handler,
+transaction adapter, permission bypass or automatic retry is added. The owning
+system must qualify its actual decorated path and preserve every native guard.
+Public package checks and private target results are separate evidence.
+
+## Check the complete effectful caller — 2026-10-19
+
+Parent commit: `8dce3b1074baeb2f60c8456771f9b006372d4989`.
+
+Change: `DIAGNOSTICS.md` extends the existing recovery checks to cover the
+complete caller after a helper extraction, including initialization, retained
+local variables, final checks and receipt cleanup. A file-write helper test
+alone does not establish that the full caller can finish.
+
+Distilled evidence: a real producer completed its selected writes, then failed
+when its outer caller referenced variables moved into a helper. A separate
+readback qualified the resulting state. The first later consumer refused
+because another predicate still required an absent producer success flag.
+A reviewed correction bound that predicate to the separate qualification
+while preserving the failed original. The consumed producer was not replayed.
+
+Scope: diagnostic guidance only. This adds no runtime recovery code, automatic
+retry, state qualification or execution permission. Package validation is
+separate from the retained target evidence; future callers still need their
+own complete-path checks and owner-selected native results.
+
+## Preserve completion evidence through the existing store — 2026-10-18
+
+Parent commit: `45685b4cf8235f6d0ea59445ce986bf136168416`.
+
+Change: `DIAGNOSTICS.md` adds a fixed-inventory coverage example and a procedure
+for preserving receipts before normal workspace cleanup. It distinguishes the
+database, profile, workspace and attachment roots, and checks normal retrieval.
+
+Distilled evidence: an actual workspace held two settlement receipts and a
+consumed continuation marker. Neither run declared those artifacts. The first
+preservation operation refused before copying because the native store resolved
+a shared attachment root while the operation required the project root. A
+supported process-local root setting corrected that binding. One later native
+operation copied all three exact files, registered three attachments and verified
+them through the existing list/get/context methods. Original files, task state
+and run history stayed unchanged. The failed operation remains retained.
+
+Validation: the private target's native copy and metadata retrieval passed within
+that scope. The public example and package checks are recorded separately in the
+PR. This adds no runtime API, copier, store or cleanup operation. Worker file-body
+delivery, crash recovery and automatic return to the original chat remain
+separate adoption evidence.
+
+## Match captured streams to the program — 2026-10-18
+
+Parent commit: `6aa9c8df02f394af160f0f89703759e0dd2aa9cd`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example using a real
+text stream over an in-memory byte buffer. It supports the program's UTF-8
+`reconfigure` call and retains encoded output without filesystem writes.
+
+Distilled evidence: a bounded method check stopped at a script's output
+configuration. The observer had substituted `StringIO`, which lacks the method.
+Correcting the observer's stream interface let the same scoped method return its
+existing held result without changing the program or saved work. An earlier
+module-registration adjustment did not resolve that failure. The successful
+component check did not establish whole-entry or scheduler acceptance.
+
+Validation: the example, pinned Ruff 0.16.10 and all seven offline self-tests
+passed locally.
+Hosted checks and target adoption remain separate. No runtime API, new runner,
+model call or authority change is added to this package.
+
+## Capture volatile state at use — 2026-10-18
+
+Parent commit: `5dc5393cafbec72221fd1d6b94a4e8c190b90b9c`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library fixture that keeps an
+owner-selected action scope fixed while checking a fresh shared snapshot. It
+demonstrates refusal for old state, a different action and a change before use.
+The example constructs data only; it writes no files or control state.
+
+Distilled evidence: a dated shared-state binding no longer matched a later
+read-only observation. Previously observed rows remained while another row was
+present. The exact historical first failing predicate remained unknown. A
+separately selected finite capture-then-stage sequence retained both complete
+receipts and preserved current history and active sources. Its reader and writer
+checks stayed intact. Separate processes respected the reader's persistent audit
+hook; the sequence used one common deadline.
+
+Validation: the example, pinned Ruff 0.16.10 and all seven offline self-tests
+passed locally. Hosted checks, target source checks, native operation results and
+actual worker adoption remain separate. No public runtime API, authority provider,
+scheduler or automatic retry is added.
+
+## Separate host envelopes from model inputs — 2026-10-18
+
+Parent commit: `d2db1b98d1f936852f1822e72e79194db1d3fe1d`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that keeps the
+exact original answer bytes beside an explicit host reference. Complete sources,
+binding and claim IDs remain. The model-input constructor receives the same
+complete answer and evidence. Existing raw-byte and strict format checks remain
+necessary in the owning decoder.
+
+Distilled evidence: a larger structurally valid answer exceeded the host envelope
+limit while its separate model phase inputs fit. The original answer was already
+retained and transported separately. Removing only its duplicate host field
+recovered space; source comparisons showed identical phase bytes. Wrong raw bytes,
+mixed formats, changed source associations and claim order still refused. An
+oversized Unicode source phase also refused under its unchanged limit. This is
+source-level target evidence, not deployed behavior or a general answer-size bound.
+
+Validation: the copyable example checks size, exact reconstruction, identical
+model input and detection of a raw-byte replacement with equal parsed values.
+The example, pinned lint and all seven offline self-tests passed locally.
+Hosted checks and native SDK/model use remain separate acceptance stages.
+No public runtime API, scheduler, provider or execution authority changes.
+
+## Keep review test labels outside model metadata — 2026-10-18
+
+Parent commit: `f14979f3dd69b28a5e3f7b88ea44868dab7e46eb`.
+
+Change: `DIAGNOSTICS.md` adds a standard-library example that creates a new
+opaque test request ID and keeps its case label and expected decision in a
+separate host record. Existing production bindings and receipts stay immutable.
+This is test-preparation guidance, not a new runtime or grading authority.
+
+Distilled evidence: an unselected qualification draft excluded an explicit
+expected-decision field but placed descriptive case names in request IDs.
+The coverage and source input builders copied those bindings into model data.
+Source review held the draft before inference. The relevant boundary is the
+actual model-facing payload, including metadata, rather than a host-side flag
+that says the expected answer was excluded.
+
+Validation: the copyable example ran locally; pinned lint and all seven offline
+self-tests passed. Hosted checks and resulting source publication are recorded
+separately. This change claims neither a corrected native result, a blind
+benchmark nor improved model accuracy.
+
+## Bind the startup guard's profile environment — 2026-10-18
+
+Parent commit: `9e256a537f57a46ee7d06110f03cabcc3c0711a3`.
+
+Change: extend the existing startup diagnostic with a portable scoped-environment
+example. Preserve an absent or empty previous value after success or failure.
+Keep the validator in an owned isolated process and retain the guard's checks.
+This is guidance and example code; no runtime API or execution authority changes.
+
+Distilled evidence: matching candidate bytes and paths passed one fixture while
+the installed check refused. A controlled pair using the same code and context
+isolated the required profile environment. Its refusal matched a pinned source
+predicate. A forward correction then passed the installed guard before the
+contract changed, followed by one connected native start. Original failures and
+recovery evidence were retained. A normal reply still exceeded its requested
+length, so connected startup does not establish complete behavior acceptance.
+
+The existing nested-pin, actual-caller and owner-question procedures already
+covered other failures in this work. Apply those checks to the assembled target;
+do not create another framework for the same requirements.
+
+Validation: documentation review, lint and all seven offline self-tests. Hosted
+release CI and broader target adoption remain separate checks.
+
+## Check versioned startup paths before publication — 2026-10-18
+
+Parent commit: `fe0386a377e3fb3a115ab483c48cf4bd18c2f400`.
+
+Change: extend `DIAGNOSTICS.md` with checks for candidate self-location,
+independent contract pins and installed startup validation. Distinguish a failed
+wrapper from an issued service-start command. Reuse the existing owner lifecycle
+and recovery evidence. No runtime code, new controller or retry authority is added.
+
+Distilled evidence: an internally consistent generated publication retained an
+older self-location literal. Its first start wrapper failed before issuing the
+service-start command. An exact forward correction passed the candidate guard,
+then the stopped installed guard. One actual start produced a new connected
+process with retained settings and closed owner handles. The failed candidate
+and receipts remain available. Connected readiness does not establish correct
+answers, physical-device use or useful continuous work.
+
+Validation: documentation checks, lint and all seven offline self-tests passed.
+Full platform release CI and target behavior remain separate
+acceptance stages. Earlier local unit-suite timeouts remain unresolved.
+
+## Verify the composed worker and its independent pins — 2026-10-18
+
+Parent commit: `e8688a7a4bd13661466fe61999b03ed2b72f31ae`.
+
+Change: extend `DIAGNOSTICS.md` with a runnable standard-library bound-method
+example and a narrow qualification procedure. Check real inherited methods,
+constructor dependencies and independently pinned gate/caller identities.
+Separate negative-result scheduling from positive admission. No runtime API,
+scheduler, storage format or new execution authority is added.
+
+Distilled evidence: test doubles missed a real inherited generation check. A
+later inactive qualification also refused a separately pinned reviewer gate.
+Both failures were retained. A forward correction passed the real composed
+constructor and negative phase while preserving positive old-generation refusal.
+After owner publication, two normal cycles visited all routes without a model
+call or changed work records. No new eligible job ran. These observations prove
+the narrow continuation repair and bounded idle cycles, not accepted advice,
+general fairness or continuous useful operation.
+
+Validation: the executable example, lint and all seven offline self-tests passed.
+Full platform release CI remains required. Earlier local unit-suite timeouts
+remain unresolved. Target owners still need their actual loaded host, complete
+request, output and normal-cycle evidence; this guidance grants no retry.
+
+## Check final admission against the selected question — 2026-10-18
+
+Parent commit: `e4cf56a52100c277c39318511d64daaa0e1fe892`.
+
+Change: extend the composed-worker diagnostic with a standard-library example
+of final owner selection. Keep metadata capture separate from admission of new
+comparative model work. Inspect the protected question against the complete
+actual excerpts and test the effective factory override, eligibility and locked
+reservation together. No public runtime API or new store is added.
+
+Distilled evidence: an exact retained packet and complete prompt exposed an old
+assertion that the supplied report did not support. The old and current reports
+differed only in aggregate bytes and a path/size fingerprint. A helper-only
+admission change would have been overridden by the final factory. The narrow
+correction changes that final flag and one stale question clause. Actual native
+qualification completed nine owner phases without inference, preserved all
+retained work, and checked all seventeen selected source files. This is component
+acceptance; normal scheduler adoption and useful continuous work remain separate.
+
+Validation: the new executable example, pinned lint and all seven offline
+self-tests passed. Platform release CI remains required.
+
+## Check every shared-history reader before a format change — 2026-10-18
+
+Parent commit: `a45a6433385b20ba393f07c41a4af3597f7a7440`.
+
+Change: add a portable decoder-compatibility example and the checks needed
+before a new producer format enters shared history. Reuse the existing owner,
+source closure, lock and store. No runtime API or additional registry is added.
+
+Distilled evidence: an actual whole-entry diagnostic located a strict older
+consumer rejecting a retained packet that its newer producer could read. An
+initial outer-audit correction missed repeated scans in new-work eligibility
+and locked reservation. It was held before placement. Three narrow decoder
+candidates preserve all other original function and class ASTs. CPU controls
+cover the exact retained packet, unknown contracts, current-selection and repair
+boundaries, and the actual reservation helper with an in-memory owner double.
+The candidates' native placement, running adoption and useful continuous work
+remain separate qualification steps. Existing generic failed-cycle logs do not
+establish this cause for every cycle.
+
+Validation: the executable example, pinned lint and all seven offline
+self-tests passed. Platform release CI remains required. These checks do not
+qualify a target's runtime adoption.
+
+## Separate freshness, material identity and failure scope — 2026-10-18
+
+Parent commit: `d4cc688e2caab6b5aebbc4b526da1b9f3b7bfa90`.
+
+Change: extend `DIAGNOSTICS.md` with a portable, standard-library material-key
+example and the checks around it. Reuse existing consistent-file readers and
+owner admission. Recheck current-source freshness for each assembly, retain one
+admitted snapshot, and distinguish unchanged material from status-file churn.
+Keep typed current-data holds separate from immutable-evidence, code and custody
+failures. No new public runtime API, controller or storage format is added.
+
+Distilled evidence: a qualified native assembly reacquired current metadata,
+reused its retained material, and prepared the complete request through one
+settled SDK child without inference. Loaded callback and provider identity was
+checked directly. Narrow parser and route-continuation controls passed source
+tests; a later owner-locked publication preserved all prior work records. These
+facts do not prove a real outage was isolated, useful model output, automatic
+consumer adoption or continuous operation. Normal output and a later duplicate
+check remain separate acceptance stages.
+
+Validation: the executable example, lint and all seven offline self-tests passed.
+Full platform release CI remains required. Earlier local unit-suite timeouts
+are retained; this documentation change does not fix them.
+The example operates on already validated metadata; its path-and-size identity
+does not establish text identity. Target owners must qualify their real source
+contract, loaded boundary, normal work and finite retention policy.
+
+## Bind requests to runtime serialization — 2026-10-18
+
+Parent commit: `ec080a3de3d05f1711d46496c6cf62dbfcfb4cf5`.
+
+Change: extend `DIAGNOSTICS.md` to distinguish a planning artifact's byte identity
+from the existing runtime encoder's byte identity. Reuse that encoder, retain
+both hashes and byte counts, and verify decoded equality while preserving the
+exact native hash guard. No new encoder, store, controller or runtime is added.
+
+Distilled evidence: a loaded qualification refused a compact JSON artifact's
+hash because the existing runtime emitted JSON with spaces. The parsed packet
+and prompt were unchanged. A separately selected correction to the expected
+native identity passed the loaded check. The existing SDK then prepared the
+complete tool-free request without a provider call or inference. The original
+failed observation remained retained. This does not prove provider delivery,
+useful model output or continuous operation.
+
+Validation: documentation only. Local lint and seven offline self-tests passed.
+The local release gate ran 21 checks; its unit suite exceeded the 240-second
+limit while the other 20 checks passed. No successful full local release is
+claimed. Platform CI remains required.
+Target owners must verify their actual serializer, complete native request,
+admission and outputs. This guidance grants no retry or deployment authority.
+
+## Separate review output, completion and evidence retention — 2026-10-17
+
+Parent commit: `f54fdd564b161b2c74c42ed6098e0cb01ef48b51`.
+
+Change: export a small advisory-role instruction example and extend
+`DIAGNOSTICS.md` to check the effective native delivery budget, required workflow
+transition and task-completion side effects. The example uses already admitted
+`kanban_request_review` and `kanban_block` tools. It is advisory-only text, not a
+new dispatcher, authority source or hard output budget.
+
+Distilled evidence: one local worker received complete evidence but timed out
+without a review transition. A selected role instruction and one owner-controlled
+continuation produced a 70-word review, native review transition and normal exit
+within the unchanged deadline. The failed history remained. Actual prompt and
+tool-message checks confirmed role and evidence delivery; independent review
+accepted the answer only within its supplied source scope. This single case does
+not isolate causality or prove general reliability or continuous useful work.
+
+A conservative input rehearsal also refused a history size that the normal
+context-scaled budget retained. No production budget change was needed. Separately,
+native task completion would have deleted scratch evidence, so explicit advisory
+acceptance and preserved native review state remained distinct. Reuse owner
+evidence retention; do not add a new store or disable cleanup globally.
+
+Validation: prompt and documentation changes only. The existing offline release
+gate passed all 21 checks, including seven self-tests, on Windows/Python3.11;
+lint also passed. Target owners must verify actual role
+loading, admission, output, settlement and delivery; this example grants none of
+those claims and does not approve a general retry.
+
+## Check source pins against real read budgets — 2026-10-17
+
+Parent commit: `6987e260f1e6a19d9c8fd73b356ee560f2e683fa`.
+
+Change: `harness.source_snapshot.pinned_snapshot` adds an explicit pin-size and
+byte-budget preflight around the existing stable reader, then checks actual
+bytes against the selected size and hash. Four added tests cover a real file
+larger than the default limit, refusal before I/O, mismatched pins and invalid
+declarations. `DIAGNOSTICS.md` adds runnable budget and UTC examples, cache
+publication checks and separate retrieval/delivery/answer acceptance.
+
+Lineage: the consistent-handle reader already existed in `a0f33e6`. Reuse it;
+do not rediscover a reader or infer target adoption from a public implementation.
+An older adapter can retain a superseded metadata comparison despite a newer
+correct reference. A mocked hash provider can also bypass the real read limit.
+
+Validation: eleven focused tests and the complete local release gate passed
+on Windows/Python3.11:21 checks, including seven offline self-tests. Platform
+CI and target adoption remain separate checks.
+This exports standard-library read-only code and synthetic examples. It adds
+no authority provider, general answer verifier, cache controller, inference or
+runtime rollout. Existing target owners still qualify their own installed path
+and complete result; earlier failed receipts remain failed.
+
+## Budget the downstream review request — 2026-10-17
+
+Parent commit: `8c4c8bf5a52b974dbd645aceceaa96db35cd0844`.
+
+Change: `DIAGNOSTICS.md` adds a standalone serialization example where producer
+input fits and reviewer input refuses. It accounts for the complete candidate,
+binding and evidence rather than inferring fit from one upstream request.
+
+Distilled lesson: check every model boundary with its own actual serializer.
+Keep policy, bindings and explicit unknowns when selecting compact evidence;
+retain the full source and verify both model-facing requests. A narrow ASCII
+fixture margin does not bound every allowed output. Preserve an already consumed
+producer result when review input is too large; no automatic producer replay.
+
+Validation: run the synthetic example and existing offline release gate before
+publication. This exports pure example code and guidance only. It does not
+install a projection, change limits, run inference or prove target adoption,
+provider delivery, review quality or continuous useful work.
+
+## Defer shared-slot work before reservation — 2026-10-17
+
+Parent commit: `ed0b668dfd1c23c51b02d3edb19219dc21646dae`.
+
+Change: `DIAGNOSTICS.md` adds a standalone standard-library classification
+example and a procedure for checking backend capacity before reserving new work.
+Explicit exit status, timeout and settlement are separate checks. Busy or unknown
+metadata defers work; unresolved child custody retains the owned handle and
+stops further admission through the existing owner.
+
+Distilled lesson: a timeout after reservation can leave an uncertain attempt.
+An idle status snapshot does not reserve the backend, and a GPU memory queue
+does not establish a request lease. Preserve uncertain history and qualify each
+route and normal dispatch path before claiming wider adoption.
+
+Validation: run the synthetic classification and refusal cases plus the existing
+offline release gate before publication. This exports guidance and pure example
+code, with no backend request, scheduler, lease implementation or private data.
+Package checks do not establish native admission, job completion or continuous
+useful operation.
+
+## Retain the serialized context beside its hash — 2026-10-17
+
+Parent commit: `093cd4f34bcc9c610cb60fb08103a530bf7046ea`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that preserves
+the exact context JSON text across custody that sorts object keys. It bounds the
+retained bytes, checks their digest and recovers the complete object for review.
+
+Distilled lesson: timestamps and other SDK metadata can make later reconstruction
+impossible. A parsed object can lose the insertion order used by the original
+hash. Retain one serialization at the actual hash boundary, with the existing
+serializer and hash domain. Keep failure evidence and existing outer-frame caps;
+do not replace a refused full result with hash-only success.
+
+Validation: run the standalone synthetic example and the complete existing
+offline release gate before publication. This adds guidance and public example
+code, not a runtime collector or private source material. Package checks do not
+prove target adoption, source fidelity, inference or physical provider delivery.
+
+## Keep production declarations in operation checks — 2026-10-17
+
+Parent commit: `0e047ae400b4ad6f7973e40fafc24d74b0b71344`.
+
+Change: `DIAGNOSTICS.md` extends the existing source-binding and owner-operation
+procedures. Fixtures must preserve the actual pin declarations and supply the
+reviewed old or new bytes at the read boundary. Recovery checks must reach the
+outer selection guard with the fields and values its later operation requires.
+
+Distilled lesson: replacing a production hash in a fixture can hide a wrong
+baseline selection. Testing only a later helper can miss an impossible exact-key
+guard. Preserve both original failures; qualify the corrected packet and its
+fresh recovery path separately. A normal start receipt is not general recovery
+acceptance or permission to reuse a consumed attempt.
+
+Validation: run the existing complete offline self-tests and release checks
+before publication. This is guidance applied to existing code examples; it adds
+no runtime component, target acceptance claim or private deployment material.
+
+## Preserve grouped numbers in diagnostic projections — 2026-10-17
+
+Parent commit: `951725fd8cf1fe6469dd18240425c5080da0c373`.
+
+Change: `DIAGNOSTICS.md` includes runnable standard-library code that keeps
+complete comma-grouped quantities and rejects malformed, signed and scientific
+suffix matches. Structured telemetry remains the preferred input. No runtime
+parser, collector, controller or new inference dependency is installed.
+
+Distilled lesson: a numeric-only metadata projection can preserve privacy while
+still reporting a false value. Token suffixes cannot establish a context budget
+or explain a slow summary. Retain the failed projection, distinguish a
+tool-enabled request from actual tool execution, and leave provider queue and
+generation time unmeasured when the evidence does not separate them.
+
+Validation: run the embedded example and the existing complete offline release
+gate before publication. Exact-commit hosted checks are recorded after they
+finish. These package checks do not repair old observations or prove parser
+adoption, semantic fidelity or performance on another runtime.
+
+## Match owner callback invocation contracts — 2026-10-17
+
+Parent commit: `76ca83040d32397d928c9a6fde1b80ec02af17c4`.
+
+Change: `DIAGNOSTICS.md` adds a runnable standard-library example that supplies
+an existing owner's default read limit and checks its actual positional call
+shapes without performing a read. It preserves the strict reader and requires
+actual owner-path checks, legitimate empty-file handling and both forward and
+recovery bindings. No new runtime helper or controller is added.
+
+Distilled lesson: individually qualified components can disagree about callback
+arguments. A live refusal before the first lock exposed a required argument
+where the owner expected a default. The narrow adapter correction preserved
+reader policy. Source checks, a selected guarded publication and later normal
+work are separate evidence; a successful publication does not accept a model's
+answer. The original failed invocation must remain failed.
+
+Validation: run the example's invocation checks and the existing full offline
+release gate before publication. Exact-commit hosted checks are recorded after
+they finish. These package checks do not qualify another host's owner, locks,
+publication, model output or continuous operation.
+
+## Supply explicit claim text and preserve raw answers — 2026-10-17
+
+Parent commit: `8d14a1f13696a3a60f9f287612aed09ca05c4fb9`.
+
+Change: the diagnostic guide includes a small host-side code example for an
+ordered claim view. It retains non-enum text exactly, uses only an existing
+owner-defined recommendation meaning and preserves the raw enum separately.
+It requires original answer/citation custody, source association, owner-version
+binding and acceptance-time reconstruction. Reuse the existing field extractor;
+this adds no new runtime helper, controller, registry or model dependency.
+
+Distilled lesson: valid references and complete retained lines can still leave
+the model resolving indirect field IDs or an ambiguous enum. One bounded private
+positive/contradiction comparison passed after direct claim text replaced that
+indirection, with the answer, sources, schema, model, instructions and budgets
+fixed. The positive had relevant witnesses for all factual clauses; the negative
+refused the actual unsafe clause. Earlier failures remain retained. This is not
+a general causal, performance or semantic-accuracy claim.
+
+Validation: documentation-only change; the existing full offline release gate
+and exact-head hosted checks are recorded after they run. Package checks and a
+bounded private pair do not prove target adoption or useful continuous work.
+Owner-policy changes still require versioned native admission and ordinary work.
+
+## Resolve complete numbered source lines — 2026-10-17
+
+Parent commit: `a6881b052adced5daf5c5496378b1fe48ef11fc8`.
+
+Change: `harness.line_evidence.resolve_numbered_line` verifies a bounded numbered
+window against expected excerpt and unnumbered-content hashes. It resolves one
+exact integer line reference and retains the complete line with its hashes.
+Blank and Markdown heading lines refuse as factual witness locations. The helper
+does not read files, execute source, authenticate supplied references or judge
+whether a line supports a claim.
+
+Distilled lesson: a fixed-length source quote can omit the clause that matters.
+Selecting a location and deriving complete text avoids that byte loss. A later
+model test still selected a wrong supporting line, despite correct full-line
+retention. That result remained held; a valid location did not become semantic
+acceptance. Keep raw model selections separate from host-derived source text.
+
+Public validation: eight focused tests cover late clauses, Unicode identity,
+exact numbering, both hash bindings, integer and span validation, headings,
+inclusive byte/line limits and source-free error messages. Full release and
+exact-head hosted results are recorded after validation. No private reviewer
+adoption or general semantic accuracy follows from this portable helper.
+
+## Compare paired source bytes with one Python parser — 2026-10-17
+
+Parent commit: `7701943e57ef354aa583813a5d058224b292f614`.
+
+Change: `harness.source_compare.compare_named_functions` takes both byte strings
+and selected top-level function names. It records byte identity separately from
+same-parser AST comparisons, binds both source hashes and records the parser
+version. Missing, nested-only or duplicate names refuse. Source is not executed.
+
+Distilled lesson: a read-only installed-source capture produced different AST
+hashes even for a byte-identical caller. Those cross-runtime hashes were not
+accepted as code-difference evidence. Matching the observed checker hash to an
+exact retained copy allowed both versions to be parsed in one process; all five
+selected functions then matched. Original false comparison flags were preserved
+and their interpretation was superseded. This did not establish current process
+population, loaded code, downstream execution or refresh permission.
+
+Public validation: eight focused tests cover formatting, body changes, changed
+globals outside selected functions, no execution, ambiguity, async functions,
+Unicode byte limits and invalid inputs. The complete release gate and exact-head
+platform checks are recorded separately after validation/publication. AST hashes
+are not portable semantic proofs or whole-program equivalence.
+
+## Qualify the decoder's empty-array representation — 2026-10-17
+
+Parent commit: `21e35857ef2655bdac6a8882d810df217f777212`.
+
+Change: `DIAGNOSTICS.md` supplies an explicit `const: []` empty-evidence schema
+and the exact upstream converter branch that motivates it. It keeps payload,
+decoder conversion, strict host validation and semantic correctness separate.
+
+Distilled lesson: a single-omission review identified the missing explanation
+and supported the other two, but emitted prose inside unsupported evidence.
+The strict parser correctly refused it. The examined converter skips array
+bounds when an array schema has neither items nor prefixItems. Its earlier
+constant branch supports an explicit empty-array literal.
+
+Source-workflow validation: adding only the constant preserved the schema's
+intended meaning in 15 finite validator checks. Three fresh single-omission
+model cases then passed independent checks of the exact judgment pattern,
+relevant quotes, host attribution and valid empty evidence. Candidate bytes,
+criteria, parser and execution limits were unchanged. The old failure remains
+failed. No compiled converter witness, universal accuracy or live adoption is
+claimed. Full source review remains a separate obligation.
+
+Public scope: documentation and a copyable schema literal only. Executable code
+is unchanged from the parent that passed the local 21-check release gate and
+both hosted platform jobs. This change passes `git diff --check`; its own hosted
+checks are recorded separately after publication.
+
+## Derive quote attribution on the host — 2026-10-17
+
+Parent commit: `0b285ba995e76087a0d4f20be588c6c793526b9a`.
+
+Change: `harness.quote_evidence.attribute_quote` resolves an exact model-selected
+quote against host-bound fields. It refuses absent or multiple-field matches,
+returns every UTF-8 byte span within the unique field, and records field and
+quote hashes. It preserves overlapping occurrences without normalization.
+The raw response, request and candidate bindings remain the caller's responsibility.
+
+Distilled lesson: choosing a field identifier can be unnecessary model work.
+Separate quote selection from deterministic attribution. Exact membership still
+does not prove that a quote supports the requested conclusion. An earlier answer
+with unrelated but exact quotes stays incorrect after attribution.
+
+Private source validation: one incomplete-answer and one complete-answer model
+test matched their expected coverage decisions; all three positive quotes were
+independently checked for relevance. This is a limited component pair, not broad
+accuracy, source support, useful continuous operation or target adoption.
+
+Public validation: all 21 release checks passed on Windows/Python3.11, including
+the unit suite and seven offline self-tests. Eight focused tests cover ambiguity,
+absent matches, Unicode byte offsets, overlaps, unchanged inputs, invalid inputs
+and the distinction between membership and meaning. Local Ruff0.11.8 and
+`git diff --check` passed; pinned hosted lint remains a separate check.
+The helper has no I/O, inference, scheduler, persistent state or admission effect.
+
+## Review the requested conclusion as well as individual claims — 2026-10-17
+
+Parent commit: `3f15bc680d47bbd3f785ab9e0f66a10af503e793`.
+
+Change: `DIAGNOSTICS.md` distinguishes claim support, question completeness,
+native reviewer outcome and later idle behavior. It requires protected task
+context in the actual review request and preserves prompt and retry limits.
+
+Distilled lesson: a real scheduled local producer and separate reviewer call
+completed, and the next two ordinary ticks made no model call for the retained
+held attempt. The answer preserved citations and uncertainty but omitted the
+requested central distinction. An independent review identified that omission;
+the native reviewer held for a different reason. Its settled explicit hold was
+stored under an aggregate held-or-uncertain state. Keep those observations and
+reasons separate. Operational success does not establish accepted content.
+
+Source-workflow validation: retained raw responses, exact request and source
+bindings, normal scheduler events and unchanged history/state/queue snapshots
+were independently compared. This qualifies one pipeline and two idle cycles,
+not sustained useful operation, every input route or revised reviewer policy.
+The owner-question disclosure correction remains a separate source candidate.
+
+Public validation: the existing release checker passed all 21 checks, including
+the unit-test command and seven offline self-tests, on Windows/Python3.11.
+`git diff --check` passed. Hosted checks follow publication.
+
+Public scope: diagnostic guidance only; no executable, model, scheduler, retry
+or prompt-limit change. Target policy adoption remains separately qualified.
+
+## Bind installation checks to actual file roles — 2026-10-16
+
+Parent commit: `a0f33e626259ef6cd62957c6a62695c29d06768c`.
+
+Change: `DIAGNOSTICS.md` checks the existing owner's exact lock metadata without
+relaxing private-input checks. It also requires checking selected source bytes
+before module initialization, executing those same held bytes, and preserving
+the primary failure stage when a receipt is written successfully.
+
+Distilled lesson: a private-file check can reject a valid existing advisory lock
+with a different mode. Reconcile the actual failed attempt before selecting a
+narrow compatibility correction. Keep the original failure, source pins and
+history; do not change permissions or retry automatically to obtain a pass.
+
+Source-workflow validation: 28 CPU control groups passed, including actual lock
+admission and receipt methods with simulated metadata and storage. They did not
+qualify Linux filesystem effects. A separate corrected native operation verified
+five source replacements and the scheduler entry under the existing locks,
+preserving source-history bindings with zero model calls or history writes.
+That result does not prove later useful work or continuous operation.
+
+Public validation: all seven offline self-tests passed on Windows/Python3.11;
+`git diff --check` passed. Hosted validation follows this documentation commit.
+
+Public scope: diagnostic guidance only. No executable behaviour, installation,
+permission, model, scheduler or retry policy changes in this package. Existing
+target owners must qualify their own operation.
+
+## Preserve file checks across Windows runtimes — 2026-10-16
+
+Parent commit: `450459f9134e3d166d3a3b856497b9662754ded4`.
+
+Change: `harness.source_snapshot.stable_snapshot` supplies bounded regular-file
+bytes to the existing pure section reader. It compares `fstat` metadata on the
+held source and a second named-file handle, retaining device, inode, mode, link
+count, size, modification time and change time. Both descriptors have explicit
+cleanup. Pathname/handle `ctime` differences do not require removing drift checks.
+
+Distilled lesson: qualify the actual interpreter and operation. Isolated runtime
+startup, remote transport, file stability, HTTP retrieval and native consumption
+are different stages. A later working runtime or snapshot does not change an
+earlier failed attempt into success; continue verification without replaying an
+already completed publication or restart.
+
+Validation: seven focused public tests passed on Windows/Python3.11 and3.13,
+covering real atomic publication, byte limits, replacement-file identity,
+in-place drift, failed-handle cleanup, hard links and relative paths. The full
+local release gate passed all21 checks and all seven offline self-tests on3.11.
+Exact-head platform CI is a separate acceptance check tracked on the pull request.
+
+Scope: an explicit read-only filesystem helper, with no credentials, inference,
+network, persistent state or automatic retry. The caller owns source authorization.
+This is not an OS deadline, continuous lock, native-reader adoption or deployment
+claim. Separate private runtime evidence does not qualify this public package.
+
+## Return complete bounded source sections — 2026-10-16
+
+Parent commit: `8596174d435da292ef3f0d8a54eaeacc1b87ca83`.
+
+Change: `harness.source_read.complete_section` returns one complete literal H2
+section from immutable UTF-8 bytes, with body/source hashes and line bounds.
+Absent, duplicate or oversized sections refuse; no prefix or summary is returned.
+The helper performs no filesystem, network, inference or authority operation.
+
+Distilled lesson: a canonical document can contain a small Current section and
+large historical evidence. Keep the complete Current within its existing body
+cap while preserving requirements and history. A section hash is different from
+a full-source hash, and a fresh source read does not prove live runtime truth.
+
+Validation: seven focused public unit tests cover exact body/line/hash binding,
+one-byte budget edges, UTF-8 bytes, CRLF/final lines, ambiguity, invalid inputs
+and a body containing the entire source. The complete unit suite and all seven
+offline self-tests passed on Windows/Python3.11. Private source-reader tests and a local canonical
+read are separate evidence; no native broker adoption is claimed here.
+
+Scope: a pure portable public helper and guidance. It is not a Markdown parser,
+stable filesystem snapshot, remote attestation, authentication, active runtime
+check or deployment. Existing target readers require their own owner adoption.
+
+## Qualify the actual adapter operation — 2026-10-16
+
+Parent commit: `f6db4a7ed8becbf9e45f674f6383afc2583f799d`.
+
+Change: `DIAGNOSTICS.md` separates schema checks, actual operation argument
+checks and SDK preparation before provider dispatch. Reuse the existing target
+inspection path and finite runner; retain strict route and source bindings.
+
+Distilled lesson: a reused reviewer built a valid schema but its operation
+still required the previous workflow's route. It failed before producing a
+verdict or recording preparation counters. A schema-only test missed that
+guard. Null counters must remain unobserved, not be reported as measured zero.
+
+Validation in the source workflow: tests exercised the actual corrected export
+up to a deliberate freshness refusal. A separate native SDK inspection then
+recorded one prepared request, zero provider payloads, no tools or session file,
+and a settled child. The original held attempt remained unchanged. Those checks
+do not prove a model verdict, server grammar, semantic quality or live adoption.
+
+Public validation: the full unit suite and all seven offline self-tests passed
+on Windows with Python 3.11. Hosted validation follows source publication.
+
+Scope: public guidance only; executable behaviour is unchanged. No runtime,
+provider, permission, retry policy or scheduler change follows from this
+documentation.
+
+## Check required contract text before model transport — 2026-10-16
+
+Parent commit: `268a270abfc27a93b4263ff1ebb9ce9d78f87798`.
+
+Change: `LocalLLM.chat` and the forwarding `ask` path accept optional
+`required_prompt_literals`. The client checks text content from the exact JSON
+payload before transport. Missing contract text refuses locally; metadata alone
+does not satisfy the check. Calls without requirements retain their payload.
+`DIAGNOSTICS.md` provides the public usage example.
+
+Distilled lesson: a controller required two exact labels but omitted both names
+from the model-facing prompt. The answer remained rejected by its validator.
+Correct disclosure and preserve the original attempt; changing the prompt does
+not establish novelty or grant another execution.
+
+Validation: eight transport-mocked regression tests cover the missing contract,
+metadata-only disclosure, actual serialized messages, default payload, invalid
+requirements, non-text content, Unicode and cross-message fragments. All seven
+offline self-tests and the complete unit suite passed on Windows with Python
+3.11. Ruff checks passed for the changed Python files. Hosted validation follows
+source publication; these local checks do not establish target adoption.
+
+Scope: an optional public client guard and diagnostic guidance. Literal presence
+does not establish complete instructions, response correctness, server grammar
+enforcement or target adoption. Existing response and semantic checks remain.
+
+## Preserve reader compatibility during scheduled rollout — 2026-10-16
+
+Parent commit: `7c857913839cea275b73bb6273f4cf72549ac623`.
+
+Change: `DIAGNOSTICS.md` checks every active reader of shared history before a
+new-format write. It separates detached format validation, installed scheduler
+selection, a normal scheduled result and later idle behaviour.
+
+Distilled lesson: a successful manual run can leave the next old timer unable
+to read its result. Publish compatible readers first. After the new record is
+stored, recovery must preserve compatible parsing and the original history.
+
+Validation: the parent workflow reproduced rejection by the old parser, checked
+retained history and a detached candidate, and read back the installed scheduled
+entry. These checks establish format and rollout evidence; they do not establish
+model correctness, later useful consumption or continuous operation.
+
+Public validation: all seven offline self-tests passed on Windows with Python
+3.11. The change is documentation only; executable behaviour is unchanged.
+
+Scope: public diagnostic guidance only. No runtime, permission, model, scheduler,
+retry policy or target adoption changes are made by this documentation.
+
+## Preserve safe failure-stage diagnostics — 2026-10-16
+
+Parent commit: `d539d832e571044d150f8a963e99be22228e27a0`.
+
+Change: `DIAGNOSTICS.md` adds a portable logging example and checks for an error
+whose underlying stage is hidden by a generic response. Keep fixed stage labels,
+allowlisted exception classes and retained-buffer metadata separate from raw
+errors and operational outcome claims.
+
+Distilled lesson: a protective hold can be correct while its cause remains
+unknown. Diagnose the original attempt before another submission. Logging must
+preserve the original exception, cleanup, admission and retry behavior.
+
+Validation: ten independent synthetic differential controls passed for the
+parent workflow's candidate diagnostics, including failure paths, cleanup and
+logger failures. At that source qualification, the live cause was unknown and
+the candidate was not deployed. These controls do not establish live diagnosis
+or adoption. This public change is guidance and example code only.
+Public validation: all seven offline module self-tests and 131 unit tests passed
+on Windows with Python 3.11. No target adoption follows from these checks.
+
+## Verify worker evidence delivery — 2026-10-16
+
+Parent commit: `09a7b7dc17dcca5500f54642246e84ce3d1a4160`.
+
+Change: `DIAGNOSTICS.md` checks the complete serialized tool response and retained
+model-facing messages, including duplicate context, size units, offload and
+available recovery tools. Compact projections must preserve task requirements,
+authority restrictions and explicit unknowns as well as selected evidence.
+
+Distilled lesson: a valid stored-body hash and successful tool result do not
+establish evidence delivery. A preview can refer to recovery tools that the
+worker cannot use. Fitting a response does not prove semantic completeness.
+
+Validation: the parent workflow retained an actual delivery failure and checked
+a corrected projection against the native serializer and offload function.
+Fresh target input, review quality and later useful consumption remain pending.
+Public validation: seven offline module self-tests and 131 unit tests passed on
+Windows with Python 3.11. These checks do not establish target adoption.
+
+Scope: diagnostic guidance only. No runtime, permissions, tools, model, deadline,
+scheduler or automatic retry changes. No target adoption or publication claim.
+
+## Verify caller and checker source bindings — 2026-10-15
+
+Parent commit: `74211bc42f2e802224e8457fe0a66e8ce74d2d08`.
+
+Change: `DIAGNOSTICS.md` adds the two source-binding comparisons and asks for a
+control over the assembled packet. A checker must still refuse the wrong source
+or caller. Bootstrap failures retain their original exit and diagnostic evidence.
+
+Distilled lesson: independently correct file hashes do not prove that a caller,
+checker and selected input form a compatible set. A stale nested pin can refuse
+before structured output, even when the caller selected the intended input.
+
+Validation: the parent workflow retained the original refusal, passed controls
+for the corrected pair and completed its normal publication and startup path.
+Public validation: seven offline module self-tests and 131 unit tests passed on
+Windows with Python 3.11. These checks do not establish target adoption.
+
+Scope: diagnostic guidance and illustrative comparisons only. No runtime,
+permission, model, scheduler, retry policy or target adoption changes.
+
+## Separate worker recovery from graph acceptance — 2026-10-11
+
+Parent commit: `bc49e9c9e6787df8a1871f317742ad5532238dd8`.
+
+Change: `DIAGNOSTICS.md` separates job-idle, replacement-startup, and total
+attempt deadlines. It asks for native events and owned-child settlement, keeps
+runtime suggestions distinct from measured causes, and requires normal graph
+publication and freshness before impact analysis. Input comparisons distinguish
+parser filtering from scanned-path and graph-structure filtering.
+
+Distilled lesson: a parser can hit its idle limit and its replacement can fail
+readiness before the outer attempt expires. A successful controller exit still
+does not establish analyzer completion. A parser-skipped file can affect graph
+input, so a changed dirty list cannot be dismissed without source evidence.
+
+Validation: source review of existing filter, graph, parser, and worker paths,
+plus retained events from a finite failed attempt. Public offline package checks
+are reported separately in the PR; no new runtime test or retry is introduced.
+
+Scope: diagnostic guidance only. No analyzer, worker, deadline, ignore rule,
+provider, model, scheduler, installation, or target-authority change. Target
+instruction loading and normal task adoption remain separate acceptance gates.
 
 ## Bound release output collection after a timeout — 2026-10-10
 
