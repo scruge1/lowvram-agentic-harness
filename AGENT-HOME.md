@@ -256,6 +256,14 @@ still does not activate or roll back an active generation.
 
 ## Read bounded board replies
 
+Rare board displays and project-maintenance schemas use native deferred exposure.
+Use `tool_search` for the needed name, check the loaded result, then call that
+tool. This includes list/show/create/comment, hierarchy/decomposition, knowledge
+rebuild and closeout/skill/memory-candidate preparation. Intake, context, selection
+and workflow tools stay direct. Native discovery is fuzzy; a matching query does
+not establish permission or source correctness. Existing restored active tools
+are preserved. Without discovery, the previous direct schema surface remains.
+
 Successful show, list, create, move, comment, decomposition and hierarchy replies
 use a bounded model view, at most12KiB of UTF-8 JSON. The original complete
 backend reply remains in host `details`. Routing, source matching, idempotence,
