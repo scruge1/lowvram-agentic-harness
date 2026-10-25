@@ -5,6 +5,43 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Home-bound managed commands — 2026-10-25
+
+Parent commit: `482357a623415eecbb1560b57f04451487ccdfdc`.
+
+Extend the existing home launcher and environment rather than creating another
+agent engine. Fresh homes include `bin/harness-agent` (Windows `.cmd`). Explicit
+command registration can put the unique command and optional default `pi` in a
+selected bin directory. Existing commands are preserved on collision. Status
+shows the selected home/project/model and process PATH result; reversal removes
+only unchanged owned commands and retains their bytes. Shell aliases/functions
+and PATH changes remain explicit user configuration.
+
+Launch from an admitted project keeps its exact root; unrelated directories
+open the home without adopting that directory. Native project identity and
+state-root validation prevent accidental use through another home. The actual
+OS HOME is unchanged. Native Pi session buckets stay home/project-bound.
+Conflicting model/provider/profile/session options are refused. Native Pi's
+actual `--` parser was exercised before retaining literal positional arguments.
+RPC and resume remain explicitly unsupported until their model/owner paths are
+qualified; no new session or RPC controller is introduced.
+
+Nine command tests and11 home tests pass on Windows, including Unicode and
+spaces. A real Unicode bootstrap exposed child output encoding, corrected by
+setting UTF-8 on the existing child-process I/O path. Nineteen Linux native
+checks produced eight binding reports through the actual managed command and
+Pi1.4 CLI, with real doctor/post-install/board/palace paths. They cover home,
+project, unrelated cwd, conflicting ambient settings, two homes, collision
+preservation and refusal cases. A command-only observer in the owned profile
+inspected real prompt/tools/memory/session bindings. Provider HTTP stayed zero;
+both owned hubs stopped and donor package/configuration hashes were unchanged.
+
+This is an instrumented native fresh-session qualification using unchanged
+borrowed dependencies, not a new package installation or model-driven task.
+Project prompts load the selected home's thin routing instructions; personal
+profile bodies remain selectively loaded. Native Windows execution and safe
+resume acceptance remain open. The shipping PR records full release outcomes.
+
 ## Selective reuse-first engineering skill — 2026-10-25
 
 Parent commit: `cba537cd27ab486aed0a0930d46529073f683cbb`.
