@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,7 @@ from harness.home import HomeError, environment, load, run
 
 
 def settings(home, config):
+    """Validate persisted nonsecret settings without resolving service credentials."""
     root = home / "memory/claude-mem"
     value = json.loads((root / "settings.json").read_text(encoding="utf-8"))
     required = {
@@ -31,9 +33,39 @@ def settings(home, config):
         "CLAUDE_MEM_WORKER_HOST": "127.0.0.1", "CLAUDE_MEM_WORKER_PORT": str(config["claude_memory_port"]),
         "CLAUDE_MEM_REDACT_ENABLED": "true",
     }
+    if "owned_model_service" in config:
+        # Accept the existing scaffold placeholder or an empty key. Neither is
+        # an effective credential for the authenticated observer child.
+        placeholder = value.get("CLAUDE_MEM_OPENAI_COMPAT_API_KEY")
+        if not isinstance(placeholder, str) or placeholder not in {"", "local"}:
+            raise HomeError("Keep owned observer credentials out of persisted settings.")
+        required["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"] = placeholder
     if any(str(value.get(key)) != expected for key, expected in required.items()):
         raise HomeError("Claude-mem local-provider/ownership configuration changed; hold capture before dispatch.")
     return root, required
+
+
+def child_environment(home, config, required, *, resolve_owned=True):
+    """Build an effective child environment. Never print or persist this result."""
+    env = environment(home)
+    env.update(required)
+    env.update({"CLAUDE_MEM_TELEMETRY": "0", "CLAUDE_MEM_TELEMETRY_ERRORS": "0", "DO_NOT_TRACK": "1"})
+    if "owned_model_service" in config and resolve_owned:
+        from harness import model_service_handoff
+        binding = config["owned_model_service"]
+        route = model_service_handoff._binding(binding)
+        expected = {"home": str(home), "base_url": config["base_url"], "model_id": config["model"],
+                    "context": config["context_window"], "max_output": config["max_output"],
+                    "transport_profile": config["model_profile"]}
+        if any(route.get(key) != value for key, value in expected.items()):
+            raise HomeError("Owned observer route differs from its selected home configuration.")
+        launched = model_service_handoff.launch_environment(home, binding)
+        env = launched.apply(env)
+        key = env.get(binding["environment_variable"])
+        if not isinstance(key, str) or not re.fullmatch(r"[a-f0-9]{64}", key):
+            raise HomeError("Owned observer did not receive a valid current service credential.")
+        env["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"] = key
+    return env
 
 
 def worker_paths(home):
@@ -51,7 +83,7 @@ def worker_paths(home):
     return bun, worker.resolve()
 
 
-def health(home, root, config, worker):
+def health(home, root, config, worker, *, expected_api_key=None):
     """A responding port is insufficient: bind process, source and data root."""
     port = config["claude_memory_port"]
     try:
@@ -85,6 +117,11 @@ def health(home, root, config, worker):
     # Start time is field22 after the parenthesized command, whose text can contain spaces.
     if before.rsplit(b")", 1)[1].split()[19] != after.rsplit(b")", 1)[1].split()[19]:
         raise HomeError("Worker lifetime changed during observation.")
+    if expected_api_key is not None:
+        prefix = b"CLAUDE_MEM_OPENAI_COMPAT_API_KEY="
+        keys = [value[len(prefix):] for value in values if value.startswith(prefix)]
+        if len(keys) != 1 or not hmac.compare_digest(keys[0], os.fsencode(expected_api_key)):
+            raise HomeError("Owned observer credential is stale; stop this exact worker before restarting. No capture was dispatched.")
     return observed
 
 
@@ -99,13 +136,23 @@ def invoke(home, action, payload=None, event=None):
             return {"results": [], "abstained": True, "reason": "sensitive_query", "authority": "retrieval_only"}
     root, required = settings(home, config)
     bun, worker = worker_paths(home)
-    env = environment(home)
-    env.update(required)
-    env.update({"CLAUDE_MEM_TELEMETRY": "0", "CLAUDE_MEM_TELEMETRY_ERRORS": "0", "DO_NOT_TRACK": "1"})
-    observed = health(home, root, config, worker)
+    # Inspection, existing keyword recall and exact stop do not need inference.
+    # Only starting/adopting a capture worker or sending a hook needs fresh auth.
+    owned = "owned_model_service" in config
+    requires_auth = owned and action in {"start", "hook"}
+    env = child_environment(home, config, required, resolve_owned=requires_auth)
+    expected_key = env["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"] if requires_auth else None
+    observed = health(home, root, config, worker, expected_api_key=expected_key)
     if action == "status":
-        return {"status": "running" if observed else "stopped", "health": observed,
-                "scope": "owned worker health, not capture freshness or memory quality"}
+        result = {"status": "running" if observed else "stopped", "health": observed,
+                  "scope": "owned worker health, not capture freshness or memory quality"}
+        if owned:
+            result.update(authentication="not_checked", capture_ready=False)
+        return result
+    if owned and action == "search" and observed is None:
+        return {"status": "held", "results": [], "abstained": True,
+                "reason": "owned_observer_stopped", "authority": "retrieval_only",
+                "authentication": "not_checked", "capture_ready": False}
     if action in {"start", "hook", "search"} and observed is None:
         with socket.socket() as probe:
             try:
@@ -113,7 +160,7 @@ def invoke(home, action, payload=None, event=None):
             except OSError as error:
                 raise HomeError("Selected memory port is occupied; do not attach or stop another worker.") from error
         run([bun, worker, "start"], cwd=home, env=env, timeout=45)
-        observed = health(home, root, config, worker)
+        observed = health(home, root, config, worker, expected_api_key=expected_key)
         if observed is None:
             raise HomeError("Worker start returned without owned health. Inspect logs before retry.")
     if action == "start":
@@ -128,10 +175,13 @@ def invoke(home, action, payload=None, event=None):
         results = value.get("observations")
         if not isinstance(results, list) or len(results) > 5 or any(not isinstance(row, dict) or type(row.get("id")) is not int for row in results):
             raise HomeError("Memory search returned an invalid source identity.")
-        return {"results": results, "returned_count": len(results), "corpus_match_total": "unknown",
-                "mode": "sqlite_fts_keyword", "upstream_body_truncation": "not_reported",
-                "transport_truncated": False, "source": str(root / "claude-mem.db"),
-                "authority": "retrieval_only"}
+        result = {"results": results, "returned_count": len(results), "corpus_match_total": "unknown",
+                  "mode": "sqlite_fts_keyword", "upstream_body_truncation": "not_reported",
+                  "transport_truncated": False, "source": str(root / "claude-mem.db"),
+                  "authority": "retrieval_only"}
+        if owned:
+            result.update(authentication="not_checked", capture_ready=False)
+        return result
     if action == "stop":
         if observed is None:
             return {"status": "stopped", "effect": "none"}
