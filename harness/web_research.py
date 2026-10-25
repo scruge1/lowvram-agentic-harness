@@ -1,9 +1,10 @@
 """Keyless public search and bounded source retrieval, separate from model mining.
 
 This ports URL identity and extraction/provenance from the existing canonical
-research toolchain. It does not port its paid-provider cascade, private state,
-model router, scholarly/Wayback fallback, or browser/stealth services. Search
-terms go to DuckDuckGo. Retrieved text is evidence, never agent instructions.
+research toolchain. An explicit managed home also enables its configured search
+provider policy. Calls without a home use DuckDuckGo only. Model mining,
+scholarly/archive fallback and browser orchestration remain separate operations.
+Retrieved text is evidence, never agent instructions.
 
 Optional native dependencies: ddgs for search; httpx and beautifulsoup4 for
 fetch/extraction. Imports and offline utilities work without those packages.
@@ -31,6 +32,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TypedDict
 import urllib.parse
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 
 SOURCE_LINEAGE = (
     {"source": "scripts/rig/search_core.py", "sha256": "9811a8c9442d6d3860972ef29f0d3fcfbbe45bc3228b9a3cadff19a0bbbb65d8",
@@ -44,7 +48,7 @@ SOURCE_LINEAGE = (
 _TRACKING_QUERY_KEYS = {"fbclid", "gclid", "mc_cid", "mc_eid", "msclkid", "ref_src"}
 _UA = "lowvram-agentic-harness-public-research/1.0"
 RESPONSE_HEADERS = frozenset({
-    "content-type", "content-language", "content-disposition", "cache-control", "vary",
+    "content-type", "content-language", "content-disposition", "cache-control", "vary", "retry-after",
     "content-security-policy", "content-security-policy-report-only", "referrer-policy", "permissions-policy",
     "access-control-allow-origin", "access-control-allow-credentials", "access-control-expose-headers",
     "cross-origin-opener-policy", "cross-origin-embedder-policy", "cross-origin-resource-policy",
@@ -170,8 +174,8 @@ def _number(value, minimum, maximum, name, integer=False):
 
 def _run(operation: str, value: str, timeout: float, **options) -> WebResult:
     _number(timeout, 0.1, 120, "timeout")
-    # Do not inherit paid API keys, proxy configuration, signed-in profiles or
-    # PYTHONPATH. Keep only native process/temp/locale infrastructure.
+    # Do not inherit API keys, proxy configuration, signed-in profiles or
+    # PYTHONPATH. Explicit enabled-provider credentials use private stdin only.
     allowed = ("PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL")
     environment = {key: os.environ[key] for key in allowed if key in os.environ}
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -210,11 +214,28 @@ def _run(operation: str, value: str, timeout: float, **options) -> WebResult:
         return _failure(operation, value, "invalid_response")
 
 
-def search(query: str, *, limit: int = 5, timeout: float = 30) -> WebResult:
-    """Explicit DuckDuckGo discovery. No provider cascade or corroboration claim."""
+def search(query: str, *, limit: int = 5, timeout: float = 30, home=None, policy=None) -> WebResult:
+    """Legacy DDG, or an explicit home's configured search; never truth authority."""
     if not isinstance(query, str) or not query.strip() or len(query) > 4096:
         raise ValueError("query must contain 1 through4096 characters")
     _number(limit, 1, 20, "limit", integer=True)
+    _number(timeout, 0.1, 120, "timeout")
+    if home is not None:
+        from harness import research_search
+        research_search.policy(policy, limit)
+        try:
+            selected_home, providers = research_search.bindings(home)
+        except (OSError, ValueError, ImportError):
+            return _failure("search", query, "configuration_error", "Managed research configuration is unavailable")
+        if any(item.get("credential") and item["credential"] in query for item in providers):
+            return _failure("search", "[redacted]", "sensitive_query")
+        result = _run("search", query.strip(), timeout, limit=limit, home=selected_home,
+                      providers=providers, policy=policy)
+        if research_search.contains_credentials(result, providers):
+            return _failure("search", query, "invalid_response", "Configured search returned withheld private material")
+        return result
+    if policy is not None:
+        raise ValueError("Search coverage policy requires an explicit managed home")
     return _run("search", query.strip(), timeout, limit=limit)
 
 
@@ -408,12 +429,18 @@ def _worker(operation: str, request: Dict[str, Any]) -> WebResult:
     value = request["value"]
     try:
         if operation == "search":
+            if "providers" in request:
+                from harness import research_search
+                return research_search.execute(value, request["timeout"], request["limit"], request["home"],
+                                               request["providers"], request.get("policy"))
             return _search_native(value, request["timeout"], request["limit"])
         return _fetch_native(value, request["timeout"], request["max_bytes"], request["max_chars"], request["max_redirects"],
                              request.get("browser_origin"), request.get("browser_referrer"))
     except ImportError as error:
         return _failure(operation, value, "dependency_missing", error.name)
     except ValueError:
+        if operation == "search" and "providers" in request:
+            return _failure(operation, value, "configuration_error", "Invalid configured search state or request")
         return _failure(operation, value, "blocked", "Unavailable public destination")
     except Exception as error:
         name = type(error).__name__
@@ -431,9 +458,10 @@ def main() -> int:
     parser.add_argument("value")
     parser.add_argument("--timeout", type=float, default=30)
     parser.add_argument("--limit", type=int, default=5)
+    parser.add_argument("--home", type=Path, help="Explicit managed provider configuration; omitted means DDG only")
     args = parser.parse_args()
     try:
-        result = search(args.value, timeout=args.timeout, limit=args.limit) if args.operation == "search" else fetch(args.value, timeout=args.timeout)
+        result = search(args.value, timeout=args.timeout, limit=args.limit, home=args.home) if args.operation == "search" else fetch(args.value, timeout=args.timeout)
     except ValueError as error:
         result = _failure(args.operation, args.value, "invalid_input", str(error))
     print(json.dumps(result, ensure_ascii=False))

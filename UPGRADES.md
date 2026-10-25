@@ -56,6 +56,25 @@ failure phases. High-cost downloads, native service and package calls are mocked
 in those fixtures. They do not qualify a new full installation, useful agent
 task quality, model speed or general hardware fit. The CPU profile remains a
 text-only candidate; GPU and full/observer setup are outside this route.
+## Configured provider fallback and coverage — 2026-10-25
+
+Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
+
+Adapt the canonical search policy into the existing bounded research worker.
+Explicit home configuration selects providers through the sole settings/key
+resolver; calls without a home retain DDG-only behavior. Preserve missing-key,
+skip, storage-rights hold, rate-limit/cooldown, relevance, request-budget and
+coverage outcomes. First-success mode makes no corroboration claim. Credentials
+cross only private worker stdin; fixed keyed endpoints cannot redirect them.
+Tavily requests basic search without generated answers or automatic parameters.
+Reuse the config owner's protected directory and cap/recover per-home cooldowns.
+
+Focused synthetic controls cover the retained quota-failure/fallback and missing
+key/cooldown failure families, exact response bounds, late success, private result
+URLs, secret echoes and unchanged legacy calls. Native HTTPX MockTransport tests
+and an actual all-skipped child operation make no provider or model requests.
+These source checks do not qualify live account limits, mining, full browser
+fallback, complete research convergence or useful model-driven outcomes.
 
 ## Observer credentials and independent keyword recall — 2026-10-25
 
