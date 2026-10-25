@@ -772,6 +772,15 @@ and bounded complete API delivery. Chroma is disabled for this new observer;
 MemPalace supplies separate semantic recall. Hook delivery does not establish
 observer output quality or freshness. No global Claude/Codex profile is edited.
 
+An isolated Linux component run qualified the actual Bun1.4.4 and patched
+Claude-mem13.29.0 foreground lifecycle: startup and health, exact owned process,
+source, data, listener and READ lease, empty drain, stop and exclusive cleanup.
+Foreign-port and persisted-registry refusals passed. It recorded zero model
+POSTs and capture hooks. Only two copied public packages were installed; seven
+selected packages remained uninstalled. Full installation/profile admission,
+generated capture and useful recall remain separate acceptance requirements.
+An empty queue does not establish generation or recall quality.
+
 The existing private preservation fork is not stock13.29.
 Never migrate an existing store during fresh-home setup. Such a migration needs
 complete SQL/vector/project-identity parity, shadow-generation testing and native
