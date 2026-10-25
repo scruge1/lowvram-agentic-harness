@@ -206,10 +206,67 @@ try {
   assert.equal(providerCalls.length, beforeHeaders); checks.push('unbound-native-routing-headers-refused-before-provider');
   const long = await tool({ ...input, timeout: 86401 }); assert.equal(long.isError, true);
   assert.match(long.details.reason, /86400/); checks.push('per-operation-budget-validation');
+
+  // Hold only the copied helper's finish-entry boundary. The production body
+  // remains unchanged; bind the explicit test instrumentation in its manifest.
+  const helper = path.join(runtime, 'harness/research_runtime.py'), originalHelper = fs.readFileSync(helper);
+  const marker = path.join(fixture, 'finish-entered'), release = path.join(fixture, 'finish-release');
+  const replacement = `request = json.loads(raw)\n        if request.get('action') == 'mine_finish' and os.environ.get('PI_RESEARCH_TEST_FINISH') == '1':\n            Path(${JSON.stringify(marker)}).write_text('entered')\n            while not Path(${JSON.stringify(release)}).exists(): __import__('time').sleep(0.01)\n        result = ResearchRuntime(args.home).execute(request)`;
+  const instrumented = originalHelper.toString().replace('result = ResearchRuntime(args.home).execute(json.loads(raw))', replacement);
+  assert.notEqual(instrumented, originalHelper.toString());
+  const bindingItem = manifest.find(item => item.path === 'harness/research_runtime.py');
+  function rebindHelper(bytes) {
+    fs.writeFileSync(helper, bytes); bindingItem.sha256 = digest(helper);
+    write(path.join(runtime, 'runtime-manifest.json'), { files: manifest });
+    const config = JSON.parse(fs.readFileSync(path.join(home, 'home.json')));
+    config.runtime_manifest_sha256 = digest(path.join(runtime, 'runtime-manifest.json')); write(path.join(home, 'home.json'), config);
+    process.env.PI_WEB_RESEARCH_HELPER_SHA256 = bindingItem.sha256;
+  }
+  const completed = () => py(`import json;from pathlib import Path
+p=Path(sys.argv[1])/'research/artifacts';v=[json.loads(f.read_text()) for f in p.glob('*.json')];print(json.dumps(sum(x.get('action')=='mine' and x['payload'].get('complete') is True for x in v)))`, [identities[0].state_root]);
+  const finishBoundaries = [];
+  rebindHelper(instrumented); process.env.PI_RESEARCH_TEST_FINISH = '1';
+  try {
+    for (const kind of ['input', 'headers', 'cancel']) {
+      for (const file of [marker, release]) if (fs.existsSync(file)) fs.unlinkSync(file);
+      const before = completed(), controller = new AbortController();
+      const operation = tool(input, controller.signal);
+      const began = Date.now();
+      while (!fs.existsSync(marker) && Date.now() - began < 5000) await new Promise(resolve => setTimeout(resolve, 10));
+      assert.ok(fs.existsSync(marker), 'Actual guarded finish helper must reach the held boundary');
+      let value;
+      if (kind === 'input') sessionManager.appendCustomEntry('synthetic-input-during-finish', {});
+      if (kind === 'headers') session.model.headers = { 'x-synthetic-route': 'during-finish' };
+      if (kind === 'cancel') {
+        controller.abort();
+        value = await Promise.race([operation, new Promise(resolve => setTimeout(() => resolve(null), 2000))]);
+      }
+      fs.writeFileSync(release, 'release');
+      value ??= await operation;
+      delete session.model.headers;
+      finishBoundaries.push({ kind, isError: value.isError, status: value.details.status,
+        reason: value.details.reason, completed_before: before, completed_after: completed() });
+    }
+  } finally {
+    fs.writeFileSync(release, 'release'); delete session.model.headers;
+    delete process.env.PI_RESEARCH_TEST_FINISH; rebindHelper(originalHelper);
+  }
+  write(path.join(fixture, 'finish-boundaries.json'), { finishBoundaries,
+    original_helper_sha256: sha(originalHelper), instrumented_sha256: sha(Buffer.from(instrumented)),
+    scope: 'Explicit copied-helper pre-publication finish barrier. Drift may hold delivery after immutable publication; the cancellation case holds before publication.' });
+  assert.ok(finishBoundaries.every(row => row.isError === true), JSON.stringify(finishBoundaries));
+  for (const row of finishBoundaries.filter(row => row.kind !== 'cancel')) {
+    assert.match(row.reason, /delivery held/);
+    assert.equal(row.completed_after, row.completed_before + 1, 'Post-publication drift preserves the old bound immutable artifact');
+  }
+  const cancelledFinish = finishBoundaries.find(row => row.kind === 'cancel');
+  assert.equal(cancelledFinish.completed_after, cancelledFinish.completed_before, 'Pre-publication abort must not write successful seen');
+  assert.equal(cancelledFinish.status, 'cancelled');
+  checks.push('finish-await-input-epoch-delivery-held', 'finish-await-native-header-delivery-held', 'prepublication-finish-abort-no-successful-seen');
   assert.deepEqual(errors, []);
   write(path.join(fixture, 'receipt.json'), { schema: 'pi-research-mining-native-qualification/v1', ok: true, checks, fixture,
     elapsed_ms: Date.now() - start, source_files: manifest, trace, borrowed_python: borrowedPython,
-    native_provider_calls: providerCalls.length, provider_wire: providerCalls, network_requests: 0, model_inferences: 0,
+    native_provider_calls: providerCalls.length, provider_wire: providerCalls, finishBoundaries, network_requests: 0, model_inferences: 0,
     scope: 'Actual Pi1.4 registered tool, selected ModelRuntime/auth/OpenAI serializer and installed guarded Python helper. Synthetic SSE in memory; no HTTP/inference or useful-research quality claim. In-memory session/project-selection fixture; no coordinator/intake/root-task acceptance claim.' });
   console.log(JSON.stringify({ ok: true, checks: checks.length, fixture, receipt: path.join(fixture, 'receipt.json'), elapsed_ms: Date.now() - start }));
 } catch (error) {

@@ -35,6 +35,14 @@ model inference. This source qualification is separate from useful model-driven
 research acceptance. Question planning, independent-source synthesis and the
 complete question-to-consensus journey remain open.
 
+An additional held-finish native regression reproduced stale successful delivery
+after input/header drift and cancellation before publication. Keep the successful
+finish connected to its AbortSignal and recheck full admission/model binding
+after the final await. Independent settlement is only for an already-cancelled
+failure ledger. A late cancellation may follow atomic immutable publication;
+hold delivery and preserve the old bound artifact for inspection. Do not claim
+rollback, silently mark current work complete, or automatically resume/replay.
+
 ## Add a reviewed agent core-source migration - 2026-10-25
 
 Parent commit: `f4b8d6b0e5e8944c064ff9152b98764b4d24340f`.

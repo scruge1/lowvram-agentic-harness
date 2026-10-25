@@ -138,7 +138,7 @@ async function mine(runtime: ReturnType<typeof binding>, params: any, ctx: any, 
   const current = () => {
     unchanged();
     if (hashObject(miningModel(ctx, runtime)) !== snapshot)
-      throw new Error('Selected model or transport changed during mining; no result was published.');
+      throw new Error('Selected model or transport changed during mining; delivery held; inspect retained bound artifacts.');
   };
   const controller = new AbortController();
   let timedOut = false;
@@ -197,9 +197,19 @@ async function mine(runtime: ReturnType<typeof binding>, params: any, ctx: any, 
     current();
     // Cancellation can publish a failure ledger only, using a separate bounded
     // settlement call. It cannot schedule inference or mark any source seen.
-    return await invoke(runtime, { action: 'mine_finish', selection, session_id: session, model_binding: modelBinding,
+    const value = await invoke(runtime, { action: 'mine_finish', selection, session_id: session, model_binding: modelBinding,
       plan_artifact_id: plan.plan_artifact_id, responses, cancelled: signal?.aborted === true,
-      timed_out: timedOut }, 30000);
+      timed_out: timedOut }, 30000, controller.signal.aborted ? undefined : controller.signal);
+    current();
+    if (controller.signal.aborted && value.ok)
+      throw new Error('Mining stopped after final publication; delivery held; inspect retained bound artifacts.');
+    return value;
+  } catch (error) {
+    if (controller.signal.aborted)
+      throw Object.assign(new Error('Research mining ' + (timedOut ? 'deadline reached' : 'cancelled')
+        + '; delivery held; inspect retained bound artifacts. No automatic resume or replay.'),
+      { miningStatus: timedOut ? 'deadline' : 'cancelled' });
+    throw error;
   } finally {
     clearTimeout(timer); signal?.removeEventListener('abort', abort);
   }
@@ -244,16 +254,18 @@ export default function (pi: ExtensionAPI) {
         const unchanged = () => {
           if (epoch !== before || ctx.sessionManager.getSessionId() !== session || ctx.sessionManager.getLeafId() !== branch
               || JSON.stringify(selected(ctx)) !== fingerprint)
-            throw new Error('Session input or project admission changed during research; no result was published.');
+            throw new Error('Session input or project admission changed during research; delivery held; inspect retained bound artifacts.');
         };
         const value = params.action === 'mine'
           ? await mine(binding(), { ...params, timeout }, ctx, signal, unchanged)
           : await invoke(binding(), { ...params, selection, session_id: session }, timeout * 1000 + 30000, signal);
+        if (params.action === 'mine') unchanged();
         if (ctx.sessionManager.getSessionId() !== session || JSON.stringify(selected(ctx)) !== fingerprint)
           throw new Error('Project selection changed during research; no result was delivered.');
         return { content: [{ type: 'text', text: JSON.stringify(value) }], details: value, isError: !value.ok };
       } catch (error) {
-        const value = { schema: 'research-result/v1', ok: false, status: params.action === 'mine' && signal?.aborted ? 'cancelled' : 'runtime_error',
+        const value = { schema: 'research-result/v1', ok: false,
+          status: params.action === 'mine' ? (error as any)?.miningStatus ?? (signal?.aborted ? 'cancelled' : 'runtime_error') : 'runtime_error',
           reason: String(error).slice(0, 1000), authority: 'untrusted_source_evidence' };
         return { content: [{ type: 'text', text: JSON.stringify(value) }], details: value, isError: true };
       }

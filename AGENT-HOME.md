@@ -541,6 +541,10 @@ The first transport failure stops further shards; there is no automatic replay.
 session. A successful unchanged result can be supplied as `resume_artifact_id`
 on the same mine request; this reuses the stored result without another model
 call. Changed inputs or a failed result cannot qualify as a successful resume.
+Cancellation before publication aborts the successful finish path. Cancellation
+or admission drift observed after atomic publication holds delivery; the old
+bound immutable artifact can remain for inspection. It grants no current-project
+authority. Do not automatically resume or replay an uncertain operation.
 
 Offline schema/span/identity tests and a native Pi serializer probe with
 synthetic responses qualify the source path. They do not establish local model
