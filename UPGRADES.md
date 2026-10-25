@@ -5,6 +5,34 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Selective reuse-first engineering skill — 2026-10-25
+
+Parent commit: `cba537cd27ab486aed0a0930d46529073f683cbb`.
+
+Port the existing engineering workflow into a thin posture route and one native
+Agent Skills package, with a separately loaded comparison reference. Preserve
+the original purpose: use existing working code and native capabilities, reduce
+duplicate components, compare actual quality, retain the best result and carry
+unmet root requirements forward. No new skill loader, controller or service.
+
+Fourteen actual Pi1.4/Hermes/Framework checks passed. Native discovery exposed
+skill metadata without loading the whole body/reference. The selected skill
+was read before a guarded action that required it; only the relevant reference
+window was read. The fixture inspected and invoked unchanged CPython3.12.3
+`csv.DictReader` before adapting it, retained its real version/source/PSF
+provenance, and used independent literal edge cases. A weaker candidate failed
+while the known-good baseline remained unchanged. Comma, quote, newline,
+Unicode, zero and decimal cases plus malformed input were checked.
+
+Existing intake retained the root through a novelty question and a blocked
+dependency; independent authorized work remained available. Four guarded host
+runs and their negative controls passed. Completed child work and the Framework
+queue remained distinct from root acceptance. This is scripted native consumer
+qualification with explicit catalog/memory observations, not evidence that a
+model independently selects the skill or follows the entire doctrine. That
+acceptance belongs in the real first-project journey. No model inference,
+GPU operation, package installation or live profile change was used.
+
 ## Native deferred memory discovery and recall readiness — 2026-10-25
 
 Parent commit: `a616de8857beaaae66adcb118ef7a627008c2797`.
