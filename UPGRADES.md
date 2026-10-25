@@ -30,6 +30,32 @@ in those fixtures. They do not qualify a new full installation, useful agent
 task quality, model speed or general hardware fit. The CPU profile remains a
 text-only candidate; GPU and full/observer setup are outside this route.
 
+## Observer credentials and independent keyword recall — 2026-10-25
+
+Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
+
+Keep persisted observer settings nonsecret. Reuse the owned service handoff to
+resolve current credentials only for the observer child that starts or captures.
+Reject a running worker with stale credentials before capture or start adoption;
+do not restart it or replay its queue automatically. Exact owned stop remains
+available without a live model or fresh credential. Foreign workers stay held.
+
+Status and existing SQLite keyword recall need no inference authentication.
+Report authentication as unchecked and capture readiness as false. A stopped
+owned observer returns held for keyword search instead of starting a daemon.
+Preserve the non-owned local path and retrieval-only authority.
+
+Sixteen focused synthetic controls passed on Windows and Linux. All seven
+existing offline selftests and pinned Ruff0.16.10 passed. The initial Linux
+fixture incorrectly placed temp inside the source tree and was refused; moving
+temp outside the tree passed without changing a guard. No actual observer,
+model, service or package action qualified this change.
+
+Native foreground entry, strict occupied-port refusal, observer/home/serving
+lease lifetime, drain/shutdown and actual authenticated capture/readback remain
+open. Full-profile admission stays held. The reduced default profile does not
+complete the original full bundle.
+
 ## Run and check the first report through managed launch — 2026-10-25
 
 Parent commit: `1c17b3ef141eda1facec10b8eb65f2cf8dc16bb7`.
