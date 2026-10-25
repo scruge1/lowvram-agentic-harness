@@ -22,7 +22,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 from harness.home import HomeError, check_package, environment, load
-from harness import home_entry, model_service, model_service_handoff
+from harness import claude_memory_patch, home_entry, model_service, model_service_handoff
 
 
 # Requiring the exported class avoids upstream CLI daemon spawning and port
@@ -101,6 +101,7 @@ def worker_paths(home):
     worker = home / "packages/claude-mem/node_modules/claude-mem/plugin/scripts/worker-service.cjs"
     if not worker.is_file():
         raise HomeError("Claude-mem worker assets are not installed.")
+    claude_memory_patch.verify(home)
     return bun, worker.resolve()
 
 
@@ -143,7 +144,7 @@ def health(home, root, config, worker, *, expected_api_key=None):
         keys = [value[len(prefix):] for value in values if value.startswith(prefix)]
         if len(keys) != 1 or not hmac.compare_digest(keys[0], os.fsencode(expected_api_key)):
             raise HomeError("Owned observer credential is stale; stop this exact worker before restarting. No capture was dispatched.")
-    return observed
+    return {**observed, "agent_home_artifact": claude_memory_patch.disclosure()}
 
 
 @contextmanager
@@ -227,6 +228,7 @@ def request(proof, route, payload=None, *, timeout=10):
 def foreground_start(home, root, config, bun, worker, env):
     # A failed health check does not prove an absent process. Do not respawn a
     # live unhealthy worker, or let the upstream CLI reclaim an occupied port.
+    claude_memory_patch.require_empty_registry(root)
     if live_pid(root) is not None:
         raise HomeError("An observer process remains alive without healthy ownership; inspect it before recovery.")
     native = model_service._pidfd()
