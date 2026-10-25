@@ -287,6 +287,55 @@ a file created after activation. The owned model service and memory hub stopped,
 and exclusive home leases passed. This qualifies that controller source; the
 later research-budget changes and new hosts require separate native evidence.
 
+### Explicit agent core-source update
+
+The separate `agent-core-source-v1` scope admits the reviewed source40 core to
+source41 observer-install hooks. It requires an integrated Linux `agent` home
+with the same five selected and installed packages: Pi, Hermes, MemPalace,
+Framework and research. It changes runtime source only. It does not install Bun
+or Claude-mem, start an observer, change package pins/profile/trust or render
+templates over personal files. Observer package records or partial package
+artifacts refuse this scope; ordinary settings-only directories remain data.
+
+The controller pins six old/new function AST pairs and one added helper, then
+requires every remaining home definition, CLI, constant and import to match.
+Stable entry, lifecycle, maintenance and Framework binder bytes stay fixed.
+The existing `gitignore.template` packaging exception accepts only its reviewed
+source bytes; the home's personalized `.gitignore` is preserved. Actual payload
+hashes remain distinct from AST comparison and line-ending normalization.
+
+Stage through the existing maintenance route first, then use the exact reviewed
+new controller checkout:
+
+```bash
+python -B /path/to/reviewed-checkout/harness/runtime_update.py --home HOME \
+  core-source-plan --operation ID
+python -B /path/to/reviewed-checkout/harness/runtime_update.py --home HOME \
+  core-source-apply --operation ID --expected-plan PLAN_SHA256 \
+  --qualification /path/to/core-source-qualification.json \
+  --qualification-sha256 CONTRACT_SHA256 --execute-qualified-runtime
+```
+
+The qualification schema remains `agent-home-runtime-qualification/v1`. Use
+scope `agent-core-source-v1`; bind the exact plan's `home`, `operation`,
+`stage_receipt_sha256`, `candidate_sha256`, `active_sha256` and `core_source`, plus
+reviewed evidence and explicit execution authorization. `core_source` includes
+the old/new source, five-package fingerprints, executing recovery closure and
+interpreter. Ordinary compatible and CLI-only contracts cannot authorize it.
+
+Apply uses the existing stopped-consumer EX transaction and ends pending.
+Run `core-source-verify` from the retained candidate controller with the current
+journal hash. It checks the stable doctor, full redacted `research status` and
+normal managed `/agent-health` with zero generation requests. Package drift or
+consumer failure preserves a distinct unaccepted state. Recovery and rollback
+reuse the existing commands and require the retained core controller/interpreter
+and unchanged package bindings. Stop the home's consumers before either route.
+
+This is a narrow source frontier. It does not combine the older research CLI
+migration with core changes or authorize other installed profiles. Source tests
+use synthetic package/consumer fixtures; separate native home adoption is
+required before claiming the complete migration is accepted on a host.
+
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
 and let their exact results reach the next model-input context. A successful
