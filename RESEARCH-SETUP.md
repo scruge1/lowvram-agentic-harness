@@ -3,8 +3,7 @@
 DuckDuckGo is the keyless default. Add other providers only if you want them.
 The host uses one configured order: SearXNG, Exa, Brave, Tavily, DuckDuckGo.
 An unconfigured or skipped provider is not activated by an ambient API key.
-These source modules need the managed-command integration before an installed
-home offers the commands below. Setup itself sends no provider request.
+Use the installed home command below. Setup itself sends no provider request.
 
 Run setup directly in your own terminal:
 
@@ -75,3 +74,9 @@ For source development, `python -m harness.research_setup --home HOME ACTION`
 is the same parser. The managed entry owns its normal home lifecycle lease;
 calling the source module directly does not establish installed lifecycle or
 provider acceptance.
+
+Existing homes retain their installed controller. The compatible updater holds
+changes to `harness/home.py`, including this new grouped setup command. Fresh
+installations include it; migration of an existing controller remains a separate
+qualification. Preserve the existing home and personal data. Copying controller
+files around that boundary is not a supported update.

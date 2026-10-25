@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Join configured search, bounded retrieval and the managed home — 2026-10-25
+
+Parent commit: `c87e6cd` (joined source history, descended from
+`4f9465dfbcd8883842dceaac18393f6391415803`; the integration merge retains PR34).
+
+Connect the sole provider resolver and human-terminal setup to the installed
+home command. Pass only the trusted home to configured search; model requests
+cannot select another home, submit a key or approve retention rights. Suppress
+argument values in launcher parser errors so a mistaken secret flag is not
+echoed. Keep DDG-only legacy calls and keyless default configuration.
+
+Adapt scholarly candidate and retry intent from the existing miner through
+guarded HTTP/browser tools. Preserve complete native attempts within a24MiB
+cumulative evidence budget; disclose withheld evidence instead of accepting it.
+Keep abstracts, archived snapshots and browser windows explicitly partial, with
+selected URL/scope retained through cached reads. Fetch defaults to60 seconds
+with a30-second browser settlement reserve; search30/render40 stay separate
+operation limits. Archive fallback is explicit. No authentication/challenge
+bypass, private browser service, mining/convergence or whole-suite parity claim.
+
+Joined synthetic checks cover installed CLI key suppression, wrong-home/key/
+rights request refusal and automatic render-to-cache scope preservation. Source
+config/cascade/fetch and native transport fixtures passed within their recorded
+Windows/Linux limits. They do not establish live keyed-provider access, current
+account rights or real model research quality. The compatible updater protects
+home.py; existing-controller migration is still separate from fresh setup.
+
 ## Human-terminal optional search setup — 2026-10-25
 
 Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
