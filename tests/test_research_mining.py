@@ -146,6 +146,7 @@ class MiningRuntimeTests(unittest.TestCase):
         self.models.write_bytes(r.wire({"providers": {"local": {"baseUrl": self.runtime.config["base_url"], "api": "openai-completions", "models": [model]}}}))
         self.model = {"provider": "local", "id": "synthetic", "api": "openai-completions", "base_url": self.runtime.config["base_url"],
                       "context_window": 32768, "max_tokens": 4096, "reasoning": False, "compat_sha256": r.digest(r.wire({})),
+                      "headers_sha256": r.digest(r.wire({})),
                       "models_sha256": r.digest(self.models.read_bytes()), "output_tokens": 1000}
         binding = {"project_id": self.identity["project_id"], "board_id": self.identity["board_id"], "canonical_root": str(self.project)}
         self.store = r.ArtifactStore(self.identity["state_root"], binding)
@@ -194,6 +195,10 @@ class MiningRuntimeTests(unittest.TestCase):
         self.assertEqual(len(list(self.store.directory.iterdir())), count)
         with self.assertRaisesRegex(r.ResearchError, "actual configured local"):
             self.runtime.execute({**self.request, "model_binding": {**self.model, "provider": "foreign"}})
+
+    def test_in_memory_routing_headers_are_not_accepted_as_pinned_home_config(self):
+        with self.assertRaisesRegex(r.ResearchError, "transport changed"):
+            self.runtime.execute({**self.request, "model_binding": {**self.model, "headers_sha256": r.digest(r.wire({"x-route": "synthetic"}))}})
 
     def test_foreign_home_model_endpoint_cannot_enable_cloud_mining(self):
         self.runtime.config["base_url"] = "https://203.0.113.1/v1"

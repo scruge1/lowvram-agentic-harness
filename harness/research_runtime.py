@@ -327,7 +327,7 @@ class ResearchRuntime:
     def mining_model(self, value):
         from harness.home import endpoint
         fields = {"provider", "id", "api", "base_url", "context_window", "max_tokens", "reasoning",
-                  "compat_sha256", "models_sha256", "output_tokens"}
+                  "compat_sha256", "models_sha256", "headers_sha256", "output_tokens"}
         require(isinstance(value, dict) and set(value) == fields, "Invalid native mining model binding")
         require(value["provider"] == "local" and value["api"] == "openai-completions"
                 and value["id"] == self.config.get("model") and value["base_url"] == self.config.get("base_url"),
@@ -343,6 +343,9 @@ class ResearchRuntime:
         require(value["context_window"] == model.get("contextWindow") and value["max_tokens"] == model.get("maxTokens")
                 and value["reasoning"] == model.get("reasoning", False)
                 and value["compat_sha256"] == digest(wire(model.get("compat", {})))
+                # Pi1.4 modelFromJson sets native model.headers=undefined.
+                # Configured headers resolve separately from the bound JSON.
+                and value["headers_sha256"] == digest(wire({}))
                 and type(value["output_tokens"]) is int and value["output_tokens"] == min(1000, value["max_tokens"]),
                 "Native model capabilities or transport changed")
         return value

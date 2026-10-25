@@ -196,6 +196,14 @@ try {
   result = await tool(input); assert.equal(result.isError, true);
   assert.match(result.details.reason, /model or transport changed/); fs.writeFileSync(modelFile, bytes);
   checks.push('native-configured-model-byte-drift-refuses-publish'); hook = () => {};
+  hook = () => { session.model.headers = { 'x-synthetic-route': 'changed' }; };
+  result = await tool(input); assert.equal(result.isError, true);
+  assert.match(result.details.reason, /model or transport changed/); delete session.model.headers;
+  checks.push('actual-native-in-memory-header-drift-refuses-publish'); hook = () => {};
+  const beforeHeaders = providerCalls.length;
+  session.model.headers = { 'x-synthetic-route': 'unbound' };
+  result = await tool(input); assert.equal(result.isError, true); delete session.model.headers;
+  assert.equal(providerCalls.length, beforeHeaders); checks.push('unbound-native-routing-headers-refused-before-provider');
   const long = await tool({ ...input, timeout: 86401 }); assert.equal(long.isError, true);
   assert.match(long.details.reason, /86400/); checks.push('per-operation-budget-validation');
   assert.deepEqual(errors, []);

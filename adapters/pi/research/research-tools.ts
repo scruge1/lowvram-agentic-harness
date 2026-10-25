@@ -126,6 +126,7 @@ function miningModel(ctx: any, runtime: ReturnType<typeof binding>) {
   return { provider: model.provider, id: model.id, api: model.api, base_url: model.baseUrl,
     context_window: model.contextWindow, max_tokens: model.maxTokens, reasoning: model.reasoning === true,
     compat_sha256: hashObject(model.compat ?? {}), models_sha256: sha(fs.readFileSync(file)),
+    headers_sha256: hashObject(model.headers ?? {}),
     output_tokens: Math.min(1000, model.maxTokens) };
 }
 
