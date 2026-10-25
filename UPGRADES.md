@@ -7,13 +7,13 @@ out of the public repository. Git records the resulting commit after publication
 
 ## Create managed projects through the existing home factory - 2026-10-25
 
-Parent commit: `147748b8a1e6ab6b5fde5525b02e280e6ee25e70`.
+Parent commit: `f4b8d6b0e5e8944c064ff9152b98764b4d24340f`.
 
 Model-driven `project_admit` initialization created ICM but did not perform the
 managed CLI's Git and instruction setup. Add a name-only `project_create` tool
 that delegates to the existing `home.project`, then validates and selects its
 identity through the existing adapter. Keep external/default adoption unchanged.
-The controller and its core AST stay byte-identical; no new project backend,
+This feature does not change the controller or its core AST; no new project backend,
 package, model, configuration or authority arguments are introduced.
 
 Bind the helper to the installed home/runtime manifest. Refuse traversal,
