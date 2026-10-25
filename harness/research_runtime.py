@@ -20,6 +20,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 
 MODEL_BYTES = 12 * 1024
@@ -32,6 +33,15 @@ AUTHORITY = "untrusted_source_evidence"
 
 class ResearchError(ValueError):
     pass
+
+
+class ResearchDeadline(ResearchError):
+    research_status = "deadline"
+
+
+def check_deadline(deadline):
+    if deadline is not None and time.monotonic() >= deadline:
+        raise ResearchDeadline("Consensus productive deadline reached; delivery held; inspect retained bound artifacts")
 
 
 def wire(value):
@@ -106,16 +116,20 @@ class ArtifactStore:
                 else:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
-    def put(self, record):
+    def put(self, record, *, deadline=None):
+        check_deadline(deadline)
         require(record.get("project") == self.project, "Artifact project binding differs")
         raw = wire(record)
+        check_deadline(deadline)
         sha = digest(raw)
         target = self.directory / (sha + ".json")
         with self.locked():
+            check_deadline(deadline)
             if target.exists():
                 require(read_json(target)[1] == raw, "Immutable artifact byte drift")
                 return "sha256:" + sha
             self.quota(len(raw))
+            check_deadline(deadline)
             fd, temporary = tempfile.mkstemp(prefix=".artifact-", dir=self.directory)
             candidate = Path(temporary)
             try:
@@ -123,6 +137,7 @@ class ArtifactStore:
                     stream.write(raw)
                     stream.flush()
                     os.fsync(stream.fileno())
+                check_deadline(deadline)
                 os.link(candidate, target)  # Atomic publication without overwrite.
             finally:
                 candidate.unlink(missing_ok=True)
@@ -165,6 +180,8 @@ def text_view(record, view):
         return payload.get("document", {}).get("text", ""), "captured_browser_window"
     if action == "mine":
         return wire(payload).decode(), "source_bound_claims_not_consensus"
+    if action == "consensus":
+        return wire(payload).decode(), "deterministic_scoring_not_truth_or_editorial_independence"
     return wire(payload.get("hits", [])).decode(), "search_metadata"
 
 
@@ -196,6 +213,10 @@ def projection(record, artifact_id, *, view="text", offset=0, limit=8192, cached
                     attempted_shards=payload["attempted_shards"], analysed_shards=payload["analysed_shards"],
                     expected_shards=payload["expected_shards"], analysed_rate=payload["analysed_rate"],
                     claim_count=len(payload["claims"]), failure_count=len(payload["failure_ledger"]))
+    if record["action"] == "consensus":
+        base.update(run_identity_sha256=payload["run_identity_sha256"], complete=payload["complete"],
+                    coverage_complete=payload["coverage_complete"], consensus_established=False, cluster_count=len(payload["clusters"]),
+                    input_claims=payload["input_claims"], input_count=len(payload["inputs"]))
     remaining = limit
     while True:
         window = text[offset:offset + remaining].encode()[:remaining].decode("utf-8", errors="ignore")
@@ -282,6 +303,8 @@ class ResearchRuntime:
     def execute(self, request):
         if isinstance(request, dict) and request.get("action") in {"mine_prepare", "mine_finish"}:
             return self.mining(request)
+        if isinstance(request, dict) and request.get("action") == "consensus":
+            return self.consensus(request)
         allowed = {"action", "query", "url", "max_results", "timeout", "artifact_id", "view", "offset", "limit",
                    "wait_selector", "click_selectors", "download_selector", "allow_archive", "selection", "session_id"}
         require(isinstance(request, dict) and not set(request) - allowed, "Unexpected research request fields")
@@ -403,6 +426,31 @@ class ResearchRuntime:
                     "sources": [{k: v for k, v in source.items() if k != "text"} for source in plan["sources"]]}
         return projection(record, key)
 
+    def consensus(self, request):
+        from harness import research_consensus
+        require(not set(request) - {"action", "artifact_ids", "query", "extraction_schema", "timeout", "limit", "selection", "session_id"},
+                "Unexpected consensus request fields")
+        timeout = request.get("timeout", 30)
+        require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research consensus timeout must be 2 through 60 seconds")
+        deadline = time.monotonic() + timeout
+        binding, identity, before = self.selection(request)
+        state = Path(identity["state_root"])
+        require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project consensus storage escaped this home")
+        store = ArtifactStore(state, binding)
+        payload = research_consensus.score(store, request.get("artifact_ids"), before, query=request.get("query"),
+                                           extraction_schema=request.get("extraction_schema"), deadline=deadline)
+        check_deadline(deadline)
+        require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
+                "Project identity changed during scoring; result was not published")
+        record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
+                  "session_id": str(request.get("session_id", ""))[:256], "action": "consensus", "authority": AUTHORITY,
+                  "payload": payload}
+        key = store.put(record, deadline=deadline)
+        check_deadline(deadline)
+        result = projection(record, key, limit=request.get("limit", 8192))
+        check_deadline(deadline)
+        return result
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -418,7 +466,8 @@ def main():
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 0
     except (Exception, KeyboardInterrupt) as error:
-        result = {"schema": "research-result/v1", "ok": False, "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "runtime_error",
+        result = {"schema": "research-result/v1", "ok": False,
+                  "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "deadline" if getattr(error, "research_status", None) == "deadline" else "runtime_error",
                   "reason": str(error)[:1000], "authority": AUTHORITY}
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 1

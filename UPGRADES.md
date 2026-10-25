@@ -5,6 +5,56 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Score complete cached mining inputs without inference - 2026-10-25
+
+Parent commit: `fd096f30bf027f8fb26b0278007ba5d1f25d8c3a`.
+
+Extend the same `web_research` tool and ArtifactStore with deterministic
+`consensus` over cached mining artifacts. Reuse the canonical authority, claim
+weight, domain-count component, cluster-score formula and hard tier floors.
+Reuse explicit lexical Jaccard grouping and the separate numeric-distribution
+method. No model/embedding/fetch request, home-controller change, model router,
+store, daemon or new dependency is added.
+
+Rebuild mining plans against their actual cached sources and validate quote
+offsets, prompt/schema/model identity, project scope and complete health/failure
+coverage. Refuse mixed questions/schemas and altered or incomplete records.
+Keep every validated input claim and all failed/partial ledgers. Empty,
+all-failed, partial and background-only corpora cannot report successful scoring.
+Accept up to32 cached mining batches within the existing artifact byte budgets,
+so multi-batch research is not limited to a small handful of pages. Distinguish
+fully analysed zero-relevance batches from dead/malformed/partial miners; retain
+them as no-relevant-claims coverage without a claim about the whole web. Keep the
+miner's successful-only seen/resume contract unchanged; automatic zero-result
+batch resume remains a separate orchestration limitation.
+The existing post-await admission check also holds consensus delivery after a
+changed native input epoch; an old bound immutable artifact can remain.
+
+A final-boundary regression then reproduced successful delivery after helper-
+close cancellation and successful publication after a declared2-second budget
+with2.2 seconds of injected productive delay. Recheck cancellation immediately
+before delivery and return typed cancellation. Enforce a single productive
+deadline in the native caller and helper/direct entry, including validation,
+grouping, serialization and the existing ArtifactStore's pre-publication check.
+Keep cleanup grace separate. Late cancellation can preserve an already committed
+bound artifact while holding delivery; no rollback or automatic replay is claimed.
+
+Necessary adaptations are explicit: use the existing public URL/domain helpers;
+anchor intended PubMed/ReadTheDocs priors instead of trusting unrelated host
+substrings; deduplicate requested URLs and identical snapshots for scoring while
+retaining attribution. Partition lexical groups by extraction field and written
+numeric signature. Preserve numeric values/units/quotes without averaging or a
+claim of proved contradiction. Store claims once and refer to their indices.
+Domain counts remain coverage proxies and inherited tier names remain policy
+labels. No qualified generic embedding route is used and no partial embedding
+set or silent semantic fallback is accepted.
+
+Source controls cover legacy math/tier examples, repeated sources, subdomains,
+copies, numeric variants, complete failure coverage, empty corpora, two-topic
+isolation and source/plan/span/health drift. Native qualification is separate
+from useful model-driven research acceptance. Question planning, narrative
+grounding and the complete research journey remain open.
+
 ## Deliver existing project discovery through one native tool - 2026-10-25
 
 Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.
