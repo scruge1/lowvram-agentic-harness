@@ -70,8 +70,22 @@ def _windows_permissions(path, protect=False):
         require(adv.GetNamedSecurityInfoW(ctypes.c_wchar_p(str(path)), 1, 5,
                                         ctypes.byref(owner), None, ctypes.byref(dacl), None,
                                         ctypes.byref(descriptor)) == 0, "Cannot inspect research file permissions")
+        normalize_owner = False
         try:
-            require(adv.EqualSid(owner, pointer(sid)), "Research path belongs to another user")
+            owned = bool(adv.EqualSid(owner, pointer(sid)))
+            if protect and not owned:
+                # A newly created object can inherit the token's default group
+                # owner on an elevated Windows account. Only creation/protect
+                # may normalize that exact token owner to the actual user.
+                # Existing-file reads still require the user SID strictly.
+                owner_size = wintypes.DWORD()
+                adv.GetTokenInformation(token, 4, None, 0, ctypes.byref(owner_size))
+                owner_buffer = ctypes.create_string_buffer(owner_size.value)
+                require(adv.GetTokenInformation(token, 4, owner_buffer, owner_size, ctypes.byref(owner_size)),
+                        "Cannot inspect default file owner")
+                default_owner = ctypes.cast(owner_buffer, ctypes.POINTER(pointer))[0]
+                normalize_owner = owned = bool(adv.EqualSid(owner, pointer(default_owner)))
+            require(owned, "Research path belongs to another user")
         finally:
             kernel.LocalFree(descriptor)
         if protect:
@@ -86,8 +100,10 @@ def _windows_permissions(path, protect=False):
             try:
                 present, defaulted = wintypes.BOOL(), wintypes.BOOL()
                 require(adv.GetSecurityDescriptorDacl(sd, ctypes.byref(present), ctypes.byref(new_dacl), ctypes.byref(defaulted)), "Cannot protect research file")
-                require(adv.SetNamedSecurityInfoW(ctypes.c_wchar_p(str(path)), 1, 0x80000004,
-                                                None, None, new_dacl, None) == 0, "Cannot protect research file")
+                information = 0x80000004 | (1 if normalize_owner else 0)
+                require(adv.SetNamedSecurityInfoW(ctypes.c_wchar_p(str(path)), 1, information,
+                                                pointer(sid) if normalize_owner else None,
+                                                None, new_dacl, None) == 0, "Cannot protect research file")
             finally:
                 kernel.LocalFree(sd)
         descriptor, owner, dacl = pointer(), pointer(), pointer()

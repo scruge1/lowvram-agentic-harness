@@ -5,6 +5,22 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Protect fresh Windows files with token default owners — 2026-10-25
+
+Parent commit: `98076e32e7244981e2dd0052d7e832716cb3a4fc`.
+
+Windows can assign a token's default group owner to newly created objects.
+During new research-file protection only, accept that exact token default owner
+and normalize ownership to the actual user while installing the private DACL.
+Keep existing-file reads strict: other owners and other allowed principals are
+still rejected. No privilege, process-token or unrelated-file changes are made.
+See [Microsoft's object-owner rules](https://learn.microsoft.com/windows/win32/secauthz/owner-of-a-new-object).
+
+The original Windows CI owner failure is retained. Forty-three focused local
+Windows checks ran with four declared skips and all remaining checks passed;
+the elevated CI context requires its own exact-head rerun. Linux ownership
+handling is unchanged.
+
 ## Join configured search, bounded retrieval and the managed home — 2026-10-25
 
 Parent commit: `c87e6cd91fc6e44947769eacbdf97f1138766b24` (joined source history, descended from
