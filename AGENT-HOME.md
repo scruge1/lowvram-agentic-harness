@@ -21,7 +21,7 @@ python -m harness.home install --python312 /path/to/python3.12
 The wizard asks for a new agent-home directory, local OpenAI-compatible endpoint
 and exact model ID. It creates a dedicated home. Existing agent profiles,
 memory databases, services and project directories are not migrated by setup.
-Setup checks all 11 required templates before creating the home. Its Git-ignore
+Setup checks all 12 required templates before creating the home. Its Git-ignore
 template is installed as `.gitignore`.
 Choose storage with room for package environments, memory and embedding caches.
 No agent model weights or GPU server are downloaded or started. Memory embeddings
@@ -96,7 +96,58 @@ mines unrelated conversations nor sends them to another model.
 Git is initialized for the home and every new project. Setup does not stage or
 commit user data. Generated context, models, auth, memory, caches and runtime
 state are ignored. Configure the owner's chosen private remote deliberately.
-Git initialization is not the newer source-milestone enforcement feature.
+The installed source-control skill provides reviewed source milestones through
+the existing supervised workflow. It does not attribute arbitrary shell edits.
+
+## Save reviewed project source
+
+Read the installed `source-control` skill before a source milestone. It uses
+the existing `workflow_step` and its project, task, context, pause, failure and
+process-ownership gates. No second execution tool or commit scheduler is added.
+The milestone action must use the configured Python and installed
+`runtime/harness/source_checkpoint.py`, with its project root equal to workflow
+`cwd`. Its only declared output is the operation's admission receipt. The
+verifier must call that same helper with the project-relative receipt path;
+a different model-supplied predicate cannot establish Git delivery.
+
+Create an explicitly reviewed JSON inventory under the project's
+`.icm/workspace/artifacts/source-control/` directory. `safe_files` is an array
+of objects containing an absolute `path` and the complete file `sha256`.
+Supply the complete inventory's hash, a unique operation, commit message and
+existing task reference. The helper verifies inventory, source, staged and
+committed bytes. It supports a new repository's first commit and retains
+unrelated unstaged work. An occupied index, source drift, a nested repository
+or an escaped inventory stops the operation. Files remain unchanged by the
+helper. Git transformations that change staged bytes must be resolved before
+an exact-byte checkpoint can pass.
+
+The default is a local commit. Push delivery requires all three explicit
+options: `--push-remote`, `--expected-push-url` and `--expected-branch`.
+The current branch and single configured push URL must match, and readback
+must find the exact commit at that remote ref. Use the owner's established
+credentials; do not embed them in URLs. A push failure retains the local commit
+and a pending receipt. Inspect it before recovery. Never repeat an operation,
+force a push, reset the index or discard another session's work.
+
+This portable helper reuses the reviewed checkpoint algorithm. It does not
+copy a private source allowlist, credential store or Forgejo privacy API. The
+caller must establish source ownership, review the chosen files and authorize
+any remote delivery. A task label records context; it grants no permission.
+Local commits, remote delivery and deployed behavior remain separate facts.
+
+Git references: [explicit-path commits](https://git-scm.com/docs/git-commit)
+and [remote ref readback](https://git-scm.com/docs/git-ls-remote).
+
+Qualification passed21 real-Git controls and22 native Pi/Hermes/guarded-workflow
+checks. The native path made an actual commit and independently read it back.
+It exercised skill omission, wrong project/verifier/output, reload, intake,
+pause, occupied index, complete failure inspection, explicit recovery and replay
+refusal. Remote tests used isolated local bare repositories. No live project,
+external push or generative model was involved.
+The same native probe loaded the current portable operating posture through
+Pi's actual resource loader and verified its full text and six required clauses
+in the session prompt before and after reload. This proves prompt delivery,
+not model obedience or whole-prompt token savings.
 
 ## Pinned tools and readiness
 
@@ -108,7 +159,7 @@ separate fields. Locks/freezes and full command logs stay in the private home.
 |---|---|---|
 | Pi | `@earendil-works/pi-coding-agent@1.4.0` | Local provider configuration; selected coordinator extensions |
 | Hermes board | commit `866332bfb52c46e543143b2620a9aeee8bce9c77` | Existing pinned board adapter, no second dispatcher |
-| MemPalace | `mempalace==3.11.0` | Home-owned palace and loopback single-writer hub; complete memory pipeline acceptance remains open |
+| MemPalace | `mempalace==3.11.0` | Home-owned palace and loopback single-writer hub; synthetic connected capture/recall passed, new-host freshness remains separate |
 | Microsoft Agent Framework | `agent-framework-core==1.21.0` | Isolated environment and exact target-bound read-only decisions; native board remains canonical |
 | Harness2 | commit `1cfe254e8d25b15f37048c3730134686abe60335` | Experimental package; prior model quality hold still applies |
 | Bun | `1.4.4`, explicit Linux CPU/libc artifact | Home-owned runtime for the observer; binary hash recorded |
@@ -241,7 +292,7 @@ private runtime source and active session identifiers stay outside this repo.
 | MCP lifecycle and health | Native Pi1.4 connected47 tools; owned hub startup/idempotence/shutdown and connected recall passed | Long-idle reconnect and new-host lifecycle checks |
 | Validated memory retrieval, exact chunks and promotion | Empty safe registry abstention and synthetic native capture/mining/exact readback passed | Reviewed promotion, new-host freshness and private-history acceptance |
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
-| Source milestones, scoped commits and remote verification | Git initialization only | Portable source-checkpoint CLI/skill; automatic all-session attribution remains open upstream |
+| Source milestones, scoped commits and remote verification | Reviewed CLI/skill,21 real-Git controls and22 native supervised-workflow checks passed | New-host adoption; automatic all-session attribution remains open |
 | Terminal/project navigation and live-owner resume checks | Not exported | Fresh/known-live-owner collision and native resume controls |
 | Maintenance/update/rollback | Exact initial pins and retained failures | Candidate update, complete dependency closure, target activation and rollback |
 

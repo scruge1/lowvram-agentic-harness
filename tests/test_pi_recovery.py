@@ -68,7 +68,7 @@ fs.mkdirSync(path.dirname(skill),{recursive:true});fs.writeFileSync(skill,'Revie
 const helper=path.join(path.dirname(source),'everyday_workflow.py');
 const helperHash=createHash('sha256').update(fs.readFileSync(helper)).digest('hex');
 const wrappedFs={...fs,readFileSync(file,...args){
-  if(path.basename(String(file))==='everyday-runtime.json')return JSON.stringify({helper_sha256:helperHash});
+  if(path.basename(String(file))==='everyday-runtime.json')return JSON.stringify({helper_sha256:helperHash,runtime:path.join(root,'runtime')});
   return fs.readFileSync(file,...args);
 }};
 const type=new Proxy({},{get:()=>()=>({})});

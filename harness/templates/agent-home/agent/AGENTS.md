@@ -14,5 +14,10 @@ The verifier must reject missing output in its empty-directory negative control.
 Read the complete saved failure before recovery. A timeout and printed process
 ID do not prove a job is still running. Preserve uncertain effects for review.
 
+Save useful verified source milestones before reporting completion. Read the
+installed source-control skill and use its exact reviewed inventory through
+workflow_step. Keep unrelated changes and staged work intact. A local commit
+does not prove remote delivery or deployed behavior.
+
 Startup and config files enforce only the installed controls. Run doctor and
 the native host acceptance checks before claiming enforcement on a new host.

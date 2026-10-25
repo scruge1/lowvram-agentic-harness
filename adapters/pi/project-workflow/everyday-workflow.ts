@@ -22,8 +22,21 @@ export default function (pi: ExtensionAPI) {
     if (!file.startsWith(root + path.sep)) throw new Error('Skill path escapes installed skill directory');
     return file;
   };
+  const checkpointAction = (input: any) => {
+    const argv = Array.isArray(input.action) ? input.action : [];
+    const sourceHelper = path.join(configuration.runtime, 'harness', 'source_checkpoint.py');
+    return argv.some((value: string, index: number) => {
+      if (typeof value !== 'string') return false;
+      if (value === 'harness.source_checkpoint' && argv[index - 1] === '-m') return true;
+      if (index === 0 && /^source-checkpoint(?:\.exe)?$/i.test(path.basename(value))) return true;
+      if (!value.endsWith('source_checkpoint.py')) return false;
+      try { return fs.realpathSync(path.resolve(input.cwd, value)) === fs.realpathSync(sourceHelper); }
+      catch { return false; }
+    });
+  };
   const missingSkills = (input: any) => {
     const names = ['supervised-tasks', ...(input.required_skills ?? [])];
+    if (checkpointAction(input)) names.push('source-control');
     return [...new Set(names)].filter((name: string) => {
       try {
         const file = skillPath(name);
@@ -44,6 +57,33 @@ export default function (pi: ExtensionAPI) {
   const helper = path.join(base, 'everyday_workflow.py');
   const hash = createHash('sha256').update(fs.readFileSync(helper)).digest('hex');
   if (hash !== configuration.helper_sha256) throw new Error('Everyday workflow source drift');
+  const checkpointPlanError = (input: any): string | undefined => {
+    if (!checkpointAction(input)) return;
+    const argv = input.action;
+    const sourceHelper = path.join(configuration.runtime, 'harness', 'source_checkpoint.py');
+    const samePath = (left: string, right: string) => {
+      try { return fs.realpathSync(left) === fs.realpathSync(right); } catch { return false; }
+    };
+    if (argv.length < 3 || argv[0] !== configuration.python || argv[1] !== '-B'
+        || !samePath(path.resolve(input.cwd, argv[2]), sourceHelper))
+      return 'Use the configured Python, -B and the installed absolute source_checkpoint.py helper for a supervised source milestone.';
+    const option = (name: string) => {
+      const indexes = argv.flatMap((value: string, index: number) => value === name ? [index] : []);
+      if (indexes.length !== 1 || argv.some((value: string) => value.startsWith(name + '='))) return;
+      return argv[indexes[0] + 1];
+    };
+    const project = option('--project-root');
+    const operation = option('--operation');
+    if (typeof project !== 'string' || !samePath(project, input.cwd))
+      return 'The source checkpoint project must be the exact admitted workflow cwd, supplied once with --project-root.';
+    if (typeof operation !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9-]{0,127}$/.test(operation))
+      return 'Supply one explicit source checkpoint --operation identifier.';
+    const receipt = `.icm/workspace/artifacts/source-control/${operation}/admission.json`;
+    const expected = [configuration.python, '-B', sourceHelper, '--verify', receipt];
+    if (!Array.isArray(input.outputs) || input.outputs.length !== 1 || input.outputs[0] !== receipt
+        || JSON.stringify(input.verify) !== JSON.stringify(expected))
+      return 'A source milestone must declare its operation admission.json and use the installed helper --verify with that relative receipt. A model-supplied predicate is not Git commit or remote proof.';
+  };
 
   pi.registerTool({
     name: 'workflow_step', label: 'Supervised workflow step',
@@ -202,6 +242,8 @@ export default function (pi: ExtensionAPI) {
     if (event.toolName === 'workflow_step') {
       const missing = missingSkills(event.input);
       if (missing.length) return { block: true, reason: 'Read the complete installed SKILL.md for: ' + missing.join(', ') + '. Missing, partial or changed skill bytes do not satisfy workflow admission.' };
+      const checkpointError = checkpointPlanError(event.input);
+      if (checkpointError) return { block: true, reason: checkpointError };
       if (inspectedFailure) recoveryInFlight = { toolCallId: event.toolCallId, sourceRunId: inspectedFailure.runId };
     }
     if (['bash', 'powershell'].includes(event.toolName)) {

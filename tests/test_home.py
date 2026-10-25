@@ -34,6 +34,10 @@ class AgentHomeTests(unittest.TestCase):
             checked = subprocess.run(["git", "check-ignore", relative], cwd=self.root, capture_output=True)
             self.assertEqual(checked.returncode, 0, relative)
         self.assertTrue((self.root / "agent/prompts/personalize.md").is_file())
+        skill = (self.root / "agent/skills/source-control/SKILL.md").read_text()
+        self.assertIn(self.root.as_posix(), skill)
+        self.assertNotIn("{{HOME}}", skill)
+        self.assertTrue((self.root / "runtime/harness/source_checkpoint.py").is_file())
         self.assertEqual(subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=self.root), b"")
 
     def test_existing_target_is_never_overwritten(self):
