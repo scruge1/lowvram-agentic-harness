@@ -5,6 +5,20 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Budget the expanded offline unit suite — 2026-10-25
+
+Parent commit: `474020ade49cb735327d2f3554d2544dd774b4ad`.
+
+The full Linux unit suite exhausted its existing 240-second release budget
+after the controller migration journey joined the package. Its retained timeout
+tail showed no assertion failure and ended during an existing runtime-update
+case. The added controller checks measured 59 seconds on Linux and 110 seconds
+on Windows. Set the complete unit-suite budget to 300 seconds on Linux and
+480 seconds on Windows. Keep the 15-minute CI job cap, three-second settlement,
+retained-child ownership, bounded output and all product deadlines unchanged.
+The original timeout remains failed evidence; this change does not claim a
+successful full gate before its exact composite rerun.
+
 ## Reserve browser work within the caller's fetch budget — 2026-10-25
 
 Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
