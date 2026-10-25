@@ -50,6 +50,32 @@ corrected to UTF-8, and its exact case plus the new compatibility control passed
 These fixtures isolate packages/services or use owned temporary lifecycle
 controls. They do not establish complete native full-bundle acceptance.
 
+## Deliver existing project discovery through one native tool - 2026-10-25
+
+Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.
+
+Add `project_prepare` to the existing project integration. An explicit relevance
+query drives only the fixed capability, system-tool, validated-memory, project
+knowledge and context readers through Pi1.4's public `ctx.executeTool` API.
+Native child validation, hooks, permission checks and call lineage remain intact.
+Return bounded actual child content; nested-call metadata alone is not delivery.
+Validate the normal workflow's compact capability projection against its retained
+full host snapshot. Keep the compact model bytes; use the full snapshot only for
+the existing host-side project observation.
+Record discovery only after the unchanged enclosing result reaches later model
+context. Recheck source/session/project/cancellation bindings, preserve instruction
+windows and remaining reads, and keep skills, intake, board and effects separate.
+Repeat the full proof after the awaited capability observation write. Drift holds
+readiness while retaining any old source-bound board observation.
+No task is selected and no execution authority is inferred.
+
+Native inert qualification captures actual serialized provider input and stops
+before HTTP. It covers the normal workflow compaction and default deferred-tool configuration, unchanged active
+tools, same-batch holds, final-hook replacement, omitted output, cancellation,
+sensitive-query abstention, source drift, session/project changes and partial
+instruction delivery. Synthetic board/catalog inputs and an empty validated
+registry do not establish model behavior, memory quality or installed adoption.
+
 ## Mine cached research with the selected local model - 2026-10-25
 
 Parent commit: `f0803125054c86ac29d19b1a7f9431b6aeec41ee`.
