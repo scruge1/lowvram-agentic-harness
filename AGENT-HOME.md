@@ -604,7 +604,28 @@ Upstream references: [Pi configuration](https://github.com/earendil-works/pi/blo
 
 ## Prepare the first checked report
 
-Use the installed helper after package setup:
+After package setup, run and check a new report through the normal managed
+agent from any directory:
+
+```bash
+/data/my-agent/envs/hermes/bin/python -B \
+  /data/my-agent/runtime/harness/first_project.py run \
+  --home /data/my-agent --name first-report
+```
+
+This explicitly invokes the configured local model with the existing home,
+project and workflow gates. Native JSON output streams first, followed by a
+final host JSON report; `--mode text` changes only the native stream format.
+The parent retains the original manifest hash/check argv and home lease through
+the launch and independent check. A failed child remains failed even when its
+report passes the predicates. Files and partial projects remain in place. The
+helper does not retry, resume or replace the configured model/server settings.
+Its final report gives the exact installed managed command to reopen that
+project. Explicit continuation is available only on the qualified Linux route.
+A predicate pass still requires semantic review and inspection of the actual
+model/workflow trace; fixture output is not model acceptance.
+
+For preparation without a model request, use:
 
 ```bash
 python /data/my-agent/runtime/harness/first_project.py prepare \
