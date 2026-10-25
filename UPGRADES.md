@@ -47,8 +47,21 @@ Ruff 0.16.10 passed. The consolidated full gate also exhausted the unchanged
 300-second unit limit. Its retained tail showed no assertion failure; the other
 20 release checks and all seven offline self-tests passed. The existing
 controller/runtime/maintenance subset passed 49 cases in 258.457 seconds, with
-two declared skips. Complete release-gate acceptance and separate native
-adoption remain open.
+two declared skips. Both local timeouts remain failed evidence. The exact
+composite `bc9cdb3` then passed the hosted full Linux and Windows gates and was
+merged as `f080312`; its post-merge gates also passed.
+
+One separate isolated Linux home then passed actual core-source plan/apply,
+the unchanged prior verifier's refusal, and the retained candidate's normal
+verification: stable doctor, redacted research status and native Pi health with
+zero generation requests. Planned rollback restored the exact predecessor,
+all five package bindings, nine protected fixture files and a file created
+after activation. The memory hub stopped, exclusive ownership passed, all
+1,399 watched donor files stayed unchanged and the inert endpoint received
+zero HTTP requests. Guarded provision took 19.568 seconds and the transaction
+took 53.333 seconds. This is source adoption and rollback evidence with verified
+borrowed dependencies, not fresh installation, observer adoption, memory
+retrieval or model task quality. Broader package maintenance remains open.
 
 ## Create managed projects through the existing home factory - 2026-10-25
 
