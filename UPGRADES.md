@@ -5,6 +5,23 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Supervised intake instruction order — 2026-10-25
+
+Parent commit: `328d16c6b3f2d71d094cabdd4f92db73756a491a`.
+
+Admit the project before observing capabilities, tools, memory and knowledge.
+The existing admission hook resets those observations on every successful
+admission. The old skill stated the opposite order. State the full installed
+skill read, task-specific system-tool query and current-context reads explicitly
+in the skill and prepared first-report instructions. Refresh context after
+compaction. Keep the existing host checks unchanged.
+
+A real correction attempt stopped before a worker ran after missed admission
+steps, one truncated tool argument and compaction. Its final unobserved interval
+does not establish a model latency cause. This instruction correction addresses
+the observed order mismatch; it does not establish a successful real-model
+correction, faster execution or target adoption in an older installed home.
+
 ## Maintained first hardware-report acceptance — 2026-10-25
 
 Parent commit: `7b6098e380b7a64ba683956652dc7c41fd27b783`.
