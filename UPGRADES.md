@@ -20,6 +20,8 @@ the existing host-side project observation.
 Record discovery only after the unchanged enclosing result reaches later model
 context. Recheck source/session/project/cancellation bindings, preserve instruction
 windows and remaining reads, and keep skills, intake, board and effects separate.
+Repeat the full proof after the awaited capability observation write. Drift holds
+readiness while retaining any old source-bound board observation.
 No task is selected and no execution authority is inferred.
 
 Native inert qualification captures actual serialized provider input and stops

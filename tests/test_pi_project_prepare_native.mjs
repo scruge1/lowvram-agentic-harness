@@ -33,7 +33,7 @@ const catalog = path.join(fixture, 'catalog.py'), database = path.join(fixture, 
 fs.writeFileSync(database, 'Synthetic catalog identity; not an actual search database.\n');
 fs.writeFileSync(catalog, `import hashlib,json,sys\nfrom pathlib import Path\np=Path(${JSON.stringify(catalogSource)})\nprint(json.dumps({'ok':True,'query':sys.argv[sys.argv.index('query')+1],'results':[{'source_file':str(p),'source_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'description':p.read_text()}]}))\n`);
 const backend = path.join(fixture, 'board.py');
-fs.writeFileSync(backend, `import hashlib,json,subprocess,sys\nfrom pathlib import Path\nsys.path.insert(0,${JSON.stringify(workflow)})\nfrom project_identity import initialize_identity\nr=json.load(sys.stdin);a=r['action'];root=Path(r['project_root'])\nwith Path(__file__).with_name('calls.jsonl').open('a') as f:f.write(json.dumps(r)+'\\n')\nif a=='project_admit':\n identity,_=initialize_identity(root,native_authority=r.get('native_authority'));w=root/identity['workspace_path']\n if not w.exists():subprocess.run([sys.executable,${JSON.stringify(path.join(workflow, 'init_workspace.py'))},'--root',str(w),'--target','Synthetic preparation','--why','Native read-only delivery qualification','--parent-authority','Explicit synthetic qualification'],check=True,capture_output=True)\n result={'project_root':str(root),'identity':identity}\nelif a=='show':result={'task':{'id':r['task_id'],'status':'ready'},'parents':[]}\nelif a=='knowledge_query':\n p=root/'AGENTS.md';result={'query':r['terms'],'results':[{'path':'AGENTS.md','sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'snippet':p.read_text()}]}\nelse:result={}\nprint(json.dumps({'ok':True,'schema':'pi-kanban-result/v1','action':a,'result':result}))\n`);
+fs.writeFileSync(backend, `import hashlib,json,subprocess,sys,time\nfrom pathlib import Path\nsys.path.insert(0,${JSON.stringify(workflow)})\nfrom project_identity import initialize_identity\nr=json.load(sys.stdin);a=r['action'];root=Path(r['project_root'])\nwith Path(__file__).with_name('calls.jsonl').open('a') as f:f.write(json.dumps(r)+'\\n')\nif a=='capability_snapshot' and Path(__file__).with_name('hold-snapshot').exists():\n Path(__file__).with_name('snapshot-entered').write_text('entered');deadline=time.monotonic()+5\n while not Path(__file__).with_name('snapshot-release').exists():\n  assert time.monotonic()<deadline,'Synthetic snapshot was not released'\n  time.sleep(.01)\nif a=='project_admit':\n identity,_=initialize_identity(root,native_authority=r.get('native_authority'));w=root/identity['workspace_path']\n if not w.exists():subprocess.run([sys.executable,${JSON.stringify(path.join(workflow, 'init_workspace.py'))},'--root',str(w),'--target','Synthetic preparation','--why','Native read-only delivery qualification','--parent-authority','Explicit synthetic qualification'],check=True,capture_output=True)\n result={'project_root':str(root),'identity':identity}\nelif a=='show':result={'task':{'id':r['task_id'],'status':'ready'},'parents':[]}\nelif a=='knowledge_query':\n p=root/'AGENTS.md';result={'query':r['terms'],'results':[{'path':'AGENTS.md','sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'snippet':p.read_text()}]}\nelse:result={}\nprint(json.dumps({'ok':True,'schema':'pi-kanban-result/v1','action':a,'result':result}))\n`);
 const registry = path.join(fixture, 'claims.jsonl'); fs.writeFileSync(registry, '');
 for (const dir of ['palace', 'palace-config']) fs.mkdirSync(path.join(fixture, dir));
 Object.assign(process.env, {
@@ -185,6 +185,20 @@ try {
   await reset(); await tool('project_prepare', { query: 'CSV parsing' });
   await session.extensionRunner.emit({ type: 'session_tree' }); await deliver(); await held(/agent_capabilities/);
   checks.push('session-reload-held');
+  await reset(); await tool('project_prepare', { query: 'CSV parsing' });
+  fs.writeFileSync(path.join(fixture, 'hold-snapshot'), 'hold');
+  const waiting = deliver(), deadline = Date.now() + 5000;
+  while (!fs.existsSync(path.join(fixture, 'snapshot-entered'))) {
+    assert.ok(Date.now() < deadline, 'The actual native adapter must reach the held snapshot');
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  fs.appendFileSync(registry, '\n'); fs.writeFileSync(path.join(fixture, 'snapshot-release'), 'release');
+  await waiting; await held(/agent_capabilities/);
+  fs.writeFileSync(registry, '');
+  for (const name of ['hold-snapshot', 'snapshot-entered', 'snapshot-release']) fs.unlinkSync(path.join(fixture, name));
+  const retained = fs.readFileSync(path.join(fixture, 'calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.ok(retained.some(call => call.action === 'capability_snapshot'), 'Old source-bound observation is retained, not rolled back');
+  checks.push('drift-during-snapshot-await-held-old-observation-retained');
   await reset(); await tool('project_prepare', { query: 'CSV parsing' });
   const old = structuredClone(lastMessage);
   await tool('project_admit', { project_root: second, initialize: true,

@@ -393,16 +393,19 @@ export default function (pi: ExtensionAPI) {
       const proof = prepared.get(message.toolCallId);
       if (message.role !== 'toolResult' || !proof) continue;
       prepared.delete(message.toolCallId);
-      const text = message.content?.length === 1 && message.content[0].type === 'text' ? message.content[0].text : undefined;
-      if (message.isError || proof.signal?.aborted || text !== proof.text || activeProject !== proof.project
-          || ctx.sessionManager.getSessionId() !== proof.session) continue;
+      const current = () => !message.isError && !proof.signal?.aborted
+        && message.content?.length === 1 && message.content[0].type === 'text' && message.content[0].text === proof.text
+        && activeProject === proof.project && ctx.sessionManager.getSessionId() === proof.session
+        && preparationStamp() === proof.stamp && proof.sources.every(([file, hash]) => sourceDigest(file) === hash);
       try {
-        if (preparationStamp() !== proof.stamp || proof.sources.some(([file, hash]) => sourceDigest(file) !== hash)) continue;
+        if (!current()) continue;
         // Keep the existing project-bound snapshot operation. Only delivered capability
         // bytes can reach it; failure does not unlock planning or execution.
         if (proof.observations.includes('agent_capabilities')) {
           await callAdapter(projectRequest({ action: 'capability_snapshot', snapshot: proof.capabilitySnapshot, session_id: proof.session }));
-          if (activeProject !== proof.project) continue;
+          // The native write can yield to cancellation, session selection or source
+          // changes. Keep any old bound observation, but do not raise readiness.
+          if (!current()) continue;
           capabilitiesObserved = true;
         }
         if (proof.observations.includes('system_tool_query')) systemToolsQueried = true;
