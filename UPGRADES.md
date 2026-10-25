@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Owned Python/Node bootstrap and portable pidfd wrappers — 2026-10-25
+
+Parent commit: `004b0a70b221adcccd16155d68cecef643715d70`.
+
+Add a Linux x86_64/glibc shell entry that asks for the agent home and displays
+its download/storage plan. Native uv provisions pinned CPython; the installer
+binds the exact owned Node/npm inventory. Permanent runtimes stay beside the
+home. Child PATH is scoped; global runtimes and shell profiles stay unchanged.
+Downloads resume with hash/size checks and preserve conflicts. Explicit install
+resume keeps the existing configuration and accepted package steps.
+
+The first complete managed-Python attempt installed all five packages, then
+failed at memory initialization because that Python build lacks compiled pidfd
+wrappers. Retain that failure. The process guard now uses the same descriptor
+ownership checks through Python's public functions or the public libc exports.
+There is no PID-signal or raw-syscall fallback. Bootstrap probes its own process
+before Node/package installation; unsupported kernels or libc fail clearly.
+
+Both system Python3.12.3 and managed Python3.12.13 passed seven facade controls
+with one platform skip, eleven real process-guard cases and eighteen memory
+controls. These include97 descendants under a64-descriptor limit, cancellation,
+unrelated-child preservation, recycled-PID refusal and helper drift/redirect
+refusal. Managed Python used libc for both operations; its descriptor count was
+unchanged after probing. Windows passed15 applicable memory and five guard
+controls with explicit Linux skips. Complete fresh-bootstrap acceptance is
+recorded separately from these component checks.
+
 ## Compatible runtime activation and recovery — 2026-10-25
 
 Parent commit: `3bed3f5d2534afa013fb3dd21a3283351b211cd6`.

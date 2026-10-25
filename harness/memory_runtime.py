@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 from urllib import request
 
 
@@ -37,6 +38,8 @@ HELPERS = {
                   "adapters/pi/memory/memory_retrieval_policy.py"),
     "verify": ("adapters/pi/memory-capture/verify.py", "adapters/pi/memory-capture/capture.py"),
 }
+NATIVE_PIDFD_SOURCE = "adapters/pi/project-workflow/native_pidfd.py"
+_BOUND_PIDFD = None
 
 
 class MemoryRuntimeError(ValueError):
@@ -67,6 +70,9 @@ def checked_home(home: Path) -> tuple[Path, dict, dict]:
     wrapper = checked_source(home, records, "harness/memory_runtime.py")
     if Path(__file__).resolve(strict=True) != wrapper:
         raise MemoryRuntimeError("Run the memory wrapper installed in this agent home")
+    if sys.platform == "linux" and (not callable(getattr(os, "pidfd_open", None))
+                                    or not callable(getattr(signal, "pidfd_send_signal", None))):
+        bind_native_pidfd(home, records)
     return home, config, records
 
 
@@ -76,6 +82,41 @@ def checked_source(home: Path, records: dict, relative: str) -> Path:
     if not source.is_relative_to(runtime) or not source.is_file() or digest(source) != records.get(relative):
         raise MemoryRuntimeError("Memory runtime source byte drift: " + relative)
     return source
+
+
+def bind_native_pidfd(home: Path, records: dict) -> None:
+    """Compile only the canonical helper after checked_home verified its owner."""
+    global _BOUND_PIDFD
+    source = checked_source(home, records, NATIVE_PIDFD_SOURCE)
+    lexical = home / "runtime" / NATIVE_PIDFD_SOURCE
+    if lexical.is_symlink() or source != lexical:
+        raise MemoryRuntimeError("Native pidfd helper path is redirected")
+    raw = source.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != records.get(NATIVE_PIDFD_SOURCE):
+        raise MemoryRuntimeError("Native pidfd helper byte drift")
+    module = types.ModuleType("memory_bound_native_pidfd")
+    module.__file__, module.__package__ = str(source), ""
+    exec(compile(raw, str(source), "exec"), module.__dict__)
+    module.require_support()
+    _BOUND_PIDFD = module
+
+
+def _pidfd_open(pid, flags=0):
+    native = getattr(os, "pidfd_open", None)
+    if callable(native):
+        return native(pid, flags)
+    if _BOUND_PIDFD is None:
+        raise MemoryRuntimeError("Verify this home's manifest-bound native pidfd helper before ownership operations")
+    return _BOUND_PIDFD.pidfd_open(pid, flags)
+
+
+def _pidfd_send_signal(descriptor, sig, siginfo=None, flags=0):
+    native = getattr(signal, "pidfd_send_signal", None)
+    if callable(native):
+        return native(descriptor, sig, siginfo, flags)
+    if _BOUND_PIDFD is None:
+        raise MemoryRuntimeError("Verify this home's manifest-bound native pidfd helper before ownership operations")
+    return _BOUND_PIDFD.pidfd_send_signal(descriptor, sig, siginfo, flags)
 
 
 def build_binding(home: Path) -> dict:
@@ -131,8 +172,17 @@ def prepare_runtime(home: Path, binding: dict) -> None:
 
 
 def require_linux() -> None:
-    if sys.platform != "linux" or not hasattr(os, "pidfd_open") or not hasattr(signal, "pidfd_send_signal"):
+    if sys.platform != "linux":
         raise MemoryRuntimeError("The owned memory hub requires Linux with pidfd support")
+    descriptor = None
+    try:
+        descriptor = _pidfd_open(os.getpid())
+        _pidfd_send_signal(descriptor, 0)
+    except OSError as error:
+        raise MemoryRuntimeError("The owned memory hub requires working public pidfd support: " + str(error)) from error
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 def hub_directory(home: Path) -> Path:
@@ -296,14 +346,14 @@ def terminate_owned(receipt: dict, config: dict) -> None:
     """Signal an exact recorded lifetime using a pidfd, never a recycled PID."""
     require_linux()
     try:
-        fd = os.pidfd_open(receipt["pid"], 0)
+        fd = _pidfd_open(receipt["pid"], 0)
     except ProcessLookupError:
         return
     try:
         if owned_process(receipt, config, current=False) is None:
             return
         try:
-            signal.pidfd_send_signal(fd, signal.SIGTERM, None, 0)
+            _pidfd_send_signal(fd, signal.SIGTERM, None, 0)
         except ProcessLookupError:
             return
         if not select.select([fd], [], [], HUB_STOP_SECONDS)[0]:

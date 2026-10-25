@@ -15,14 +15,36 @@ import subprocess
 import sys
 import threading
 import time
+import types
 from pi_native_events import tool_results
 
 
+NATIVE_PIDFD_SHA256 = '0bec3bbf24319a07206388771f7f03bb95ae989d00b1fba40959437dae556423'
+
+
+def load_native_pidfd():
+    source = Path(__file__).resolve(strict=True).with_name('native_pidfd.py')
+    if source.is_symlink() or not source.is_file():
+        raise ValueError('Adjacent native pidfd helper is missing or redirected.')
+    raw = source.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != NATIVE_PIDFD_SHA256:
+        raise ValueError('Adjacent native pidfd helper byte drift.')
+    module = types.ModuleType('pi_worker_native_pidfd')
+    module.__file__, module.__package__ = str(source), ''
+    exec(compile(raw, str(source), 'exec'), module.__dict__)
+    return module
+
+
+PIDFD = load_native_pidfd()
+
+
 def require_process_ownership():
-    if (sys.platform != 'linux' or not Path('/proc/self/task').is_dir()
-            or not hasattr(os, 'pidfd_open')
-            or not hasattr(signal, 'pidfd_send_signal')):
-        raise ValueError('Pi process ownership requires Linux /proc and pidfd support; no fallback is enabled.')
+    if sys.platform != 'linux' or not Path('/proc/self/task').is_dir():
+        raise ValueError('Pi process ownership requires Linux /proc and public pidfd support; no PID fallback is enabled.')
+    try:
+        PIDFD.require_support()
+    except OSError as error:
+        raise ValueError('Pi process ownership requires working public pidfd support: ' + str(error)) from error
     libc = ctypes.CDLL(None, use_errno=True)
     if not hasattr(libc, 'prctl'):
         raise ValueError('Pi process ownership requires Linux prctl support; no fallback is enabled.')
@@ -54,7 +76,7 @@ def stop_owned_tree(pid):
     def open_exact(current, expected=None):
         descriptor = None
         try:
-            descriptor = os.pidfd_open(current)
+            descriptor = PIDFD.pidfd_open(current)
             # /proc/stat fields after the final ')' start with state (field3).
             # starttime is field22. pidfd inode adds its kernel identity where
             # available; the starttime check also covers older anon-inode hosts.
@@ -63,7 +85,7 @@ def stop_owned_tree(pid):
             identity = (fields[19], info.st_dev, info.st_ino)
             # The original process must still exist after the /proc read. If
             # its PID was reused, this old pidfd reports that it has exited.
-            signal.pidfd_send_signal(descriptor, 0)
+            PIDFD.pidfd_send_signal(descriptor, 0)
             if expected is not None and identity != expected:
                 os.close(descriptor)
                 return None
@@ -83,7 +105,7 @@ def stop_owned_tree(pid):
             return None
         descriptor, identity = opened
         try:
-            signal.pidfd_send_signal(descriptor, signal.SIGSTOP)
+            PIDFD.pidfd_send_signal(descriptor, signal.SIGSTOP)
             frozen[current] = identity
             deadline = time.monotonic() + 2
             while True:
@@ -106,7 +128,7 @@ def stop_owned_tree(pid):
         if opened is not None:
             descriptor, _ = opened
             try:
-                signal.pidfd_send_signal(descriptor, signal.SIGKILL)
+                PIDFD.pidfd_send_signal(descriptor, signal.SIGKILL)
             except ProcessLookupError:
                 pass
             finally:

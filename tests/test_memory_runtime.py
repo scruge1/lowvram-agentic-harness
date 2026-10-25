@@ -15,6 +15,7 @@ from unittest import mock
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "harness" / "memory_runtime.py"
+PIDFD_SOURCE = SOURCE.parents[1] / "adapters/pi/project-workflow/native_pidfd.py"
 
 
 class MemoryRuntimeTests(unittest.TestCase):
@@ -38,7 +39,11 @@ class MemoryRuntimeTests(unittest.TestCase):
         self.metadata_distribution.start()
         self.addCleanup(self.metadata_version.stop)
         self.addCleanup(self.metadata_distribution.stop)
-        self.records = {"harness/memory_runtime.py": self.runtime.digest(self.wrapper)}
+        native_helper = self.home / "runtime" / self.runtime.NATIVE_PIDFD_SOURCE
+        native_helper.parent.mkdir(parents=True)
+        native_helper.write_bytes(PIDFD_SOURCE.read_bytes())
+        self.records = {"harness/memory_runtime.py": self.runtime.digest(self.wrapper),
+                        self.runtime.NATIVE_PIDFD_SOURCE: self.runtime.digest(native_helper)}
         for files in self.runtime.HELPERS.values():
             for relative in files:
                 path = self.home / "runtime" / relative
@@ -52,6 +57,7 @@ class MemoryRuntimeTests(unittest.TestCase):
         self.config = {"schema": "agent-home/v1", "home": str(self.home),
                        "runtime_manifest_sha256": self.runtime.digest(manifest), "memory_runtime": self.binding}
         (self.home / "home.json").write_text(json.dumps(self.config))
+        self.runtime.checked_home(self.home)
         self.cls = type("RecordedONNX", (), {"MODEL_NAME": "all-MiniLM-L6-v2",
                                             "DOWNLOAD_PATH": Path("original-cache")})
         self.onnx = SimpleNamespace(__file__=str(self.onnx_source), ONNXMiniLM_L6_V2=self.cls)
@@ -123,8 +129,36 @@ class MemoryRuntimeTests(unittest.TestCase):
 
     def test_home_manifest_and_wrapper_bytes_are_checked(self):
         self.wrapper.write_bytes(self.wrapper.read_bytes() + b"\n# Changed\n")
+        with mock.patch.object(self.runtime, "bind_native_pidfd") as bind:
+            with self.assertRaisesRegex(ValueError, "source byte drift"):
+                self.runtime.checked_home(self.home)
+            bind.assert_not_called()
+
+    def test_pidfd_helper_drift_refuses_before_compilation(self):
+        helper = self.home / "runtime" / self.runtime.NATIVE_PIDFD_SOURCE
+        marker = self.home / "unexpected-helper-execution"
+        helper.write_text("from pathlib import Path\nPath(" + repr(str(marker)) + ").touch()\n")
         with self.assertRaisesRegex(ValueError, "source byte drift"):
-            self.runtime.checked_home(self.home)
+            self.runtime.bind_native_pidfd(self.home, self.records)
+        self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(sys.platform == "linux", "requires actual Linux pidfd support")
+    def test_pidfd_binding_uses_canonical_source_and_ignores_import_search(self):
+        decoy = SimpleNamespace(require_support=lambda: self.fail("Imported unbound helper"))
+        with mock.patch.dict(sys.modules, {"native_pidfd": decoy}):
+            self.runtime.bind_native_pidfd(self.home, self.records)
+        bound = self.runtime._BOUND_PIDFD
+        self.assertEqual(Path(bound.__file__), self.home / "runtime" / self.runtime.NATIVE_PIDFD_SOURCE)
+        self.assertIn(bound.require_support()["pidfd_open"], ("python", "libc"))
+
+    @unittest.skipUnless(sys.platform == "linux", "requires actual Linux symlink support")
+    def test_pidfd_helper_symlink_refuses_even_with_matching_bytes(self):
+        helper = self.home / "runtime" / self.runtime.NATIVE_PIDFD_SOURCE
+        redirected = helper.with_name("redirected.py")
+        helper.rename(redirected)
+        helper.symlink_to(redirected)
+        with self.assertRaisesRegex(ValueError, "path is redirected"):
+            self.runtime.bind_native_pidfd(self.home, self.records)
 
     def test_explicit_daemon_route_refuses_before_import(self):
         with mock.patch.object(self.runtime, "prepare_runtime") as prepare:
@@ -208,16 +242,16 @@ class MemoryRuntimeTests(unittest.TestCase):
         receipt = {"pid": 123, "command": ["owned"], "start_ticks": 10}
         replacement = {"pid": 123, "command": ["other"], "start_ticks": 20}
         with mock.patch.object(self.runtime, "require_linux"), \
-             mock.patch.object(self.runtime.os, "pidfd_open", return_value=987, create=True), \
+             mock.patch.object(self.runtime, "_pidfd_open", return_value=987), \
              mock.patch.object(self.runtime.os, "close") as close, \
              mock.patch.object(self.runtime, "process_identity", return_value=replacement), \
-             mock.patch.object(self.runtime.signal, "pidfd_send_signal", create=True) as send:
+             mock.patch.object(self.runtime, "_pidfd_send_signal") as send:
             with self.assertRaisesRegex(ValueError, "not the recorded owned process"):
                 self.runtime.terminate_owned(receipt, self.config)
             send.assert_not_called()
             close.assert_called_once_with(987)
 
-    @unittest.skipUnless(sys.platform == "linux" and hasattr(os, "pidfd_open"), "Linux process lifetime proof")
+    @unittest.skipUnless(sys.platform == "linux", "Linux process lifetime proof")
     def test_pidfd_stops_only_the_recorded_public_test_child(self):
         child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
         try:
