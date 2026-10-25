@@ -674,6 +674,16 @@ project. Explicit continuation is available only on the qualified Linux route.
 A predicate pass still requires semantic review and inspection of the actual
 model/workflow trace; fixture output is not model acceptance.
 
+The helper selects the project identity that preparation already created. Its
+prompt supplies the exact read-only admission arguments. The owner display name
+and report manifest hash must not replace that identity's authority or hash.
+
+The normal managed Pi session has no fixed ten-minute deadline. The earlier
+600-second qualification runs were smoke-test budgets, not a maximum duration
+for long-horizon work. A time budget exhausted before a checked result leaves
+quality unassessed. Session, individual action and verifier budgets are separate;
+hour-scale work needs an explicit suitable budget and preserved progress.
+
 For preparation without a model request, use:
 
 ```bash
