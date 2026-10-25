@@ -32,7 +32,7 @@ const hash = (file) => createHash('sha256').update(fs.readFileSync(file)).digest
 const json = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
 const names = ['agent-capabilities.ts', 'system-tool-knowledge.ts', 'pi-kanban.ts', 'everyday-workflow.ts'];
 for (const name of fs.readdirSync(source)) {
-  if (/\.(ts|py)$/.test(name)) fs.copyFileSync(path.join(source, name), path.join(workflow, name));
+  if (/\.(ts|py|mjs)$/.test(name)) fs.copyFileSync(path.join(source, name), path.join(workflow, name));
 }
 const intake = path.join(fixture, 'intake');
 fs.mkdirSync(intake);

@@ -167,6 +167,35 @@ actual native capability observation and exact delivered `SKILL.md` bytes before
 supervised work. A failed run must be read from its saved failure record before
 another workflow action.
 
+## Bounded board views
+
+`pi-kanban.ts` imports `kanban-reply-projector.mjs`. Keep both files and the
+runtime manifest together. The installer copies `.mjs` modules explicitly.
+Supported successful board replies project only `content` to at most12KiB;
+`details` remains the exact original backend object. Do not replace it with
+the summary: completion witnesses hash whole task rows, intake reads exact
+source bodies and idempotence comments, and Framework uses complete hierarchy
+and truncation fields.
+
+Show/list/hierarchy tools accept nested `view` options, which are stripped before
+the unchanged backend call. Text pages use Unicode codepoints. Comments use
+stable numeric IDs. Any own top-level task field can be recovered as serialized
+JSON. List and hierarchy pages describe the fetched backend result, not the
+whole database or a deeper graph. Pin `expected_reply_sha256` while paging;
+changed results return a stale-cursor notice. Mutation acknowledgements omit
+history and do not claim the newest observed comment belongs to that write.
+
+This is a model-view boundary. Full host data, unrelated actions and the1MiB
+adapter transport guard remain unchanged. Native read/project_context delivery
+is not truncated. Tool-definition size and inference latency are separate
+measurements. The pure helper has21 portable contract cases. The actual native
+reply/provider/controller probe passed20 checks, and the existing35 composition
+checks still pass. In one synthetic case the decoded model content was
+105,410bytes before projection and7,599bytes afterwards. Matched provider
+envelopes were106,886 and8,076bytes. Full task rows, comments and completion
+witness hashes remained unchanged; actual Framework completion also passed.
+No inference or live-board claim is supplied by those fixture results.
+
 ## Qualification Boundary
 
 Offline tests cover identity, knowledge, immutable skill compilation, private

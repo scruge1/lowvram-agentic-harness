@@ -125,7 +125,7 @@ def source_files(source):
     paths = []
     for name in ("harness", "ssot", "adapters/pi"):
         for file in sorted((source / name).rglob("*")):
-            if file.is_file() and (file.suffix in {".py", ".ts", ".md"} or file.name == ".gitignore") and "__pycache__" not in file.parts:
+            if file.is_file() and (file.suffix in {".py", ".ts", ".mjs", ".md"} or file.name == ".gitignore") and "__pycache__" not in file.parts:
                 if file.is_symlink() or not file.resolve().is_relative_to(source.resolve()):
                     raise HomeError(f"Source escaped checkout: {file}")
                 paths.append(file)

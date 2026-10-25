@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { registerRequestIntake } from '../intake/request-intake-138.ts';
 import { registerProjectContext } from '../context/project-context.ts';
+import { projectKanbanReply } from './kanban-reply-projector.mjs';
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -19,6 +20,20 @@ const MAX_OUTPUT = 1024 * 1024;
 const EXECUTION_TOOLS = new Set(['workflow_step', 'run_step', 'run_ledger']);
 
 type Reply = { schema: string; ok: boolean; action?: string; result?: unknown; limits?: string[]; error?: string };
+const offsetSchema = () => Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
+const viewSchema = Type.Object({
+  before_id: Type.Optional(offsetSchema()),
+  comment_id: Type.Optional(offsetSchema()),
+  offset: Type.Optional(offsetSchema()),
+  body_offset: Type.Optional(offsetSchema()),
+  items_offset: Type.Optional(offsetSchema()),
+  items_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 20 })),
+  hierarchy_offset: Type.Optional(offsetSchema()),
+  relation_offset: Type.Optional(offsetSchema()),
+  max_bytes: Type.Optional(Type.Integer({ minimum: 1024, maximum: 12288 })),
+  task_field: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+  expected_reply_sha256: Type.Optional(Type.String({ pattern: '^[a-f0-9]{64}$' })),
+}, { additionalProperties: false });
 
 function callAdapter(request: Record<string, unknown>, signal?: AbortSignal): Promise<Reply> {
   return new Promise((resolve, reject) => {
@@ -61,8 +76,9 @@ function callAdapter(request: Record<string, unknown>, signal?: AbortSignal): Pr
   });
 }
 
-function response(value: Reply) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(value) }], details: value };
+function response(value: Reply, view: Record<string, unknown> = {}) {
+  // Only the model view is projected. Full controller evidence stays intact.
+  return { content: [{ type: 'text' as const, text: JSON.stringify(projectKanbanReply(value, view)) }], details: value };
 }
 
 function failure(error: unknown) {
@@ -200,9 +216,11 @@ export default function (pi: ExtensionAPI) {
     name: 'kanban_hierarchy', label: 'Read retained task hierarchy',
     description: 'Read decomposition containment and distinct native prerequisites. A ready card is not completed work or execution authority.',
     parameters: Type.Object({ task_id: Type.String(),
-      depth: Type.Optional(Type.Integer({ minimum: 1, maximum: 12 })) }, { additionalProperties: false }),
+      depth: Type.Optional(Type.Integer({ minimum: 1, maximum: 12 })),
+      view: Type.Optional(viewSchema) }, { additionalProperties: false }),
     async execute(_id, params, signal) {
-      try { return response(await callAdapter(projectRequest({ action: 'hierarchy', ...params }), signal)); }
+      const { view, ...request } = params;
+      try { return response(await callAdapter(projectRequest({ action: 'hierarchy', ...request }), signal), view); }
       catch (error) { return failure(error); }
     },
   });
@@ -287,15 +305,24 @@ export default function (pi: ExtensionAPI) {
   });
   pi.registerTool({
     name: 'kanban_list', label: 'List Kanban work',
-    description: 'List host-local Pi Kanban cards. This reads work state only and grants no evidence or SSOT authority.',
-    parameters: Type.Object({ status: Type.Optional(Type.String()), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })) }, { additionalProperties: false }),
-    async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'list', ...params }), signal)); } catch (error) { return failure(error); } },
+    description: 'List bounded card summaries. Use view.items_offset and returned paging metadata to recover the fetched list. Backend limit remains at most100. This is work state, not execution or proof authority.',
+    parameters: Type.Object({ status: Type.Optional(Type.String()), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+      view: Type.Optional(viewSchema) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      const { view, ...request } = params;
+      try { return response(await callAdapter(projectRequest({ action: 'list', ...request }), signal),
+        { ...view, selected_task_id: activeTask?.cardId }); } catch (error) { return failure(error); }
+    },
   });
   pi.registerTool({
     name: 'kanban_show', label: 'Show Kanban work',
-    description: 'Show one Pi Kanban card with dependencies and comments.',
-    parameters: Type.Object({ task_id: Type.String() }, { additionalProperties: false }),
-    async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'show', ...params }), signal)); } catch (error) { return failure(error); } },
+    description: 'Read a bounded card view with latest comments. Page body via view.body_offset; comments via before_id or comment_id plus offset; any top-level task_field via offset; relations via relation_offset. Reuse expected_reply_sha256 to reject changed-source cursors. Full host evidence remains separate.',
+    parameters: Type.Object({ task_id: Type.String(), view: Type.Optional(viewSchema) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      const { view, ...request } = params;
+      try { return response(await callAdapter(projectRequest({ action: 'show', ...request }), signal), view); }
+      catch (error) { return failure(error); }
+    },
   });
   pi.registerTool({
     name: 'kanban_select', label: 'Select existing Kanban work',

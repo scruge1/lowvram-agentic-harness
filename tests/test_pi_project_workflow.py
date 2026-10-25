@@ -71,11 +71,13 @@ const spawn = () => {
 };
 const context = vm.createContext({ Buffer,process,setTimeout,clearTimeout,console });
 const type = new Proxy({}, {get:() => () => ({})});
+const { projectKanbanReply } = await import(process.env.PI_TEST_PROJECTOR);
 const dependencies = {
   typebox:{Type:type}, 'node:child_process':{spawn},
   'node:crypto':{createHash}, 'node:fs':{readFileSync},
   '../intake/request-intake-138.ts': {registerRequestIntake() { /* Separate native intake qualification. */ }},
-  '../context/project-context.ts': {registerProjectContext() { /* Separate native context qualification. */ }}
+  '../context/project-context.ts': {registerProjectContext() { /* Separate native context qualification. */ }},
+  './kanban-reply-projector.mjs': {projectKanbanReply}
 };
 const source = stripTypeScriptTypes(readFileSync(process.env.PI_TEST_EXTENSION,'utf8'));
 const module = new vm.SourceTextModule(source,{context});
@@ -139,6 +141,7 @@ console.log('selection contract passed');
             "PI_PROJECT_KANBAN_ADAPTER": str(adapter),
             "PI_PROJECT_KANBAN_ADAPTER_SHA256": hashlib.sha256(adapter.read_bytes()).hexdigest(),
             "PI_TEST_EXTENSION": str(WORKFLOW / "pi-kanban.ts"),
+            "PI_TEST_PROJECTOR": (WORKFLOW / "kanban-reply-projector.mjs").as_uri(),
         }
         result = subprocess.run(
             [node, "--experimental-vm-modules", "--input-type=module", "-e", script],

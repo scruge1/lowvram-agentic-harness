@@ -5,6 +5,44 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bounded Kanban model replies — 2026-10-25
+
+Parent commit: `f9bd5ad2f0c825318f3ba7f8178d787c2641650e`.
+
+Change: reuse the parallel session's pure reply projector, exact source SHA
+`a956e2bb98ce1731e198e0304fd59d1a7c0f30b920487f3d2b4d4b132413fd2a`.
+Supported board model views are capped at12KiB of UTF-8 JSON. Explicit task-body,
+comment, top-level field, list, hierarchy and relation windows carry omission
+and source-hash metadata. Stale source hashes require a new paging sequence.
+Routine mutations return acknowledgements rather than repeated history.
+
+The native adapter projects only model content. Original complete `details`
+remain unchanged for source routing, idempotence, completion hashes and
+Framework decisions. Display options are stripped before backend validation.
+The installer/runtime manifest and native fixture copiers now include `.mjs`.
+No backend rewrite, dispatcher, task database or history migration is added.
+
+Qualification:21 portable helper cases pass. Existing35 actual Pi/Hermes/
+Framework/context controls pass against the new wrapper and exact helper.
+The actual large-board/provider/controller probe passed20 checks. A synthetic
+card reply's decoded model content changed105,410 ->7,599bytes (92.79% less).
+Matched serialized provider tool envelopes changed106,886 ->8,076bytes (92.44%
+less). Both branches use the same installed SDK/provider conversion, model,
+call ID and timestamp. The updated measurement function was replayed against
+the retained fixture; original board-action receipts remain bound to their
+original test source. Paging, source-hash refusal, raw detail preservation,
+intake idempotence, native full-row completion witnesses and actual Framework
+completion passed. No inference or private-board data was used.
+
+The shipping PR records full release outcomes. The parallel private installation
+has its own qualification; public-target tests do not prove its adoption.
+
+Limits: the existing1MiB adapter transport, full host data and unrelated actions
+are unchanged. Paging the fetched list does not fetch more than the backend
+limit. A paged hierarchy does not establish untruncated deeper containment.
+The reported122 tools/~70KB definitions are a separate private measurement.
+No whole-prompt token, inference speed or generic backend memory bound is claimed.
+
 ## Reviewed Git source milestones — 2026-10-25
 
 Parent commit: `104dfa8fa9117d5ae6b48d1c6551b6ee7d163413`.

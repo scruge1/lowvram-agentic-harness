@@ -36,7 +36,7 @@ function copyTree(relative) {
     const name = path.join(relative, item.name);
     assert.ok(!item.isSymbolicLink(), `Source symlink is not an admitted runtime file: ${name}`);
     if (item.isDirectory()) copyTree(name);
-    else if (/\.(py|ts|md)$/.test(item.name)) {
+    else if (/\.(py|ts|mjs|md)$/.test(item.name)) {
       const target = path.join(runtime, name);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(path.join(source, name), target);
