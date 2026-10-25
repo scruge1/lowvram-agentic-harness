@@ -1,0 +1,22 @@
+# Source history is deliberate. Private runtime/context stays local by default.
+home.json*
+agent/*.json
+agent/sessions/
+agent/mcp.log*
+agent/cache/
+agent/.state/
+context/
+memory/
+state/
+logs/
+cache/
+envs/
+packages/
+runtime/
+projects/
+.icm/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc

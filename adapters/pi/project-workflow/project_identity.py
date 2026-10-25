@@ -35,6 +35,30 @@ def _same_path(left: Path, right: Path) -> bool:
     return os.path.normcase(str(left)) == os.path.normcase(str(right))
 
 
+def _storage_paths(project_id: str) -> tuple[str, str]:
+    """Keep legacy pointer bytes, or bind both stores to the selected canonical base."""
+    value = os.environ.get("PI_PROJECT_STATE_BASE")
+    if value is None:
+        state = f"~/.local/state/pi-projects/{project_id}"
+        return state, state + "/knowledge"
+    if not value or value != value.strip():
+        raise ProjectIdentityError("PI_PROJECT_STATE_BASE must be a nonempty absolute path")
+    requested = Path(value)
+    if not requested.is_absolute():
+        raise ProjectIdentityError("PI_PROJECT_STATE_BASE must be an explicit absolute path")
+    try:
+        base = requested.resolve(strict=False)
+        ancestor = base
+        while not ancestor.exists() and ancestor != ancestor.parent:
+            ancestor = ancestor.parent
+        if not ancestor.is_dir():
+            raise ProjectIdentityError("PI_PROJECT_STATE_BASE has a non-directory ancestor")
+    except (OSError, RuntimeError) as exc:
+        raise ProjectIdentityError(f"cannot resolve PI_PROJECT_STATE_BASE: {exc}") from exc
+    state = base / project_id
+    return str(state), str(state / "knowledge")
+
+
 def _slug(name: str) -> str:
     value = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return (value or "project")[:48].rstrip("-")
@@ -116,9 +140,11 @@ def validate_identity(document: dict[str, Any], root: Path) -> dict[str, Any]:
     expected_board = f"project:{document['project_id']}"
     if document["board_id"] != expected_board:
         raise ProjectIdentityError(f"board_id must be {expected_board}")
-    expected_state = f"~/.local/state/pi-projects/{document['project_id']}"
+    expected_state, expected_knowledge = _storage_paths(document["project_id"])
     if document["state_root"] != expected_state:
-        raise ProjectIdentityError(f"state_root must be {expected_state}")
+        raise ProjectIdentityError(f"state_root must be {expected_state}; existing identity was not migrated")
+    if document["knowledge_index"] != expected_knowledge:
+        raise ProjectIdentityError(f"knowledge_index must be {expected_knowledge}; existing identity was not migrated")
     if document["shared_skill_promotion"] not in {"not_requested", "candidate", "reviewed", "promoted"}:
         raise ProjectIdentityError("invalid shared_skill_promotion")
     return document
@@ -144,6 +170,7 @@ def initialize_identity(
         return load_identity(canonical_root), False
 
     project_id = _project_id(canonical_root)
+    state_root, knowledge_index = _storage_paths(project_id)
     timestamp = _utc_now()
     document: dict[str, Any] = {
         "schema": SCHEMA,
@@ -153,9 +180,9 @@ def initialize_identity(
         "native_authority": native_authority,
         "workspace_path": workspace_path,
         "board_id": f"project:{project_id}",
-        "state_root": f"~/.local/state/pi-projects/{project_id}",
+        "state_root": state_root,
         "knowledge_manifest": ".icm/knowledge-manifest.json",
-        "knowledge_index": f"~/.local/state/pi-projects/{project_id}/knowledge",
+        "knowledge_index": knowledge_index,
         "local_skill_dir": ".icm/skills",
         "shared_skill_promotion": "not_requested",
         "created_at": timestamp,

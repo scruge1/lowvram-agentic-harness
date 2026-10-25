@@ -5,6 +5,7 @@ import io
 import time
 import subprocess
 import tempfile
+from pathlib import Path
 from unittest import mock
 
 from scripts.verify_ssot_release import UNSETTLED_CHILDREN, output_snapshot, run
@@ -63,14 +64,23 @@ class ReleaseDiagnosticsTests(unittest.TestCase):
         self.assertIn("before-timeout", result["stdout_tail"])
 
     def test_success_does_not_wait_for_descendant_pipe_eof(self):
-        descendant = "import time; time.sleep(5)"
-        parent = (
-            "import subprocess,sys; "
-            f"subprocess.Popen([sys.executable,'-c',{descendant!r}]); "
-            "print('complete',flush=True)"
-        )
-        start = time.monotonic()
-        result = run([sys.executable, "-c", parent], timeout=1)
+        with tempfile.TemporaryDirectory() as directory:
+            ready = str(Path(directory) / "ready")
+            descendant = (
+                "import pathlib,sys,time; "
+                "pathlib.Path(sys.argv[1]).write_text('ready'); time.sleep(5)"
+            )
+            # Establish the fixture's quiet held handles before parent exit.
+            # A descendant's delayed interpreter-startup warning is a real
+            # concurrent write and correctly makes the release snapshot refuse.
+            parent = (
+                "import pathlib,subprocess,sys,time\n"
+                f"subprocess.Popen([sys.executable,'-c',{descendant!r},{ready!r}])\n"
+                f"while not pathlib.Path({ready!r}).exists(): time.sleep(.001)\n"
+                "print('complete',flush=True)\n"
+            )
+            start = time.monotonic()
+            result = run([sys.executable, "-c", parent], timeout=1)
         self.assertLess(time.monotonic() - start, 4)
         self.assertEqual(result["exit_code"], 0)
         self.assertIn("complete", result["stdout_tail"])

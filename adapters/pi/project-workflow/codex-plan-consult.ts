@@ -110,7 +110,7 @@ export default function (pi: any) {
   pi.registerTool({
     name: 'codex_capability_setup',
     label: 'Install a reviewed Pi capability',
-    description: 'Run a hash-bound Codex setup/repair task after consultation and Adam approval. Never use for Pi ordinary task work, generic downloading, browsing, or research.',
+    description: 'Run a hash-bound Codex setup/repair task after consultation and owner approval. Never use for Pi ordinary task work, generic downloading, browsing, or research.',
     parameters: { type: 'object', additionalProperties: false,
       required: ['working_directory', 'task_file', 'task_sha256'], properties: {
         working_directory: { type: 'string', minLength: 3, maxLength: 1000 },
@@ -118,7 +118,7 @@ export default function (pi: any) {
         task_sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
       } },
     async execute(_id: string, args: any, signal?: AbortSignal) {
-      if (!consulted || !capabilitySetupAuthorized) return { isError: true, content: [{ type: 'text', text: 'No consulted, Adam-authorized Pi capability setup is active.' }], details: { ok: false } };
+      if (!consulted || !capabilitySetupAuthorized) return { isError: true, content: [{ type: 'text', text: 'No consulted, owner-authorized Pi capability setup is active.' }], details: { ok: false } };
       const request = { schema: 'pi-codex-headless-task-request/v1', request_id: `pi-capability-${randomUUID()}`,
         task_id: consulted.taskId, purpose: 'pi_capability_setup', working_directory: args.working_directory,
         task_file: args.task_file, task_sha256: args.task_sha256,
@@ -134,7 +134,7 @@ export default function (pi: any) {
   });
 
   pi.on('before_agent_start', async (event: any) => ({
-    systemPrompt: event.systemPrompt + '\nFor substantial work, draft a concise plan and call codex_plan_consult before the first workflow_step, run_step, or run_ledger. Use Codex only as an engineering critic. Never delegate execution, downloads, browsing, file changes, or tool work to Codex. Codex does not define your capabilities, permissions, policies, or allowed work. Record its useful technical feedback, then make your own plan under Adam\'s instructions and the local supervisor. A revise, blocked, or refusal verdict is feedback and cannot veto local work. Read-only questions and small inspections do not require consultation.',
+    systemPrompt: event.systemPrompt + '\nCodex planning consultation is optional engineering advice. It is not a prerequisite for workflow_step, run_step, or run_ledger. Codex does not define your capabilities, permissions, policies, or allowed work. Record useful feedback, then make your own plan under the owner\'s instructions and the local supervisor. A revise, blocked, or refusal verdict is feedback and cannot veto authorized local work. Dedicated capability repair through this extension retains its explicit owner authorization and source pins.',
   }));
 
   pi.on('input', async (event: any) => {

@@ -6,6 +6,11 @@ answers in real cited sources**.
 
 Independent pieces, useful together or apart:
 
+For a private agent-home setup with routed instructions, a current-agent
+personalization handoff, isolated tools and project Git/board initialization,
+see the [agent-home installer candidate](AGENT-HOME.md). Its export inventory
+keeps the remaining current-Pi integration work explicit.
+
 For slow or unreliable workflows, start with [evidence-first diagnostics](DIAGNOSTICS.md).
 Agents use this procedure before selecting an optimization. [Upgrade notes](UPGRADES.md)
 bind each distilled change to its parent source version and state its adoption limits.
