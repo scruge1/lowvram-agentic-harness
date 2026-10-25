@@ -183,6 +183,7 @@ export default function (pi: ExtensionAPI) {
   const prepared = new Map<string, {
     project: NonNullable<typeof activeProject>; session: string; text: string;
     stamp: string; sources: [string, string][]; observations: string[]; signal?: AbortSignal;
+    capabilitySnapshot?: any;
   }>();
   const sourceDigest = (file: string | URL) => createHash('sha256').update(readFileSync(file)).digest('hex');
   const preparationStamp = () => JSON.stringify([
@@ -191,7 +192,7 @@ export default function (pi: ExtensionAPI) {
       'PI_MEMORY_RUNTIME_WRAPPER'].map(key => {
       const file = process.env[key]; return [key, file ?? null, file ? sourceDigest(file) : null];
     }),
-    ...['./pi-kanban.ts', './agent-capabilities.ts', './system-tool-knowledge.ts',
+    ...['./pi-kanban.ts', './agent-capabilities.ts', './system-tool-knowledge.ts', './everyday-workflow.ts', './everyday-runtime.json',
       '../memory/validated-memory-query.ts', '../context/project-context.ts'].map(file =>
       [file, sourceDigest(new URL(file, import.meta.url))]),
   ]);
@@ -296,6 +297,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const stamp = preparationStamp(), session = ctx.sessionManager.getSessionId();
         const sections: any[] = [], observations: string[] = [], sources: [string, string][] = [];
+        let capabilitySnapshot: any;
         let contextChild: { id: string; text: string } | undefined;
         const children = [
           ['project_context', params.path ? { path: params.path } : {}],
@@ -325,8 +327,26 @@ export default function (pi: ExtensionAPI) {
           let value: any;
           try { value = JSON.parse(text); } catch { /* Preserve error text, without success evidence. */ }
           let ok = !outcome.isError && raw?.details?.ok !== false;
-          if (name === 'agent_capabilities') ok &&= raw?.details?.ok === true
-            && value?.schema === 'pi-native-capabilities/v1' && value.session_id === session;
+          if (name === 'agent_capabilities') {
+            const snapshot = raw?.details?.snapshot;
+            const summary = snapshot?.schema === 'pi-native-capabilities/v1' && Array.isArray(snapshot.configured_tools)
+              ? { schema: 'pi-capability-summary/v1', session_id: snapshot.session_id, observed_at: snapshot.observed_at,
+                active_tools: snapshot.configured_tools.filter((tool: any) => tool.active).map((tool: any) => tool.name),
+                inactive_tools: snapshot.configured_tools.filter((tool: any) => !tool.active).map((tool: any) => tool.name),
+                limits: 'Registry activity only, not health. Full host snapshot retained in result details.' } : undefined;
+            const originalContentHash = snapshot && createHash('sha256').update(JSON.stringify([
+              { type: 'text', text: JSON.stringify(snapshot) },
+            ])).digest('hex');
+            const compact = summary && raw.details.model_view === 'compact_registry'
+              && raw.details.original_content_sha256 === originalContentHash
+              && JSON.stringify(value) === JSON.stringify(summary);
+            const full = value?.schema === 'pi-native-capabilities/v1'
+              && JSON.stringify(value) === JSON.stringify(snapshot);
+            ok &&= raw?.details?.ok === true && summary !== undefined && snapshot.session_id === session && Boolean(compact || full);
+            // Preserve final compact model bytes. The original snapshot stays host-only
+            // for the existing project-bound observation, never in the enclosing packet.
+            if (ok) capabilitySnapshot = structuredClone(snapshot);
+          }
           else if (name === 'validated_memory_query') ok &&= value?.schema === 'validated-memory-query/v1'
             && Array.isArray(value.results) && value.reason !== 'sensitive_query';
           else if (name === 'project_context') ok &&= value?.ok === true && value.root === project.root;
@@ -358,7 +378,7 @@ export default function (pi: ExtensionAPI) {
         if (contextChild) contextDelivery.enclose(contextChild.id, id, contextChild.text, text, () =>
           !signal?.aborted && activeProject === project && ctx.sessionManager.getSessionId() === session
           && preparationStamp() === stamp && sources.every(([file, hash]) => sourceDigest(file) === hash));
-        prepared.set(id, { project, session, stamp, sources, observations, text, signal });
+        prepared.set(id, { project, session, stamp, sources, observations, text, signal, capabilitySnapshot });
         while (prepared.size > 16) prepared.delete(prepared.keys().next().value!);
         return { content: [{ type: 'text' as const, text }], details: { ok: true, schema: packet.schema, complete: packet.complete } };
       } catch {
@@ -380,10 +400,8 @@ export default function (pi: ExtensionAPI) {
         if (preparationStamp() !== proof.stamp || proof.sources.some(([file, hash]) => sourceDigest(file) !== hash)) continue;
         // Keep the existing project-bound snapshot operation. Only delivered capability
         // bytes can reach it; failure does not unlock planning or execution.
-        const packet = JSON.parse(text);
         if (proof.observations.includes('agent_capabilities')) {
-          const section = packet.sections.find((value: any) => value.tool === 'agent_capabilities');
-          await callAdapter(projectRequest({ action: 'capability_snapshot', snapshot: JSON.parse(section.content), session_id: proof.session }));
+          await callAdapter(projectRequest({ action: 'capability_snapshot', snapshot: proof.capabilitySnapshot, session_id: proof.session }));
           if (activeProject !== proof.project) continue;
           capabilitiesObserved = true;
         }

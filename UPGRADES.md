@@ -14,13 +14,16 @@ query drives only the fixed capability, system-tool, validated-memory, project
 knowledge and context readers through Pi1.4's public `ctx.executeTool` API.
 Native child validation, hooks, permission checks and call lineage remain intact.
 Return bounded actual child content; nested-call metadata alone is not delivery.
+Validate the normal workflow's compact capability projection against its retained
+full host snapshot. Keep the compact model bytes; use the full snapshot only for
+the existing host-side project observation.
 Record discovery only after the unchanged enclosing result reaches later model
 context. Recheck source/session/project/cancellation bindings, preserve instruction
 windows and remaining reads, and keep skills, intake, board and effects separate.
 No task is selected and no execution authority is inferred.
 
 Native inert qualification captures actual serialized provider input and stops
-before HTTP. It covers default deferred-tool configuration, unchanged active
+before HTTP. It covers the normal workflow compaction and default deferred-tool configuration, unchanged active
 tools, same-batch holds, final-hook replacement, omitted output, cancellation,
 sensitive-query abstention, source drift, session/project changes and partial
 instruction delivery. Synthetic board/catalog inputs and an empty validated

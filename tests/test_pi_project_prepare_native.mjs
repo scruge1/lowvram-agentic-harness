@@ -20,6 +20,9 @@ const runtime = path.join(fixture, 'runtime'), agentDir = path.join(fixture, 'ag
 fs.cpSync(path.join(source, 'adapters/pi'), runtime, { recursive: true, filter: file => !file.includes('__pycache__') });
 fs.mkdirSync(agentDir);
 const workflow = path.join(runtime, 'project-workflow'), memory = path.join(runtime, 'memory');
+fs.writeFileSync(path.join(workflow, 'everyday-runtime.json'), JSON.stringify({ python: options.python, runtime,
+  runtime_manifest_sha256: '0'.repeat(64), engine_sha256: '0'.repeat(64),
+  helper_sha256: hash(path.join(workflow, 'everyday_workflow.py')) }));
 const project = path.join(fixture, 'project'), second = path.join(fixture, 'second');
 for (const root of [project, second]) {
   fs.mkdirSync(root); fs.writeFileSync(path.join(root, 'AGENTS.md'), '# Synthetic project\n\nKeep the exact owner output.\n');
@@ -62,12 +65,17 @@ const observer = pi => {
   pi.on('tool_result', event => {
     events.push({ type: 'result', name: event.toolName, id: event.toolCallId, parent: event.parentToolCallId });
     if (mode === 'replace-child' && event.toolName === 'system_tool_query') return { content: [{ type: 'text', text: '{"ok":false,"results":[],"replacement":true}' }] };
+    if (mode === 'tamper-capability' && event.toolName === 'agent_capabilities') {
+      const value = JSON.parse(event.content[0].text); value.active_tools = [];
+      return { content: [{ type: 'text', text: JSON.stringify(value) }] };
+    }
     if (mode === 'large' && event.toolName === 'system_tool_query') return { content: [{ type: 'text', text: JSON.stringify({ ok: true, results: [], body: 'x'.repeat(70000) }) }] };
     if (mode === 'replace-outer' && event.toolName === 'project_prepare') return { content: [{ type: 'text', text: '{"replaced":true}' }] };
   });
 };
 const settings = sdk.SettingsManager.inMemory({ extensions: [path.join(workflow, 'agent-capabilities.ts'),
-  path.join(workflow, 'system-tool-knowledge.ts'), path.join(memory, 'validated-memory-query.ts'), path.join(workflow, 'pi-kanban.ts')],
+  path.join(workflow, 'system-tool-knowledge.ts'), path.join(workflow, 'pi-kanban.ts'),
+  path.join(memory, 'validated-memory-query.ts'), path.join(workflow, 'everyday-workflow.ts')],
   defaultTools: ['read', 'ls', 'find', 'grep'], cacheWarming: 'off' });
 const loader = new sdk.DefaultResourceLoader({ cwd: project, agentDir, settingsManager: settings,
   extensionFactories: [sdk.createCodemodeExtension(), sdk.createToolSearchExtension(), observer],
@@ -135,6 +143,9 @@ try {
   const result = await tool('project_prepare', { query: 'CSV parsing' });
   assert.ok(!result.isError, JSON.stringify(result));
   const packet = JSON.parse(result.content[0].text); assert.equal(packet.complete, true);
+  const compact = JSON.parse(packet.sections.find(section => section.tool === 'agent_capabilities').content);
+  assert.equal(compact.schema, 'pi-capability-summary/v1');
+  assert.ok(!JSON.stringify(packet).includes('source_info'), 'Do not expand the full capability snapshot into model context');
   assert.equal(packet.sections.length, 5); assert.ok(Buffer.byteLength(result.content[0].text) <= 65536);
   const children = events.filter(event => event.type === 'call' && event.parent === lastMessage.toolCallId);
   assert.deepEqual(children.map(event => event.name), ['project_context', 'agent_capabilities', 'system_tool_query', 'validated_memory_query', 'project_knowledge_query']);
@@ -142,13 +153,18 @@ try {
   assert.deepEqual(session.getActiveToolNames(), activeBefore, 'Preparation must not activate tools');
   await held(/agent_capabilities/); // A sibling call in the same batch remains held.
   await deliver(); await held();
+  const snapshots = fs.readFileSync(path.join(fixture, 'calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse)
+    .filter(call => call.action === 'capability_snapshot');
+  assert.equal(snapshots.length, 1); assert.equal(snapshots[0].snapshot.schema, 'pi-native-capabilities/v1');
+  assert.ok(snapshots[0].snapshot.configured_tools.every(tool => 'source_info' in tool));
   const serialized = JSON.stringify(payload);
   assert.ok(serialized.includes('Synthetic capability')); assert.ok(serialized.includes('Keep the exact owner output.'));
   assert.ok(serialized.includes('no_current_provenanced_result'));
   checks.push('native-fixed-children-default-deferred-configuration', 'unchanged-active-tools', 'same-batch-held',
-    'actual-agent-provider-input-delivers-bodies', 'zero-http-empty-validated-registry');
+    'actual-agent-provider-input-delivers-bodies', 'zero-http-empty-validated-registry',
+    'actual-everyday-compact-capabilities-preserved-host-snapshot-bound');
 
-  for (const failure of ['replace-outer', 'replace-child', 'large', 'abort']) {
+  for (const failure of ['replace-outer', 'replace-child', 'tamper-capability', 'large', 'abort']) {
     await reset(); mode = failure;
     const changed = await tool('project_prepare', { query: 'CSV parsing' });
     if (failure === 'abort') assert.equal(changed.isError, true);
