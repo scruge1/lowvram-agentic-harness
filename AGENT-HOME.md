@@ -491,6 +491,7 @@ The source port is deliberately identified by what it contains:
 |---|---|---|
 | `scripts/rig/search_core.py` | URL identity/domain grouping and configured provider request, cooldown, relevance and coverage policy | Search coverage does not establish factual corroboration |
 | `scripts/rig/godmode_miner.py` | HTML/redirect provenance and source-bound schema-shard claim mining | Question-to-consensus orchestration remains separate |
+| `scripts/godmode_research.py` and `img_consensus.py` | Deterministic source scoring, lexical grouping and separate numeric evidence over cached mining | No semantic truth, editorial-independence or narrative-model acceptance claim |
 | Existing browser workflow | New guarded Playwright adapter and project evidence cache/pager | The complete private browser service is not bundled |
 
 Raw session calls and failures are reviewed privately. Public regressions use
@@ -560,6 +561,44 @@ authority. Do not automatically resume or replay an uncertain operation.
 Offline schema/span/identity tests and a native Pi serializer probe with
 synthetic responses qualify the source path. They do not establish local model
 quality or the complete question-to-consensus research journey.
+
+Use `consensus` to score1–32 cached mining results for the same exact question and
+extraction schema. It makes no model, embedding, search or fetch request. Every
+input plan, source window, quote offset, hash and health record is revalidated.
+Mixed topics, foreign projects and altered evidence refuse the operation.
+
+```json
+{"action":"consensus","artifact_ids":["sha256:MINING_RESULT_64_HEX_DIGEST"]}
+```
+
+The inherited scoring formula combines domain priors, model relevance/confidence,
+domain coverage, quoted evidence and a fixed freshness-policy coefficient. These
+are policy inputs, not measured truth or document age. Lexical Jaccard grouping
+is explicit; no qualified generic embedding route is selected. Requested-source
+URL and identical-snapshot deduplication prevent repeated representations from
+inflating scoring when those identities match. Other correlations still require
+review. All original claims remain in `claim_rows`; clusters and
+numeric values cite their `claim_indices`. Background and failed/partial input
+coverage remain visible. No source or failure row is silently dropped.
+
+Numeric literals and their quotes stay separate; different numeric signatures
+cannot merge into one lexical cluster. Written units are not converted or
+averaged. `CONTESTED_LITERALS` means written values differ, not that a factual
+contradiction is proved. Domain counts are coverage proxies. The inherited
+`CANONICAL` and `CORROBORATED` tiers are scoring labels, not established editorial
+independence or semantic agreement. `consensus_established` remains false.
+`complete` and `coverage_complete` describe only the supplied cached computation;
+all-failed, partial and background-only corpora do not report success. Fully
+analysed batches with no relevant claims remain explicit `no_relevant_claims`
+inputs. They can combine with useful healthy batches without being called dead
+miners or proof that the whole web is empty. Mining's successful-only seen/resume
+rule stays unchanged: a zero-claim mining result still cannot act as a successful
+resume receipt. Full batch orchestration must handle that remaining limitation.
+The existing32MiB artifact byte budget applies; oversized batches refuse without
+silently dropping rows. The bound supports combining multiple mining batches;
+synthetic source controls cover32 batches with96 pages, not a live throughput claim.
+Use `read` and its offsets to inspect the complete result. The full question-to-
+consensus research journey and useful model-driven acceptance remain open.
 
 Full source bytes, complete permitted static extraction, provenance and download
 bytes stay in content-addressed project-state artifacts. Model replies remain
