@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Native discovery for rare project tools — 2026-10-25
+
+Parent commit: `68bc4b2ff8bd13e40e7b403ed039b55f69f70c55`.
+
+Mark ten existing board-display and project-maintenance definitions with Pi1.4's
+native deferred exposure. Keep intake, context, readiness, selection and workflow
+interfaces direct. Native tool_search loads the selected existing definition;
+previously active/restored tools remain active. When native discovery is absent
+or hidden, retain the previous declared schema set and core relative order.
+No new discovery registry, handler wrapper or task authority is introduced.
+
+Eight native SDK checks passed with19 synthetic fetch interceptions, zero HTTP
+and zero model inference. Actual OpenAI tool-schema JSON fell from25,248 to16,760
+bytes in one controlled32-to22-tool fixture. Auto-capture was excluded from that
+fixture. This is8,488 schema bytes, not whole-request tokens or latency. Canonical
+discovery reached the unchanged real board handler; unknown/invalid/unmatched
+queries, stale cursors and handler errors refused. Native active-loadout
+restoration and both discovery fallbacks passed. Search remains native BM25,
+not exact-only lookup; check the loaded tool name before invoking it.
+
+Seven focused coordinator tests and all seven offline selftests passed. The
+source-policy tail is unchanged after LF normalization. Real model task quality,
+cold session continuation and deployed private-client adoption remain separate.
+
 ## Owned research tools and smaller agent installation — 2026-10-25
 
 Parent commit: `7faf6c8d9c9f86cdde088b25b200d4cb2df54d3e`.

@@ -18,6 +18,11 @@ const ADAPTER = requiredEnvironment('PI_PROJECT_KANBAN_ADAPTER');
 const ADAPTER_SHA256 = requiredEnvironment('PI_PROJECT_KANBAN_ADAPTER_SHA256');
 const MAX_OUTPUT = 1024 * 1024;
 const EXECUTION_TOOLS = new Set(['workflow_step', 'run_step', 'run_ledger']);
+const RARE_PROJECT_TOOLS = [
+  'kanban_hierarchy', 'kanban_decompose', 'project_knowledge_rebuild',
+  'project_closeout_prepare', 'project_skill_candidate_compile', 'project_memory_candidate_prepare',
+  'kanban_list', 'kanban_show', 'kanban_create', 'kanban_comment',
+] as const;
 
 type Reply = { schema: string; ok: boolean; action?: string; result?: unknown; limits?: string[]; error?: string };
 const offsetSchema = () => Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER });
@@ -105,6 +110,20 @@ function successfulCanonicalMemorySearch(event: any): boolean {
 }
 
 export default function (pi: ExtensionAPI) {
+  const nativeExposure = typeof pi.getAllTools === 'function'
+    && typeof pi.getActiveTools === 'function' && typeof pi.setActiveTools === 'function';
+  const enableRareToolDiscovery = () => {
+    if (!nativeExposure) return; // Older API surfaces retain direct definitions.
+    const active = pi.getActiveTools();
+    try {
+      const search = pi.getAllTools().find(tool => tool.name === 'tool_search');
+      if (typeof search?.reachesTools === 'function' && search.exposure !== 'hidden') {
+        if (!active.includes('tool_search')) pi.setActiveTools([...active, 'tool_search']);
+        if (pi.getActiveTools().includes('tool_search')) return;
+      }
+    } catch { /* Preserve the previous direct surface if discovery cannot be used. */ }
+    pi.setActiveTools([...new Set([...active, ...RARE_PROJECT_TOOLS])]);
+  };
   const pendingConsultations = new Map<string, { taskId: string; cardId?: string; objective: string; draftPlan: string }>();
   let activeProject: { root: string; projectId: string; boardId: string } | null = null;
   let activeTask: { taskId: string; cardId: string } | null = null;
@@ -126,6 +145,8 @@ export default function (pi: ExtensionAPI) {
     pendingConsultations.clear();
   };
   const restoreSelection = async (_event: any, ctx: any) => {
+    // Adding discovery never removes a tool explicitly active on a resumed branch.
+    enableRareToolDiscovery();
     activeProject = null;
     activeTask = null;
     boardAdmissionFailed = false;
@@ -232,6 +253,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'kanban_hierarchy', label: 'Read retained task hierarchy',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Read decomposition containment and distinct native prerequisites. A ready card is not completed work or execution authority.',
     parameters: Type.Object({ task_id: Type.String(),
       depth: Type.Optional(Type.Integer({ minimum: 1, maximum: 12 })),
@@ -245,6 +267,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'kanban_decompose', label: 'Decompose an unstarted task',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Use native Hermes fan-out on an unstarted triage root. Sibling indices express prerequisites; expandable children remain triage. Keep the original owner outcome.',
     parameters: Type.Object({ task_id: Type.String(), children: Type.Array(Type.Object({
       title: Type.String({ minLength: 1, maxLength: 200 }),
@@ -270,6 +293,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'project_knowledge_rebuild', label: 'Rebuild project knowledge',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Rebuild the admitted project retrieval index and hash-bound manifest from its readable source policy. This grants retrieval-only authority.',
     parameters: Type.Object({}, { additionalProperties: false }),
     async execute(_id, _params, signal) { try { return response(await callAdapter(projectRequest({ action: 'knowledge_build' }), signal)); } catch (error) { return failure(error); } },
@@ -277,6 +301,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'project_closeout_prepare', label: 'Prepare verified project closeout',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Validate one accepted supervised receipt and its current output bytes, write one immutable project lesson record, rebuild project knowledge, and return a canonical guidance-only memory payload. This does not write durable memory or promote a skill.',
     parameters: Type.Object({
       task_id: Type.String({ minLength: 1, maxLength: 128 }),
@@ -291,6 +316,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'project_skill_candidate_compile', label: 'Compile project skill candidate',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Compile one immutable project-local skill candidate from a verified closeout. The result is guidance only. It is not installed, shared, or promoted.',
     parameters: Type.Object({
       name: Type.String({ minLength: 2, maxLength: 64, pattern: '^[a-z0-9][a-z0-9-]+$' }),
@@ -307,6 +333,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: 'project_memory_candidate_prepare', label: 'Prepare project memory candidate',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Bind one verified project closeout to one exact MemPalace drawer readback and write an immutable project-local memory claim candidate. It rejects sensitive summaries and grants no shared-memory promotion authority.',
     parameters: Type.Object({
       closeout_path: Type.String({ minLength: 1, maxLength: 4096 }),
@@ -323,6 +350,7 @@ export default function (pi: ExtensionAPI) {
   });
   pi.registerTool({
     name: 'kanban_list', label: 'List Kanban work',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'List bounded card summaries. Use view.items_offset and returned paging metadata to recover the fetched list. Backend limit remains at most100. This is work state, not execution or proof authority.',
     parameters: Type.Object({ status: Type.Optional(Type.String()), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
       view: Type.Optional(viewSchema) }, { additionalProperties: false }),
@@ -334,6 +362,7 @@ export default function (pi: ExtensionAPI) {
   });
   pi.registerTool({
     name: 'kanban_show', label: 'Show Kanban work',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Read a bounded card view with latest comments. Page body via view.body_offset; comments via before_id or comment_id plus offset; any top-level task_field via offset; relations via relation_offset. Reuse expected_reply_sha256 to reject changed-source cursors. Full host evidence remains separate.',
     parameters: Type.Object({ task_id: Type.String(), view: Type.Optional(viewSchema) }, { additionalProperties: false }),
     async execute(_id, params, signal) {
@@ -359,6 +388,7 @@ export default function (pi: ExtensionAPI) {
   });
   pi.registerTool({
     name: 'kanban_create', label: 'Create Kanban work',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Create or idempotently recover one bounded host-local work card. A card never grants execution, evidence, proof, promotion, or submission authority.',
     parameters: Type.Object({
       title: Type.String({ minLength: 1, maxLength: 200 }),
@@ -383,6 +413,7 @@ export default function (pi: ExtensionAPI) {
   });
   pi.registerTool({
     name: 'kanban_comment', label: 'Comment on Kanban work',
+    exposure: nativeExposure ? 'deferred' : 'direct',
     description: 'Append one audit comment to a Pi Kanban card.',
     parameters: Type.Object({ task_id: Type.String(), comment: Type.String({ minLength: 1, maxLength: 8000 }) }, { additionalProperties: false }),
     async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'comment', ...params }), signal)); } catch (error) { return failure(error); } },
