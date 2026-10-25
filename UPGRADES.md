@@ -5,6 +5,36 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Add an explicit reviewed controller CLI migration — 2026-10-25
+
+Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
+
+Compatible runtime updates correctly refuse controller changes, so an existing
+home could not adopt the new research setup CLI through that route. Add the
+separate `controller-cli-v1` plan/apply/verify scope to the existing updater.
+Bind the exact reviewed prior/new CLI AST, unchanged controller core/constants,
+old/new source and executing closure/interpreter. Keep ordinary `FIXED_SOURCE`,
+package pins, stable entry/guard, templates, schema and personalized data fixed.
+Reuse the existing staged candidate, exclusive lease, transaction, pending
+sentinel, recovery and rollback instead of adding another updater.
+
+Controller pending/failure states are rejected by the retained old verifier.
+Its actual old status check is exercised with hash-proven unchanged early
+helpers/fixed modules and the original rejection traceback. New verification
+runs the stable doctor, complete redacted research status and existing normal
+managed Pi health. Validate exact provider/field sets, enums, booleans, untested
+status, refreshable canonical ISO dates and known limits without scanning
+arbitrary document text. Empty status and extra credential fields cannot pass.
+
+Isolated Linux fixtures passed the controller activation/verification/rollback
+journey and every retained exchange fault. Windows checks cover source/scope,
+contract refusal and unsupported activation. Real Python3.11/3.12/3.13 checks
+found and corrected empty AST-field serialization differences. A stale fixture
+assumption after the research merge was retained and replaced with an explicit
+distinct predecessor closure. Pinned lint and all seven offline self-tests
+passed. Actual installed migration, service lifecycle and data preservation
+remain a separate native acceptance step; this source change does not claim it.
+
 ## Name the remaining discovery calls in blocked execution â€” 2026-10-25
 
 Parent commit: `eefb72a818a29b16174fa2960d1f64e694451bbc`.

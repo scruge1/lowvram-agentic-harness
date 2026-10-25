@@ -222,7 +222,65 @@ normal entry. Use `recover --operation ID --expected-journal CURRENT_SHA256` fro
 the retained reviewed controller to restore that predecessor. Keep the journal
 and stage receipt; withdrawal refuses an operation used by runtime exchange.
 Personalized files, credentials, sessions, boards, packages and new user data
-survive rollback. Dependency, entry-protocol and template migrations remain held.
+survive rollback. Dependency, other entry-protocol and template migrations remain held.
+The reviewed research CLI controller slice below has a separate explicit route.
+
+### Explicit research CLI controller migration
+
+The Linux `controller-cli-v1` route adds the reviewed research CLI to an existing
+controller. It accepts the pinned prior/new `main` and new `CommandParser`
+definitions. All other `home.py` definitions, constants, profiles, package pins
+and layout must match. The stable entry, lifetime guard, maintenance protocol and
+Framework binder stay fixed. Ordinary compatible updates keep their existing
+`FIXED_SOURCE` refusal policy.
+
+Stage the complete reviewed source through `harness.maintenance` first. Run the
+new controller from that exact reviewed checkout, rather than asking an older
+installed controller to interpret a new command:
+
+```bash
+python -B /path/to/reviewed-checkout/harness/runtime_update.py --home HOME \
+  controller-plan --operation ID
+python -B /path/to/reviewed-checkout/harness/runtime_update.py --home HOME \
+  controller-apply --operation ID --expected-plan PLAN_SHA256 \
+  --qualification /path/to/controller-qualification.json \
+  --qualification-sha256 CONTRACT_SHA256 --execute-qualified-runtime
+```
+
+The qualification schema remains `agent-home-runtime-qualification/v1`, with
+scope `controller-cli-v1`. Copy the exact plan bindings `home`, `operation`,
+`stage_receipt_sha256`, `candidate_sha256`, `active_sha256` and `controller`, plus
+`qualified: true`, `execution_authorized: true` and retained reviewed evidence
+paths/hashes. The controller binding includes old/new protected source hashes,
+the executing closure and interpreter, and the retained recovery-controller path.
+These fields record an explicit review; writing the contract is not that review.
+
+Stop this home's consumers, including its owned model service and memory hub,
+before activation. Apply does not restart services or change model settings.
+For consumer verification, use the existing owned-service lifecycle if this home
+requires its local server, then run the retained candidate controller:
+
+```bash
+python -B RETAINED_CANDIDATE/harness/runtime_update.py --home HOME \
+  controller-verify --operation ID --expected-journal CURRENT_JOURNAL_SHA256
+# Stop the home's model service and memory hub before rollback.
+python -B RETAINED_CANDIDATE/harness/runtime_update.py --home HOME \
+  rollback --operation ID --expected-journal CURRENT_JOURNAL_SHA256
+```
+
+Verification runs the actual stable doctor, read-only `research status` and normal
+managed Pi `/agent-health`. Research status must contain the complete redacted
+five-provider v1 contract, a real canonical ISO date and the known limits text;
+unknown fields and `tested: true` refuse acceptance. No provider request or model
+inference is needed. An old verifier refuses the controller pending/failure
+states. An incomplete exchange keeps the existing entry-blocking sentinel; use
+that retained controller's existing `recover` command with the current journal
+hash. Do not replay apply or edit the sentinel. Rollback preserves personalized
+files, sessions and new user data and restores the exact predecessor source and
+bindings.
+
+This route has isolated source/transaction tests. Actual installed controller
+migration and rollback need their own native qualification before adoption.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
@@ -879,7 +937,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
 | Source milestones, scoped commits and remote verification | Reviewed CLI/skill,21 real-Git controls and22 native supervised-workflow checks passed | New-host adoption; automatic all-session attribution remains open |
 | Terminal/project navigation and live-owner resume checks | Native same-home/project continuation, bucket leases and23actual managed CLI checks passed | Real model continuation and new-host adoption; raw pickers/RPC remain held |
-| Maintenance/update/rollback | Source staging and compatible runtime exchange, native doctor/Pi health, rollback and interrupted-exchange recovery passed | New-host adoption; dependency, entry-protocol and template migrations remain held |
+| Maintenance/update/rollback | Source staging and compatible runtime exchange, native doctor/Pi health, rollback and interrupted-exchange recovery passed | New-host adoption; dependency, other entry-protocol and template migrations remain held |
 
 Do not mark the whole installer accepted until every selected requirement has
 its native evidence. Package tests and a successful deterministic lab demo do
