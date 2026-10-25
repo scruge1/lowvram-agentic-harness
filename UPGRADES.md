@@ -30,6 +30,15 @@ batch resume remains a separate orchestration limitation.
 The existing post-await admission check also holds consensus delivery after a
 changed native input epoch; an old bound immutable artifact can remain.
 
+A final-boundary regression then reproduced successful delivery after helper-
+close cancellation and successful publication after a declared2-second budget
+with2.2 seconds of injected productive delay. Recheck cancellation immediately
+before delivery and return typed cancellation. Enforce a single productive
+deadline in the native caller and helper/direct entry, including validation,
+grouping, serialization and the existing ArtifactStore's pre-publication check.
+Keep cleanup grace separate. Late cancellation can preserve an already committed
+bound artifact while holding delivery; no rollback or automatic replay is claimed.
+
 Necessary adaptations are explicit: use the existing public URL/domain helpers;
 anchor intended PubMed/ReadTheDocs priors instead of trusting unrelated host
 substrings; deduplicate requested URLs and identical snapshots for scoring while

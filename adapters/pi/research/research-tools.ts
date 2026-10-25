@@ -64,17 +64,18 @@ function invoke(runtime: ReturnType<typeof binding>, request: object, timeout: n
       cwd: runtime.home, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
       env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
     });
-    let output = Buffer.alloc(0), errors = Buffer.alloc(0), stopped = '', finished = false;
+    let output = Buffer.alloc(0), errors = Buffer.alloc(0), stopped = '', stoppedStatus = 'runtime_error', finished = false;
     let killTimer: ReturnType<typeof setTimeout> | undefined;
-    const stop = (reason: string) => {
+    const stop = (reason: string, status = 'runtime_error') => {
       if (stopped) return;
       stopped = reason;
+      stoppedStatus = status;
       // Let the native browser guard settle its owned descendants before close.
       child.kill('SIGTERM');
       killTimer = setTimeout(() => child.kill('SIGKILL'), 8000);
     };
-    const abort = () => stop('Research cancelled; no result was delivered.');
-    const timer = setTimeout(() => stop('Research helper deadline reached.'), timeout);
+    const abort = () => stop('Research cancelled; delivery held; inspect retained bound artifacts.', 'cancelled');
+    const timer = setTimeout(() => stop('Research helper productive deadline reached; delivery held; inspect retained bound artifacts.', 'deadline'), timeout);
     signal?.addEventListener('abort', abort, { once: true });
     const finish = (error?: Error, value?: any) => {
       if (finished) return;
@@ -93,7 +94,7 @@ function invoke(runtime: ReturnType<typeof binding>, request: object, timeout: n
     });
     child.stdin.on('error', () => stop('Research input channel failed.'));
     child.on('close', code => {
-      if (stopped) { finish(new Error(stopped)); return; }
+      if (stopped) { finish(Object.assign(new Error(stopped), { researchStatus: stoppedStatus })); return; }
       try {
         if (code !== 0 && !output.length) {
           const refusal = JSON.parse(errors.toString('utf8'));
@@ -259,14 +260,19 @@ export default function (pi: ExtensionAPI) {
         };
         const value = params.action === 'mine'
           ? await mine(binding(), { ...params, timeout }, ctx, signal, unchanged)
-          : await invoke(binding(), { ...params, selection, session_id: session }, timeout * 1000 + 30000, signal);
+          : await invoke(binding(), { ...params, selection, session_id: session },
+            timeout * 1000 + (params.action === 'consensus' ? 0 : 30000), signal);
         if (params.action === 'mine' || params.action === 'consensus') unchanged();
         if (ctx.sessionManager.getSessionId() !== session || JSON.stringify(selected(ctx)) !== fingerprint)
           throw new Error('Project selection changed during research; no result was delivered.');
+        if (params.action === 'consensus' && signal?.aborted)
+          throw Object.assign(new Error('Research consensus cancelled after helper settlement; delivery held; inspect retained bound artifacts.'),
+            { researchStatus: 'cancelled' });
         return { content: [{ type: 'text', text: JSON.stringify(value) }], details: value, isError: !value.ok };
       } catch (error) {
         const value = { schema: 'research-result/v1', ok: false,
-          status: params.action === 'mine' ? (error as any)?.miningStatus ?? (signal?.aborted ? 'cancelled' : 'runtime_error') : 'runtime_error',
+          status: params.action === 'mine' ? (error as any)?.miningStatus ?? (signal?.aborted ? 'cancelled' : 'runtime_error')
+            : params.action === 'consensus' ? (error as any)?.researchStatus ?? (signal?.aborted ? 'cancelled' : 'runtime_error') : 'runtime_error',
           reason: String(error).slice(0, 1000), authority: 'untrusted_source_evidence' };
         return { content: [{ type: 'text', text: JSON.stringify(value) }], details: value, isError: true };
       }

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -235,6 +236,36 @@ class ConsensusTests(unittest.TestCase):
 
 
 class ConsensusRuntimeTests(unittest.TestCase):
+    def test_declared_productive_deadline_rejects_a_late_scoring_result_before_publish(self):
+        with tempfile.TemporaryDirectory() as name:
+            home = Path(name).resolve()
+            project = home / "project"
+            project.mkdir()
+            source = Path(__file__).resolve().parents[1] / "adapters/pi/project-workflow/project_identity.py"
+            spec = importlib.util.spec_from_file_location("consensus_deadline_identity", source)
+            identity = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(identity)
+            state = home / "state/projects"
+            with patch.dict(os.environ, {"PI_PROJECT_STATE_BASE": str(state)}):
+                native, _ = identity.initialize_identity(project)
+            binding = {"project_id": native["project_id"], "board_id": native["board_id"], "canonical_root": str(project)}
+            corpus = Corpus(Path(native["state_root"]), binding, r.digest((project / ".icm/project.json").read_bytes()))
+            key = corpus.mine()
+            runtime = r.ResearchRuntime.__new__(r.ResearchRuntime)
+            runtime.home, runtime.identity, runtime.env = home, identity, {"PI_PROJECT_STATE_BASE": str(state)}
+            selection = {"project": {"root": str(project), "projectId": native["project_id"], "boardId": native["board_id"]}, "task": None}
+            original = c.score
+            def delayed(*args, **kwargs):
+                value = original(*args, **kwargs)
+                time.sleep(2.1)
+                return value
+            before = set(corpus.store.directory.iterdir())
+            started = time.monotonic()
+            with patch.object(c, "score", side_effect=delayed), self.assertRaisesRegex(ValueError, "deadline"):
+                runtime.execute({"action": "consensus", "artifact_ids": [key], "selection": selection, "timeout": 2})
+            self.assertGreaterEqual(time.monotonic() - started, 2)
+            self.assertEqual(set(corpus.store.directory.iterdir()), before)
+
     def test_existing_dispatcher_stores_full_result_and_cached_read_never_infers(self):
         with tempfile.TemporaryDirectory() as name:
             home = Path(name).resolve()

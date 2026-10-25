@@ -11,10 +11,11 @@ from __future__ import annotations
 import math
 from pathlib import Path
 import re
+import time
 from urllib.parse import urlsplit
 
 from harness import research_mining as mining
-from harness.research_runtime import digest, require, text_view, wire
+from harness.research_runtime import check_deadline, digest, require, text_view, wire
 from harness.web_research import canonical_url, coverage_domain
 
 AUTHORITY = [
@@ -103,7 +104,8 @@ def numeric_literals(text):
     return tuple(sorted(set(match.group().strip() for match in NUMBER.finditer(text))))
 
 
-def validate_mine(store, artifact_id, identity_sha256):
+def validate_mine(store, artifact_id, identity_sha256, deadline=None):
+    check_deadline(deadline)
     record = store.get(artifact_id)
     require(record["action"] == "mine" and record.get("identity_sha256") == identity_sha256, "Use mining results bound to the current project identity")
     payload = record["payload"]
@@ -116,6 +118,7 @@ def validate_mine(store, artifact_id, identity_sha256):
                               "recall_bias": "HIGH" if spec["recall_floor"] == 1 else "MEDIUM",
                               "mine_timeout_seconds": spec["mine_timeout_seconds"]},
                              store, spec["model"], text_view, wire, digest)
+    check_deadline(deadline)
     require(all(saved.get(key) == value for key, value in rebuilt.items())
             and payload.get("run_identity_sha256") == rebuilt["run_identity_sha256"]
             and payload.get("model") == spec["model"] and payload.get("mine_timeout_seconds") == spec["mine_timeout_seconds"],
@@ -136,6 +139,7 @@ def validate_mine(store, artifact_id, identity_sha256):
             "Invalid mining failure/response coverage")
     slots, failed, run_failures = {}, {}, 0
     for row in payload["response_hashes"]:
+        check_deadline(deadline)
         require(isinstance(row, dict) and set(row) == {"source", "shard", "status", "text_sha256"}
                 and type(row["source"]) is int and 0 <= row["source"] < len(rebuilt["sources"])
                 and type(row["shard"]) is int and 0 <= row["shard"] < len(rebuilt["shards"])
@@ -145,6 +149,7 @@ def validate_mine(store, artifact_id, identity_sha256):
         require(key not in slots, "Repeated mining response binding")
         slots[key] = row["status"]
     for row in payload["failure_ledger"]:
+        check_deadline(deadline)
         require(isinstance(row, dict), "Malformed mining failure row")
         if row.get("scope") == "run":
             run_failures += 1
@@ -167,6 +172,7 @@ def validate_mine(store, artifact_id, identity_sha256):
             "Missing or unexpected mining run failure row")
     good = set()
     for s in range(len(rebuilt["sources"])):
+        check_deadline(deadline)
         for n in range(len(rebuilt["shards"])):
             key = s, n
             if key not in slots:
@@ -183,6 +189,7 @@ def validate_mine(store, artifact_id, identity_sha256):
     validated = []
     fields = {"field", "claim", "relevance", "confidence", "evidence_span"}
     for row in rows:
+        check_deadline(deadline)
         require(isinstance(row, dict), "Malformed stored mining claim")
         sources = [(i, source) for i, source in enumerate(rebuilt["sources"]) if source["artifact_id"] == row.get("artifact_id")]
         require(len(sources) == 1, "Claim source is outside its mining plan")
@@ -212,11 +219,15 @@ def validate_mine(store, artifact_id, identity_sha256):
     return spec, payload, validated, operationally_healthy
 
 
-def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema=None):
+def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema=None, deadline=None):
+    deadline = time.monotonic() + 30 if deadline is None else deadline
+    require(type(deadline) in (int, float) and math.isfinite(deadline), "Invalid scoring deadline")
+    check_deadline(deadline)
     require(isinstance(artifact_ids, list) and 1 <= len(artifact_ids) <= 32 and len(set(artifact_ids)) == len(artifact_ids), "Use 1 through 32 distinct mining artifacts")
     claims, inputs, intent, input_bytes = [], [], None, 0
     for artifact_id in artifact_ids:
-        spec, payload, rows, healthy = validate_mine(store, artifact_id, identity_sha256)
+        check_deadline(deadline)
+        spec, payload, rows, healthy = validate_mine(store, artifact_id, identity_sha256, deadline)
         current = {"query": spec["question"], "extraction_schema": spec["extraction_schema"]}
         require(intent is None or intent == current, "Mining topics or extraction schemas differ; do not mix research questions")
         intent = current
@@ -238,10 +249,13 @@ def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema
     row_indices = {id(row): index for index, row in enumerate(claims)}
     leaders = []
     for row in promoted:
+        check_deadline(deadline)
         tokens = _content_tokens(row["claim"])
         signature = (row["field"], numeric_literals(row["claim"]), numeric_literals(row["evidence_span"]))
         best, similarity = None, THRESHOLD
-        for leader in leaders:
+        for index, leader in enumerate(leaders):
+            if index % 64 == 0:
+                check_deadline(deadline)
             match = _jaccard(tokens, leader["tokens"]) if signature == leader["signature"] else 0.0
             if match >= similarity:
                 best, similarity = leader, match
@@ -251,9 +265,11 @@ def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema
             best["rows"].append(row)
     clusters, numeric = [], {}
     for leader in leaders:
+        check_deadline(deadline)
         rows = leader["rows"]
         scored, urls, snapshots = [], set(), set()
         for row in sorted(rows, key=lambda c: (-claim_weight(c), c["source_url"], c["claim"])):
+            check_deadline(deadline)
             url = canonical_url(row["requested_source_url"])
             snapshot = row["source_text_sha256"]
             if url not in urls and snapshot not in snapshots:
@@ -266,14 +282,21 @@ def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema
                          "domain_coverage_proxy": comp["independent_sources"],
                          "claim_indices": [row_indices[id(row)] for row in rows]})
     for row in claims:
+        check_deadline(deadline)
         for value in numeric_literals(row["evidence_span"]):
             numeric.setdefault(row["field"], {}).setdefault(value, []).append(row)
-    distributions = [{"field": field, "status": "CONTESTED_LITERALS" if len(values) > 1 else "SINGLE_LITERAL",
-                      "comparison": "written evidence literals; no unit conversion, averaging or proven contradiction",
-                      "values": [{"literal": value, "domain_coverage_proxy": _independent_sources(rows),
-                                  "unique_snapshots": len({r["source_text_sha256"] for r in rows}),
-                                  "claim_indices": [row_indices[id(row)] for row in rows]}
-                                 for value, rows in sorted(values.items())]} for field, values in sorted(numeric.items())]
+    distributions = []
+    for field, values in sorted(numeric.items()):
+        check_deadline(deadline)
+        spread = []
+        for value, rows in sorted(values.items()):
+            check_deadline(deadline)
+            spread.append({"literal": value, "domain_coverage_proxy": _independent_sources(rows),
+                           "unique_snapshots": len({r["source_text_sha256"] for r in rows}),
+                           "claim_indices": [row_indices[id(row)] for row in rows]})
+        distributions.append({"field": field, "status": "CONTESTED_LITERALS" if len(values) > 1 else "SINGLE_LITERAL",
+                              "comparison": "written evidence literals; no unit conversion, averaging or proven contradiction",
+                              "values": spread})
     clusters.sort(key=lambda c: (-c["cluster_score"], c["field"], c["claim"]))
     healthy = all(row["operationally_healthy"] for row in inputs)
     status = ("all_failed" if not any(row["analysed_shards"] for row in inputs) else "partial_coverage" if not healthy
@@ -289,4 +312,5 @@ def score(store, artifact_ids, identity_sha256, *, query=None, extraction_schema
             "run_identity_sha256": digest(wire({"project": store.project, "artifacts": artifact_ids, "intent": intent,
                                                "policy": POLICY, "source_sha256": digest(Path(__file__).read_bytes())}))}
     require(len(wire(result)) <= store.maximum, "Consensus result exceeds the artifact byte budget; split the batch; no rows were dropped")
+    check_deadline(deadline)
     return result

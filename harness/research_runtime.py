@@ -20,6 +20,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 
 MODEL_BYTES = 12 * 1024
@@ -32,6 +33,15 @@ AUTHORITY = "untrusted_source_evidence"
 
 class ResearchError(ValueError):
     pass
+
+
+class ResearchDeadline(ResearchError):
+    research_status = "deadline"
+
+
+def check_deadline(deadline):
+    if deadline is not None and time.monotonic() >= deadline:
+        raise ResearchDeadline("Consensus productive deadline reached; delivery held; inspect retained bound artifacts")
 
 
 def wire(value):
@@ -106,16 +116,20 @@ class ArtifactStore:
                 else:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
-    def put(self, record):
+    def put(self, record, *, deadline=None):
+        check_deadline(deadline)
         require(record.get("project") == self.project, "Artifact project binding differs")
         raw = wire(record)
+        check_deadline(deadline)
         sha = digest(raw)
         target = self.directory / (sha + ".json")
         with self.locked():
+            check_deadline(deadline)
             if target.exists():
                 require(read_json(target)[1] == raw, "Immutable artifact byte drift")
                 return "sha256:" + sha
             self.quota(len(raw))
+            check_deadline(deadline)
             fd, temporary = tempfile.mkstemp(prefix=".artifact-", dir=self.directory)
             candidate = Path(temporary)
             try:
@@ -123,6 +137,7 @@ class ArtifactStore:
                     stream.write(raw)
                     stream.flush()
                     os.fsync(stream.fileno())
+                check_deadline(deadline)
                 os.link(candidate, target)  # Atomic publication without overwrite.
             finally:
                 candidate.unlink(missing_ok=True)
@@ -417,18 +432,24 @@ class ResearchRuntime:
                 "Unexpected consensus request fields")
         timeout = request.get("timeout", 30)
         require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research consensus timeout must be 2 through 60 seconds")
+        deadline = time.monotonic() + timeout
         binding, identity, before = self.selection(request)
         state = Path(identity["state_root"])
         require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project consensus storage escaped this home")
         store = ArtifactStore(state, binding)
         payload = research_consensus.score(store, request.get("artifact_ids"), before, query=request.get("query"),
-                                           extraction_schema=request.get("extraction_schema"))
+                                           extraction_schema=request.get("extraction_schema"), deadline=deadline)
+        check_deadline(deadline)
         require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
                 "Project identity changed during scoring; result was not published")
         record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
                   "session_id": str(request.get("session_id", ""))[:256], "action": "consensus", "authority": AUTHORITY,
                   "payload": payload}
-        return projection(record, store.put(record), limit=request.get("limit", 8192))
+        key = store.put(record, deadline=deadline)
+        check_deadline(deadline)
+        result = projection(record, key, limit=request.get("limit", 8192))
+        check_deadline(deadline)
+        return result
 
 
 def main():
@@ -445,7 +466,8 @@ def main():
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 0
     except (Exception, KeyboardInterrupt) as error:
-        result = {"schema": "research-result/v1", "ok": False, "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "runtime_error",
+        result = {"schema": "research-result/v1", "ok": False,
+                  "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "deadline" if getattr(error, "research_status", None) == "deadline" else "runtime_error",
                   "reason": str(error)[:1000], "authority": AUTHORITY}
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 1

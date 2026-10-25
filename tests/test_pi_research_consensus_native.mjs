@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
+import childProcess from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -95,6 +97,17 @@ print(json.dumps({'good':good,'second':mine('https://example.readthedocs.io/b'),
 let providerCalls = 0;
 const oldFetch = globalThis.fetch;
 globalThis.fetch = async () => { providerCalls++; throw new Error('Consensus must never call a provider'); };
+const originalSpawn = childProcess.spawn;
+let abortAfterClose;
+childProcess.spawn = (...args) => {
+  const child = originalSpawn(...args), controller = abortAfterClose;
+  if (controller && args[1]?.includes(path.join(runtime, 'harness/research_runtime.py')))
+    // Attach after the production close handler: invoke has resolved and
+    // removed its abort listener, but execute's await has not resumed yet.
+    child.once('spawn', () => child.once('close', () => controller.abort()));
+  return child;
+};
+syncBuiltinESMExports();
 const sdk = await import(pathToFileURL(path.join(piPackage, 'dist/index.js')));
 assert.equal(JSON.parse(fs.readFileSync(path.join(piPackage, 'package.json'))).version, '1.4.0');
 const settings = sdk.SettingsManager.inMemory({ extensions: [path.join(runtime, 'adapters/pi/research/research-tools.ts')], cacheWarming: 'off', defaultTools: [] });
@@ -195,15 +208,53 @@ try {
     assert.equal(result.isError, true); assert.match(result.details.reason, /admission changed.*delivery held/);
     checks.push('last-await-admission-epoch-delivery-held');
   } finally { fs.writeFileSync(release, 'release'); rebind(bytes); }
+  const completed = () => py(`import json;from pathlib import Path
+p=Path(sys.argv[1])/'research/artifacts';rows=[json.loads(f.read_text()) for f in p.glob('*.json')];print(json.dumps(sum(x.get('action')=='consensus' and x['payload'].get('status')=='scored' for x in rows)))`, [identities[0].state_root]);
+  const boundaries = [];
+  const late = new AbortController(), beforeLate = completed();
+  abortAfterClose = late;
+  result = await tool({ ...input, artifact_ids: [corpus.second] }, late.signal); abortAfterClose = undefined;
+  boundaries.push({ case: 'abort_after_helper_close', aborted: late.signal.aborted, isError: result.isError,
+    status: result.details.status, completed_before: beforeLate, completed_after: completed() });
+
+  const scorer = path.join(runtime, 'harness/research_consensus.py'), scorerBytes = fs.readFileSync(scorer);
+  const delayed = scorerBytes.toString().replace(/^(def score\([^\r\n]*\):)\r?$/m,
+    (_match, header) => header + "\n    __import__('time').sleep(2.2)");
+  assert.notEqual(delayed, scorerBytes.toString());
+  const scorerMember = manifest.find(x => x.path === 'harness/research_consensus.py');
+  const bindScorer = value => {
+    fs.writeFileSync(scorer, value); scorerMember.sha256 = digest(scorer);
+    write(path.join(runtime, 'runtime-manifest.json'), { files: manifest });
+    const config = JSON.parse(fs.readFileSync(path.join(home, 'home.json')));
+    config.runtime_manifest_sha256 = digest(path.join(runtime, 'runtime-manifest.json')); write(path.join(home, 'home.json'), config);
+  };
+  bindScorer(delayed);
+  try {
+    const before = completed(), began = Date.now();
+    result = await tool({ ...input, artifact_ids: [corpus.good], timeout: 2 });
+    boundaries.push({ case: 'delayed_productive_scoring', isError: result.isError, status: result.details.status,
+      elapsed_ms: Date.now() - began, completed_before: before, completed_after: completed() });
+  } finally { bindScorer(scorerBytes); }
+  write(path.join(fixture, 'final-boundaries.json'), { boundaries,
+    scope: 'Actual helper close/abort order and explicit copied-scorer2.2s delay with declared2s productive budget; no model/provider.' });
+  assert.equal(boundaries[0].aborted, true);
+  assert.equal(boundaries[0].isError, true, JSON.stringify(boundaries));
+  assert.equal(boundaries[0].status, 'cancelled');
+  assert.equal(boundaries[0].completed_after, beforeLate + 1, 'Late cancellation must preserve the already-published bound artifact');
+  assert.equal(boundaries[1].isError, true, JSON.stringify(boundaries));
+  assert.equal(boundaries[1].status, 'deadline');
+  assert.equal(boundaries[1].completed_after, boundaries[1].completed_before, 'Expired productive scoring cannot publish success');
+  checks.push('post-helper-abort-holds-delivery-preserves-committed-data', 'productive-deadline-excludes-cleanup-reserve');
   assert.equal(providerCalls, 0); assert.deepEqual(errors, []);
   checks.push('zero-provider-requests-no-chat-as-embedder');
   write(path.join(fixture, 'receipt.json'), { schema: 'pi-research-consensus-native-qualification/v1', ok: true,
     checks, fixture, elapsed_ms: Date.now() - start, source_files: manifest, trace, borrowed_python: borrowedPython,
     provider_requests: providerCalls, model_inferences: 0,
     instrumentation: { original_helper_sha256: sha(bytes), barrier_helper_sha256: sha(Buffer.from(changed)),
-      scope: 'Explicit copied-helper pre-operation barrier only; unchanged production scoring body.' },
+      original_scorer_sha256: sha(scorerBytes), delayed_scorer_sha256: sha(Buffer.from(delayed)),
+      scope: 'Copied-helper pre-operation barrier, copied-scorer2.2s entry delay and child-close abort observer; no provider or model.' },
     scope: 'Actual Pi1.4 registered tool and installed guarded scoring helper over synthetic cached producer artifacts. No inference, fetch/search, embedding, fresh package install, normal intake or useful full research-journey acceptance.' });
   console.log(JSON.stringify({ ok: true, checks: checks.length, fixture, receipt: path.join(fixture, 'receipt.json'), elapsed_ms: Date.now() - start }));
 } catch (error) {
   write(path.join(fixture, 'failure.json'), { ok: false, checks, error: String(error.stack || error), trace, source_files: manifest }); throw error;
-} finally { globalThis.fetch = oldFetch; await session.dispose(); }
+} finally { abortAfterClose = undefined; childProcess.spawn = originalSpawn; syncBuiltinESMExports(); globalThis.fetch = oldFetch; await session.dispose(); }

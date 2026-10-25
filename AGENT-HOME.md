@@ -605,6 +605,12 @@ resume receipt. Full batch orchestration must handle that remaining limitation.
 The existing32MiB artifact byte budget applies; oversized batches refuse without
 silently dropping rows. The bound supports combining multiple mining batches;
 synthetic source controls cover32 batches with96 pages, not a live throughput claim.
+Consensus defaults to30 productive seconds and accepts2–60. The helper/direct
+entry checks one monotonic deadline during validation, grouping and before atomic
+publication. Native cancellation/cleanup grace cannot extend productive scoring.
+Expiry observed before publication cannot create a successful artifact. A late
+abort or expiry after publication holds delivery while the old bound immutable
+artifact remains for inspection; it is not rolled back or automatically replayed.
 Use `read` and its offsets to inspect the complete result. The full question-to-
 consensus research journey and useful model-driven acceptance remain open.
 
