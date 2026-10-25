@@ -21,7 +21,9 @@ def record(text="public evidence", action="fetch", project=None):
 class ArtifactTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        # Hosted Windows TEMP can use an 8.3 alias. The production store expects
+        # the same canonical state path that native project admission records.
+        self.root = Path(self.temp.name).resolve()
         self.project = record()["project"]
         self.store = rr.ArtifactStore(self.root, self.project)
 

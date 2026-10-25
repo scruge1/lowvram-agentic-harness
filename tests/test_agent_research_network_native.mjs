@@ -97,7 +97,7 @@ try {
   assert.equal(source.cleaned_text_full, text);
   checks.push('full-static-evidence-preserved-and-recovered-with-cached-windows', 'host-raw-source-sha256-readback');
 
-  const rendered = await invoke('web_research', { action: 'render', url: 'https://www.python-httpx.org', timeout: 20 });
+  const rendered = await invoke('web_research', { action: 'render', url: 'https://www.python-httpx.org' });
   bounded(rendered);
   assert.ok(!rendered.isError && rendered.details.ok, JSON.stringify(rendered));
   assert.equal(rendered.details.content_scope, 'captured_browser_window');
