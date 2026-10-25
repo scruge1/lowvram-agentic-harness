@@ -5,6 +5,37 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Maintained first hardware-report acceptance — 2026-10-25
+
+Parent commit: `7b6098e380b7a64ba683956652dc7c41fd27b783`.
+
+Prepare a new project through the existing home/Git/board path. Reuse native
+inventory and configured model metadata; preserve unavailable facts as unknown.
+Return a fixed read-only checker with the original preparation-manifest hash.
+Require exact numeric values and units, unchanged input bytes and250–400 Unicode
+word tokens. Keep relative-cwd verification and the empty-directory negative
+control. Add one supervised-task reference and require it before scaffolding.
+
+A real local-model pilot wrote a verified report but exceeded its requested
+length, misreported its own count and needed scope corrections. Its separate
+English-regex check also rejected a clear pronoun reference. Preserve that
+partial result; use mechanical checks for facts/length/input conservation and
+retain interpretation as manual review. No English-regex claim establishes
+tuner execution. The first measured report does not require a combined source
+implementation audit or code-reuse research task.
+
+Linux system Python3.12.3 and managed Python3.12.13 passed11 controls each;
+Windows passed10 plus one explicit symlink skip. These exercise actual Git,
+files, CLI and inventory with explicit fixture admission/board transport. No
+model/service call or real native board adoption is implied by those unit cases.
+Seven subsequent native checks passed in22.808 seconds through the actual
+installed helper and normal Git/Hermes board path, including original hashes
+and both missing-output/empty-directory refusals. One isolated pi-profile home
+used four exact accepted dependencies; its hub stopped, donor files stayed
+unchanged and provider HTTP/model calls stayed zero. Source/installed byte hashes
+and Git line-ending normalization are recorded separately. Useful model output
+through this maintained pattern and later continuation/recovery remain separate.
+
 ## Scoped native session continuation — 2026-10-25
 
 Parent commit: `1002d7a77d1f9ff00b6b654c8bf4a82308aaff89`.
