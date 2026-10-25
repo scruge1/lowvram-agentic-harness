@@ -5,6 +5,36 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Mine cached research with the selected local model - 2026-10-25
+
+Parent commit: `f0803125054c86ac29d19b1a7f9431b6aeec41ee`.
+
+Extend the existing native `web_research` tool and project ArtifactStore with
+schema-shard claim mining. Reuse the canonical miner's graded relevance, exact
+evidence spans and source/prompt/schema identity, plus the deployed scraper's
+explicit model-health and analysed-yield failure semantics. Native Pi's selected
+ModelRegistry supplies inference/authentication; no endpoint/key override, model
+router, evidence store, daemon or home-controller change is added. The first
+native transport failure stops the remaining corpus. Bind the actual selected
+model instead of the legacy prompt-role label, and validate the complete claims
+schema instead of treating malformed JSON as an empty successful corpus.
+
+Save source-window offsets/hashes, explicit truncation, response hashes, declared
+operation budget and typed failure records. Cancelled, failed, empty or low-yield
+runs cannot mark sources seen. Only an explicitly supplied successful unchanged
+result enables cached resume. Revalidate session/admission and model binding
+across native awaits and before publication. Reuse installed lifecycle entry and
+bounded cancellation/settlement; no session-wide time limit is introduced.
+
+Focused tests cover schema and quote failures, healthy/empty/dead mining,
+partial/low-yield accounting, run identity, source window limits, model drift,
+failure-preserving storage and explicit resume. The native probe uses actual
+Pi1.4 registration, ModelRuntime, authentication and OpenAI serialization with
+intercepted synthetic SSE responses. It performs zero network requests and zero
+model inference. This source qualification is separate from useful model-driven
+research acceptance. Question planning, independent-source synthesis and the
+complete question-to-consensus journey remain open.
+
 ## Add a reviewed agent core-source migration - 2026-10-25
 
 Parent commit: `f4b8d6b0e5e8944c064ff9152b98764b4d24340f`.

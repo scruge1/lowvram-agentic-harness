@@ -479,7 +479,7 @@ The source port is deliberately identified by what it contains:
 | Existing script | Public adaptation | Remaining scope |
 |---|---|---|
 | `scripts/rig/search_core.py` | URL identity/domain grouping and configured provider request, cooldown, relevance and coverage policy | Search coverage does not establish factual corroboration |
-| `scripts/rig/godmode_miner.py` | HTML extraction and response/redirect provenance | Complete mining and consensus orchestration remain separate |
+| `scripts/rig/godmode_miner.py` | HTML/redirect provenance and source-bound schema-shard claim mining | Question-to-consensus orchestration remains separate |
 | Existing browser workflow | New guarded Playwright adapter and project evidence cache/pager | The complete private browser service is not bundled |
 
 Raw session calls and failures are reviewed privately. Public regressions use
@@ -507,6 +507,44 @@ Partial source scope and actual selected URL remain visible in cached results.
 {"action":"fetch","url":"https://example.org/public-javascript-page","timeout":120}
 {"action":"read","artifact_id":"sha256:RETURNED_64_HEX_DIGEST","view":"text","offset":0}
 ```
+
+Use `mine` after fetching evidence. It reads1–4 cached fetch/render artifact IDs;
+it does not perform another search or fetch. Supply a research question and
+1–32 distinct extraction fields. The tool uses the home's actual selected local
+model through Pi's native model registry and request-time authentication. A
+foreign/virtual model, changed selection/session, changed model configuration or
+changed source binding refuses publication. No endpoint or key is accepted in
+the tool request. An owner-selected local endpoint is not proof of a proxy's
+upstream inference provenance.
+
+```json
+{"action":"mine","artifact_ids":["sha256:RETURNED_64_HEX_DIGEST"],"query":"What failure does this method address?","extraction_schema":["mechanism","failure_mode"],"timeout":900}
+```
+
+Mining uses shards of at most8 fields, at most1,000 output tokens per request,
+and the first14,000 characters of each captured source. Truncation and the
+original source scope remain explicit. Every accepted quote must occur exactly
+inside the supplied window; offsets refer to that window in the cached source.
+Source, actual selected model/transport, schema, prompt and operation budget are
+hash-bound. `recall_bias=HIGH` retains background relevance; the default requires
+on-topic claims. This is claim extraction, not verified consensus.
+The character limit is not a token estimate or a promise that every local model
+can fit this request. Native context/transport errors and length termination
+remain failures; the tool does not raise the model's configured limits.
+
+Malformed output, unavailable model, length termination, cancellation, deadline,
+zero accepted claims and low analysed-shard yield remain typed failures. Partial
+claims and failure records are retained, but failed runs mark no sources seen.
+The first transport failure stops further shards; there is no automatic replay.
+`timeout` is the declared mine-operation budget, default300 seconds and at most
+86,400, with up to30 seconds for native ledger settlement. It does not cap the
+session. A successful unchanged result can be supplied as `resume_artifact_id`
+on the same mine request; this reuses the stored result without another model
+call. Changed inputs or a failed result cannot qualify as a successful resume.
+
+Offline schema/span/identity tests and a native Pi serializer probe with
+synthetic responses qualify the source path. They do not establish local model
+quality or the complete question-to-consensus research journey.
 
 Full source bytes, complete permitted static extraction, provenance and download
 bytes stay in content-addressed project-state artifacts. Model replies remain
