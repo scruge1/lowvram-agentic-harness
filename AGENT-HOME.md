@@ -684,6 +684,15 @@ for long-horizon work. A time budget exhausted before a checked result leaves
 quality unassessed. Session, individual action and verifier budgets are separate;
 hour-scale work needs an explicit suitable budget and preserved progress.
 
+For supervised file work, `workflow_step` accepts `action_timeout_seconds` and
+`check_timeout_seconds`. Set these for the expected operation, including related
+substeps. For example, use `7200` for a two-hour action and `300` for each check.
+The defaults remain585 and45 seconds. Each declared value must be an integer
+from1 through86385; the host reserves15 seconds within the existing24-hour
+command limit and derives the outer deadline from both checks and cleanup.
+The plan and host result retain these budgets. Cancellation and failed-action
+recovery keep their existing rules; extending a budget does not replay work.
+
 For preparation without a model request, use:
 
 ```bash
