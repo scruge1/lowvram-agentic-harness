@@ -25,13 +25,15 @@ const config = read('home.json');
 if (options.owner) assert.equal(config.name, options.owner, 'The requested owner name must survive the complete scaffold');
 const settingsJson = read('agent/settings.json');
 const modelsJson = read('agent/models.json');
-assert.equal(config.profile, 'full', 'This probe qualifies the complete configured home');
+const expectedProfile = options.profile ?? 'full';
+assert.ok(['full', 'agent', 'pi'].includes(expectedProfile), 'Choose an actual supported package profile');
+assert.equal(config.profile, expectedProfile, 'Qualify the exact requested configured home');
 assert.equal(settingsJson.defaultProvider, 'local');
 assert.equal(settingsJson.defaultModel, config.model);
 assert.deepEqual(settingsJson.enabledModels, ['local/*']);
 assert.equal(settingsJson.cacheWarming, 'off');
 assert.equal(modelsJson.providers.local.baseUrl, config.base_url);
-assert.ok(settingsJson.extensions.length >= 8, 'All full-profile extensions must be configured');
+assert.ok(settingsJson.extensions.length >= (expectedProfile === 'pi' ? 7 : 8), 'All selected-profile extensions must be configured');
 assert.equal(fs.readFileSync(path.join(home, 'state/validated-memory.jsonl'), 'utf8'), '',
   'The empty-registry refusal check requires a new home');
 const watched = ['home.json', 'agent/settings.json', 'agent/models.json', 'agent/AGENTS.md',
@@ -73,7 +75,7 @@ assert.ok(configuredModel, 'The exact configured local model must be present');
 assert.equal(configuredModel.contextWindow, config.context_window, 'The explicit selected context limit must reach Pi');
 assert.equal(configuredModel.maxTokens, config.max_output, 'The explicit selected output limit must reach Pi');
 const model = { ...configuredModel, name: configuredModel.name || config.model,
-  provider: 'local', api: provider.api, baseUrl: provider.baseUrl, reasoning: false,
+  provider: 'local', api: provider.api, baseUrl: provider.baseUrl, reasoning: configuredModel.reasoning ?? false,
   input: configuredModel.input || ['text'],
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
 // The default SDK runtime creates auth/catalog files. Keep those stores in
@@ -93,10 +95,16 @@ const expectedTools = ['agent_capabilities', 'system_tool_query', 'project_admit
   'project_context',
   'kanban_select', 'kanban_decompose', 'kanban_hierarchy', 'kanban_intake_status', 'kanban_intake_route',
   'kanban_work_checkpoint', 'kanban_dependency_resolve', 'workflow_step', 'validated_memory_query',
-  'pi_memory_capture_status', 'claude_memory_status', 'claude_memory_search'];
+  'pi_memory_capture_status'];
+if (expectedProfile === 'full') expectedTools.push('claude_memory_status', 'claude_memory_search');
+if (config.selected_packages.research) expectedTools.push('web_research');
 const registered = session.extensionRunner.getAllRegisteredTools();
 const tools = registered.map((tool) => tool.definition.name).sort();
 for (const name of expectedTools) assert.ok(tools.includes(name), `Missing configured native tool ${name}`);
+if (expectedProfile !== 'full') {
+  assert.ok(!tools.includes('claude_memory_status') && !tools.includes('claude_memory_search'),
+    'Optional observer must stay absent from the selected smaller profile');
+}
 assert.equal(typeof session.extensionRunner.createContext().modelRegistry.streamSimple, 'function',
   'Bounded compaction requires the actual model-registry compatibility facade');
 assert.equal(typeof sdk.compact, 'function', 'Bounded compaction must import the public compact function');

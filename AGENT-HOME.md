@@ -49,15 +49,21 @@ core scaffold; package-stack setup refuses those hosts. This is not a
 cross-platform process sandbox.
 
 Use `--profile core --offline` to create only the dependency-free scaffold.
-The default `full` profile includes Pi, the Hermes board, MemPalace, Agent
-Framework, Claude-mem with Bun, and the Harness2 and DeepSeek laboratory packages.
-Use the reduced `--profile pi` explicitly for Pi, the board, MemPalace and the
-model-free Framework decision helper.
+The default `agent` profile includes Pi, the Hermes board, MemPalace, Agent
+Framework and the owned public-research environment/browser. Use `--profile full`
+explicitly to add Claude-mem with Bun and the Harness2/DeepSeek laboratories.
+The reduced `--profile pi` retains Pi, board, memory and the model-free Framework
+decision helper without the research dependencies. None of these profiles starts
+a generative model server or allocates a GPU.
 `--offline` on another profile retains the requested package list but does not
 install it; doctor reports those dependencies missing.
 
 Set `--context-window` and `--max-output` from the actual server configuration.
-Defaults8192/2048 are unprobed configuration limits, not detected capabilities.
+Defaults32768/4096 are configured limits, not detected capabilities or memory fit.
+One measured first-project request used10,830 input tokens before useful work;
+the former8192 default could not hold that request. Its32K/4K report journey
+still failed to deliver an artifact. Supply the actual supported server limits;
+increasing configuration values does not expand the server or qualify the model.
 The installer sets native compaction reserves to fit the selected context.
 Image input stays disabled until the selected model/projector path is tested.
 
@@ -183,6 +189,70 @@ commit user data. Generated context, models, auth, memory, caches and runtime
 state are ignored. Configure the owner's chosen private remote deliberately.
 The installed source-control skill provides reviewed source milestones through
 the existing supervised workflow. It does not attribute arbitrary shell edits.
+
+## Public research and cached evidence
+
+The `agent` and `full` profiles install the single native `web_research` tool.
+Admit/select the project through the existing coordinator first. Use `search`
+for explicit DuckDuckGo discovery, `fetch` for public HTTP extraction, `render`
+for a clean read-only Chromium context and `read` for saved evidence windows.
+No provider keys, personal browser profile, cookies or stealth service are used.
+
+```json
+{"action":"search","query":"Python unittest documentation","max_results":3}
+{"action":"fetch","url":"https://docs.python.org/3/library/unittest.html"}
+{"action":"read","artifact_id":"sha256:RETURNED_64_HEX_DIGEST","view":"text","offset":0}
+```
+
+Full source bytes, complete permitted static extraction, provenance and download
+bytes stay in content-addressed project-state artifacts. Model replies remain
+within12KiB. Follow `next_offset` for more cached text/metadata; cached reads do
+not contact the source again. Offsets count Unicode characters. Static text has
+`full_extraction` scope. Rendered text has `captured_browser_window` scope;
+reading its cache does not reveal uncaptured page content. Tables, links,
+headings and download metadata use separate cached views. The store refuses
+quota exhaustion rather than silently deleting previous evidence.
+
+URLs and source text remain untrusted evidence. A search snippet is not a fetched
+fact; one provider is not independent corroboration. Empty, blocked, challenged,
+oversized, timed-out and partial results retain their status. A cached successful
+read does not promote a failed source request to successful acquisition. The
+original DDG no-results failure remains unexplained; a later diagnostic returned
+HTTP200/three hits. Native installed search, static fetch and complete cached
+recovery passed. A normal Pi-tool browser check returned3,022 characters in4.126s
+with partial-resource status and the unchanged40-second default.
+
+Browser network requests pass through the reviewed public HTTP route, including
+DNS/redirect checks and bounded streaming. Native routing preserves CSP/CORS;
+unintercepted browser networking is denied. Downloads use explicitly labelled
+host-fetch/browser-blob bytes with matching hashes. This does not establish
+general authenticated browsing or original download-UI parity.
+
+This text-research route omits image, media and font requests before the shared
+fetch queue. Each omission records `nonessential_text_resource` and its resource
+type, with partial-result status. A native slow-image fixture reproduced a queued
+JavaScript timeout before this change. Pages that depend on resource load events
+can remain partial; this is not a full visual rendering route. CSS, JavaScript,
+data and explicit download operations keep their existing checks and deadlines.
+
+The dependency plan pins16 tested Python runtime distributions and Playwright's
+matching Chromium revision1248. Source/native-file inventory is recorded under
+`state/research-installation.json`; generated Python bytecode is excluded.
+Resuming installation refuses a changed selected package/dependency plan.
+
+## Stable home lifecycle boundary
+
+Fresh Linux homes keep `home-lifecycle.py` beside the stable `agent-home.py`,
+outside the replaceable runtime. The launcher checks the guard bytes and takes
+a shared lifetime lease before importing runtime code. Managed Pi children and
+the owned memory hub retain their own lease. Guarded memory/research commands
+check pending activation before executing their runtime helper. An exclusive
+update lease refuses a busy home; pending activation refuses ordinary entry.
+
+This is coordination between managed entrypoints, not an OS sandbox. Older
+homes and unmanaged direct Pi commands do not gain this boundary automatically.
+Windows retains core inspection without Linux lease enforcement. Source staging
+still does not activate or roll back an active generation.
 
 ## Read bounded board replies
 
@@ -311,6 +381,7 @@ separate fields. Locks/freezes and full command logs stay in the private home.
 | Hermes board | commit `866332bfb52c46e543143b2620a9aeee8bce9c77` | Existing pinned board adapter, no second dispatcher |
 | MemPalace | `mempalace==3.11.0` | Home-owned palace and loopback single-writer hub; synthetic connected capture/recall passed, new-host freshness remains separate |
 | Microsoft Agent Framework | `agent-framework-core==1.21.0` | Isolated environment and exact target-bound read-only decisions; native board remains canonical |
+| Public research | `ddgs==9.16.1`, `httpx==0.28.1`, `beautifulsoup4==4.15.0`, `playwright==1.64.1`; complete16-distribution plan in `harness/research_install.py` | Owned Python/cache/browser; source evidence and bounded project artifact views |
 | Harness2 | commit `1cfe254e8d25b15f37048c3730134686abe60335` | Experimental package; prior model quality hold still applies |
 | Bun | `1.4.4`, explicit Linux CPU/libc artifact | Home-owned runtime for the observer; binary hash recorded |
 | Claude-mem | `claude-mem@13.29.0` | Isolated local provider/settings, owned worker checks and native Pi event hooks |
@@ -399,7 +470,7 @@ behavior from the private system or prove final-provider consumption.
 
 The current source snapshot passes the offline release gate on Linux and
 Windows: 21 checks, including all seven self-tests. Ruff 0.16.10 also passes.
-The fresh default full installation passed on Linux as one normal command:
+The earlier explicit full installation passed on Linux as one normal command:
 all eight components installed and doctor returned no failures. Native startup
 loaded eight extensions and30 tools with the selected owner instructions and
 model limits, without a generative model request or configuration mutation.

@@ -47,10 +47,12 @@ PINS = {
     "bun": "bun@1.4.4",
     "claude-mem": "claude-mem@13.29.0",
     "deepseek": "@deepseek-ai/dsh@0.2.1-rc.2",
+    "research": "ddgs==9.16.1;httpx==0.28.1;beautifulsoup4==4.15.0;playwright==1.64.1",
 }
 PROFILES = {
     "core": (),
     "pi": ("pi", "hermes", "mempalace", "framework"),
+    "agent": ("pi", "hermes", "mempalace", "framework", "research"),
     "full": tuple(PINS),
 }
 NPM_NAMES = {"pi": "@earendil-works/pi-coding-agent", "claude-mem": "claude-mem", "deepseek": "@deepseek-ai/dsh", "bun": "bun"}
@@ -181,6 +183,25 @@ def environment(home, project_root=None):
         "PI_BOUNDED_COMPACTION_CONFIG": str(home / "state/bounded-compaction.json"),
     })
     config = json.loads((home / "home.json").read_text(encoding="utf-8"))
+    if "research" in config.get("selected_packages", {}):
+        helper = home / "runtime/harness/research_runtime.py"
+        guard = home / "runtime/pi-task-worker.py"
+        value.update({
+            "PI_WEB_RESEARCH_PYTHON": str(executable(home / "envs/research")),
+            "PI_WEB_RESEARCH_HELPER": str(helper),
+            "PI_WEB_RESEARCH_HELPER_SHA256": digest(helper),
+            "PI_WEB_RESEARCH_GUARD": str(guard),
+            "PI_WEB_RESEARCH_GUARD_SHA256": digest(guard),
+            "PLAYWRIGHT_BROWSERS_PATH": str(home / "cache/playwright"),
+        })
+        research_python = executable(home / "envs/research")
+        if research_python.is_file():
+            from harness import home_entry
+            command = home_entry.guarded_command(home, [str(research_python), "-I", "-B", str(helper), "--home", str(home)],
+                                                 python=str(research_python))
+            encoded = json.dumps(command, ensure_ascii=False, separators=(",", ":"))
+            value["PI_WEB_RESEARCH_COMMAND"] = encoded
+            value["PI_WEB_RESEARCH_COMMAND_SHA256"] = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
     if config.get("framework_binding_sha256"):
         value["PI_FRAMEWORK_BINDING"] = str(home / "state/framework-binding.json")
         value["PI_FRAMEWORK_BINDING_SHA256"] = config["framework_binding_sha256"]
@@ -193,8 +214,8 @@ def environment(home, project_root=None):
     return value
 
 
-def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner", offline=False,
-             context_window=8192, max_output=2048, model_profile="generic-local"):
+def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner", offline=False,
+             context_window=32768, max_output=4096, model_profile="generic-local"):
     home = home.expanduser().resolve(strict=False)
     source = source.resolve(strict=True)
     if home.is_symlink() or home.resolve() in {Path.home().resolve(), Path(home.anchor)}:
@@ -216,6 +237,12 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
     except ValueError as error:
         raise HomeError(str(error)) from error
     files = source_files(source)
+    if "research" in PROFILES[profile]:
+        required = ("harness/research_install.py", "harness/research_runtime.py",
+                    "harness/web_research.py", "harness/web_browser.py",
+                    "adapters/pi/research/research-tools.ts")
+        if any(not (source / item).is_file() for item in required):
+            raise HomeError("The selected research profile requires the complete research runtime source.")
     templates = source / "harness/templates/agent-home"
     missing = [name for name in REQUIRED_TEMPLATES if not (templates / name).is_file()]
     if missing:
@@ -262,12 +289,20 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         "validated_registry_sha256": hashlib.sha256(b"").hexdigest(),
         "claude_memory_port": memory_port,
     }
+    if "research" in configuration["selected_packages"]:
+        from harness.research_install import REQUIREMENTS
+        configuration["research_requirements"] = list(REQUIREMENTS)
     write_json(home / "state/bounded-compaction.json", {
         "schema": "pi-bounded-compaction/v1",
         "models": [{"provider": "local", "id": model, "base_url": base_url}],
     })
     configuration["bounded_compaction_sha256"] = digest(home / "state/bounded-compaction.json")
     write_json(home / "home.json", configuration)
+    from harness import home_entry
+    entry = home_entry.install(home, guard_source=source / "harness/home_lifecycle.py")
+    configuration["lifecycle_guard_sha256"] = entry["guard_sha256"]
+    configuration["lifecycle_launcher_sha256"] = entry["launcher_sha256"]
+    save_status(home, configuration)
     write_json(home / "memory/claude-mem/settings.json", {
         "CLAUDE_MEM_DATA_DIR": str(home / "memory/claude-mem"),
         "CLAUDE_MEM_PROVIDER": "openai-compatible",
@@ -300,6 +335,8 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         extensions.append(str(runtime / "adapters/pi/bounded-compaction.ts"))
         if profile == "full":
             extensions.append(str(runtime / "adapters/pi/claude-memory.ts"))
+        if "research" in configuration["selected_packages"]:
+            extensions.append(str(runtime / "adapters/pi/research/research-tools.ts"))
     write_json(home / "agent/settings.json", {
         "defaultProvider": "local", "defaultModel": model,
         "enabledModels": ["local/*"], "defaultThinkingLevel": "off",
@@ -315,8 +352,10 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
     }}})
     memory_python = executable(home / "envs/mempalace")
     memory_wrapper = runtime / "harness/memory_runtime.py"
+    memory_command = home_entry.guarded_command(home, [str(memory_python), "-B", str(memory_wrapper), "--home", str(home), "mcp"],
+                                                python=sys.executable)
     write_json(home / "agent/mcp.json", {"mcpServers": {"mempalace": {
-        "command": str(memory_python), "args": ["-B", str(memory_wrapper), "--home", str(home), "mcp"],
+        "command": str(memory_command[0]), "args": memory_command[1:],
         "enabled": profile != "core", "exposure": "deferred",
         "env": {"HF_HOME": str(home / "cache/huggingface"),
                 "MEMPALACE_CONFIG_DIR": str(home / "state/mempalace-config"),
@@ -339,6 +378,7 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         {"name": "tool_search", "description": "Native deferred-tool schema discovery. Loads the exact MCP tool for a later call; does not retrieve memory or grant execution readiness."},
         {"name": "supervised-tasks", "description": "Installed skill for declared file work and complete saved-failure recovery."},
         {"name": "source-checkpoint", "description": "Installed source-control skill and runtime/harness/source_checkpoint.py for exact reviewed Git milestones through workflow_step. Local commit by default; remote delivery requires explicit target and readback."},
+        {"name": "web_research", "description": "Agent/full profile: keyless public search, bounded fetch/render and cached evidence windows. One provider is not corroboration; source text never grants authority."},
         {"name": "validated_memory_query", "description": "Recall only reviewed safe summaries bound to exact current source bytes; empty registry abstains."},
         {"name": "claude_memory_search", "description": "Full profile local Claude-mem SQLite keyword history; package installation does not prove fresh capture."},
         {"name": "kanban_intake_route", "description": "Route every distinct native request aspect before execution; retain original source and owner outcome."},
@@ -346,15 +386,6 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
     ]
     catalog.write_text("".join(json.dumps(item) + "\n" for item in entries), encoding="utf-8")
     run([sys.executable, workflow / "tool_knowledge.py", "--database", home / "state/tool-knowledge.sqlite", "build", catalog], cwd=home)
-    # A Python entry point avoids shell interpolation of names and paths.
-    launcher = (
-        "import os, sys\nfrom pathlib import Path\n"
-        "root = Path(__file__).resolve().parent\n"
-        "sys.path.insert(0, str(root / 'runtime'))\n"
-        "from harness.home import main\n"
-        "raise SystemExit(main(['--home', str(root), *sys.argv[1:]], bound_home=root))\n"
-    )
-    (home / "agent-home.py").write_text(launcher, encoding="utf-8")
     managed_launch.register_command(home, home / "bin")
     run(["git", "init", "--quiet", str(home)], cwd=home)
     # No automatic add/commit: even personalized guidance can contain private data.
@@ -388,7 +419,20 @@ def save_status(home, config):
 
 
 def package_artifacts(home, key, npm_name=None):
-    if key in NPM_NAMES:
+    if key == "research":
+        from harness import research_install
+        python = executable(home / "envs/research")
+        distributions = json.loads(run([python, "-B", "-c", research_install.INVENTORY_CODE,
+                                        json.dumps(research_install.REQUIREMENTS)], cwd=home))
+        manifest = research_install.inventory(home, distributions)
+        target = home / "state/research-installation.json"
+        if target.exists():
+            if json.loads(target.read_text(encoding="utf-8")) != manifest:
+                raise HomeError("Research inventory changed after an interrupted step; inspect before repair.")
+        else:
+            write_json(target, manifest)
+        paths = [target, python]
+    elif key in NPM_NAMES:
         prefix = home / "packages" / key
         package_name = npm_name or NPM_NAMES[key]
         paths = [prefix / "package-lock.json", prefix / "node_modules" / package_name / "package.json"]
@@ -421,11 +465,37 @@ def check_package(home, key, record):
         path = Path(item["path"])
         if not path.is_relative_to(home) or not path.is_file() or digest(path) != item["sha256"]:
             return "installed package missing or changed: " + key
+    if key == "research":
+        from harness import research_install
+        try:
+            return research_install.verify(home, json.loads((home / "state/research-installation.json").read_text(encoding="utf-8")))
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            return "Research installation inventory is invalid: " + str(error)
     return None
 
 
+def package_plan(config):
+    """Resume the selected exact plan; source updates cannot silently extend it."""
+    expected = {key: PINS[key] for key in PROFILES[config["profile"]]}
+    if config.get("selected_packages") != expected:
+        raise HomeError("Selected package plan differs from this runtime; use reviewed maintenance before installation.")
+    if "research" in expected:
+        from harness.research_install import REQUIREMENTS
+        if config.get("research_requirements") != list(REQUIREMENTS):
+            raise HomeError("Selected research dependency plan differs from this runtime; inspect before maintenance.")
+    return tuple(expected)
+
+
 def install_packages(home, config, python312=None):
-    if not PROFILES[config["profile"]]:
+    package_plan(config)
+    from harness import home_entry
+    with home_entry.consumer(home):
+        return _install_packages(home, config, python312)
+
+
+def _install_packages(home, config, python312=None):
+    selected = package_plan(config)
+    if not selected:
         return
     if platform.system() != "Linux":
         raise HomeError("The pinned Hermes board and process owner require Linux. Use the core scaffold on this platform.")
@@ -441,7 +511,7 @@ def install_packages(home, config, python312=None):
     if tuple(map(int, node_version.split("."))) < (22, 19, 0):
         raise HomeError("Pi requires Node 22.19 or newer.")
     bun_package = None
-    if "bun" in PROFILES[config["profile"]]:
+    if "bun" in selected:
         arch = {"x86_64": "x64", "amd64": "x64", "aarch64": "aarch64", "arm64": "aarch64"}.get(platform.machine().lower())
         if arch is None:
             raise HomeError("This Bun distribution is qualified only for Linux x64/aarch64.")
@@ -453,7 +523,7 @@ def install_packages(home, config, python312=None):
     temporary = home / "cache/tmp"
     temporary.mkdir(exist_ok=True)
     env["TMPDIR"] = str(temporary)
-    for key in PROFILES[config["profile"]]:
+    for key in selected:
         if key in config["installed"]:
             problem = check_package(home, key, config["installed"][key])
             if problem:
@@ -490,8 +560,13 @@ def install_packages(home, config, python312=None):
                 if observed != commit:
                     raise HomeError("Fetched source commit mismatch: " + key)
                 requirement = str(checkout)
-            install_args = ["--editable", requirement] if key == "hermes" else [requirement]
-            output = run([executable(target), "-m", "pip", "install", *install_args], cwd=home, env=env)
+            if key == "research":
+                from harness import research_install
+                env["PLAYWRIGHT_BROWSERS_PATH"] = str(home / "cache/playwright")
+                output = research_install.install_owned(home, execute=run, environment=env)
+            else:
+                install_args = ["--editable", requirement] if key == "hermes" else [requirement]
+                output = run([executable(target), "-m", "pip", "install", *install_args], cwd=home, env=env)
             actual = run([executable(target), "-m", "pip", "freeze"], cwd=home, env=env)
             (target / "installed-freeze.txt").write_text(actual, encoding="utf-8")
             run([executable(target), "-m", "pip", "check"], cwd=home, env=env)
@@ -507,8 +582,10 @@ def install_packages(home, config, python312=None):
                                                   "--home", home, "--bind"], cwd=home, env=env))
         save_status(home, config)
     shim = home / "bin/mempalace"
-    expected_shim = "#!/bin/sh\nexec " + shlex.join([str(memory_python), "-B", str(memory_wrapper),
-                                                    "--home", str(home), "cli", "--"]) + ' "$@"\n'
+    from harness import home_entry
+    memory_command = home_entry.guarded_command(home, [str(memory_python), "-B", str(memory_wrapper),
+                                                      "--home", str(home), "cli", "--"], python=str(memory_python))
+    expected_shim = "#!/bin/sh\nexec " + shlex.join(memory_command) + ' "$@"\n'
     if not shim.exists():
         with shim.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(expected_shim)
@@ -554,6 +631,16 @@ def board(home, request):
 def doctor(home):
     home, config = load(home)
     failures, pending = [], []
+    try:
+        package_plan(config)
+    except HomeError as error:
+        failures.append(str(error))
+    if config.get("lifecycle_guard_sha256"):
+        for relative, field in (("home-lifecycle.py", "lifecycle_guard_sha256"),
+                                ("agent-home.py", "lifecycle_launcher_sha256")):
+            path = home / relative
+            if path.is_symlink() or not path.is_file() or digest(path) != config.get(field):
+                failures.append("stable home entry missing or changed: " + relative)
     runtime = home / "runtime"
     manifest = runtime / "runtime-manifest.json"
     if digest(manifest) != config["runtime_manifest_sha256"]:
@@ -606,6 +693,12 @@ def doctor(home):
 
 
 def launch(home, args, project_root=None):
+    from harness import home_entry
+    with home_entry.consumer(home) as inherited:
+        return _launch(home, args, project_root, inherited)
+
+
+def _launch(home, args, project_root=None, inherited=()):
     home, config = load(home)
     args = managed_launch.pi_arguments(args, config["model"])
     selected = managed_launch.select_project(home, project_root)
@@ -624,7 +717,13 @@ def launch(home, args, project_root=None):
     print(json.dumps({"managed_agent": {"home": str(home), "project": str(selected) if selected else None,
                                        "profile": config["profile"], "model": "local/" + config["model"], "mode": mode}}), file=sys.stderr)
     # Explicit provider/model and fresh isolated profile prevent ambient defaults.
-    return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *args], cwd=cwd, env=environment(home, cwd))
+    from harness import home_entry
+    child_env = environment(home, cwd)
+    if inherited:
+        child_env[home_entry.FD_ENV] = str(inherited[0])
+    options = {"pass_fds": inherited} if os.name != "nt" else {}
+    return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *args],
+                           cwd=cwd, env=child_env, **options)
 
 
 def launch_status(home, project_root=None):
@@ -646,8 +745,11 @@ def palace(home, operation):
     if "mempalace" not in config["installed"] or check_package(home, "mempalace", config["installed"]["mempalace"]):
         raise HomeError("Install and verify MemPalace before managing its hub.")
     wrapper = home / "runtime/harness/memory_runtime.py"
-    output = run([executable(home / "envs/mempalace"), "-B", wrapper,
-                  "--home", home, "hub-" + operation], cwd=home, env=environment(home), timeout=75)
+    from harness import home_entry
+    python = executable(home / "envs/mempalace")
+    command = home_entry.guarded_command(home, [str(python), "-B", str(wrapper), "--home", str(home), "hub-" + operation],
+                                         python=str(python))
+    output = run(command, cwd=home, env=environment(home), timeout=75)
     return json.loads(output)
 
 
@@ -675,7 +777,7 @@ def main(argv=None, *, bound_home=None):
     commands = parser.add_subparsers(dest="command", required=True)
     install = commands.add_parser("install")
     install.add_argument("--source", type=Path, default=ROOT)
-    install.add_argument("--profile", choices=PROFILES, default="full")
+    install.add_argument("--profile", choices=PROFILES, default="agent")
     install.add_argument("--base-url")
     install.add_argument("--model")
     from harness.model_profiles import PROFILES as MODEL_PROFILES
@@ -683,8 +785,8 @@ def main(argv=None, *, bound_home=None):
                          help="Native transport profile; select only for its actual serving backend")
     install.add_argument("--name", default="Owner")
     install.add_argument("--python312")
-    install.add_argument("--context-window", type=int, default=8192, help="Actual server context limit; default8192 is an unprobed conservative configuration")
-    install.add_argument("--max-output", type=int, default=2048)
+    install.add_argument("--context-window", type=int, default=32768, help="Actual server context limit; configured default32768 is not detected hardware/model fit")
+    install.add_argument("--max-output", type=int, default=4096)
     install.add_argument("--offline", action="store_true", help="Create files only; do not install optional packages")
     commands.add_parser("doctor")
     resume = commands.add_parser("resume-install")
