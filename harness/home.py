@@ -274,6 +274,9 @@ def owned_service_provider(home, binding, *, profile, base_url, model, context_w
         raise HomeError("Owned full-agent setup requires at least32768 context and4096 output; a protocol-only service is insufficient.")
     if max_output > context_window // 2:
         raise HomeError("Owned output limit must preserve the existing factory's input-context budget.")
+    if profile == "full":
+        from harness.claude_memory import observer_budget
+        observer_budget({"context_window": context_window, "max_output": max_output})
     try:
         route = model_service_handoff._binding(binding)
     except (OSError, ValueError, TypeError, KeyError) as error:
@@ -408,6 +411,8 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         "CLAUDE_MEM_OPENAI_COMPAT_PRESET": "custom",
         "CLAUDE_MEM_OPENAI_COMPAT_BASE_URL": base_url,
         "CLAUDE_MEM_OPENAI_COMPAT_MODEL": model,
+        "CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": str(context_window),
+        "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": str(max_output),
         "CLAUDE_MEM_OPENAI_COMPAT_API_KEY": "local",
         "CLAUDE_MEM_OPENAI_COMPAT_API_KEYS": "",
         "CLAUDE_MEM_QUOTA_FALLBACK_PROVIDER": "", "CLAUDE_MEM_QUOTA_FALLBACK_MODEL": "",
@@ -806,20 +811,23 @@ def doctor(home):
             problem = check_package(home, key, config["installed"][key])
             if problem:
                 failures.append(problem)
-    if config["profile"] == "full" and "owned_model_service" in config:
+    if config["profile"] == "full":
         try:
-            provider = json.loads((home / "agent/models.json").read_text(encoding="utf-8")).get("providers", {}).get("local")
-            if not isinstance(provider, dict):
-                raise HomeError("Owned full local provider configuration is missing.")
-            owned_service_provider(home, config["owned_model_service"], profile="full", base_url=config["base_url"],
-                                   model=config["model"], context_window=config["context_window"], max_output=config["max_output"],
-                                   model_profile=config["model_profile"], provider=provider, source=runtime)
+            if "owned_model_service" in config:
+                provider = json.loads((home / "agent/models.json").read_text(encoding="utf-8")).get("providers", {}).get("local")
+                if not isinstance(provider, dict):
+                    raise HomeError("Owned full local provider configuration is missing.")
+                owned_service_provider(home, config["owned_model_service"], profile="full", base_url=config["base_url"],
+                                       model=config["model"], context_window=config["context_window"], max_output=config["max_output"],
+                                       model_profile=config["model_profile"], provider=provider, source=runtime)
             from harness import claude_memory
             claude_memory.settings(home, config)
         except (OSError, ValueError) as error:
-            failures.append("owned observer source/settings binding failed: " + str(error))
-        pending.extend(["owned observer authenticated capture, nonce rotation and useful recall on this host",
+            failures.append("observer source/settings binding failed: " + str(error))
+        pending.extend(["observer capture and useful recall on this host",
                         "Harness2 and DeepSeek are optional experimental laboratories, not accepted agent dispatch"])
+        if "owned_model_service" in config:
+            pending.append("owned observer authenticated capture and nonce rotation on this host")
     if config["profile"] != "core" and "framework" in config["installed"]:
         binding = home / "state/framework-binding.json"
         if not binding.is_file() or digest(binding) != config.get("framework_binding_sha256"):

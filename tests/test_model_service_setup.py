@@ -72,7 +72,7 @@ class OwnedFactoryTests(unittest.TestCase):
             _, required = claude_memory.settings(self.target, config)
             self.assertEqual(required["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], "local")
             baseline = home.doctor(self.target)
-            self.assertFalse(any("owned observer source/settings" in e for e in baseline["failures"]))
+            self.assertFalse(any("observer source/settings" in e for e in baseline["failures"]))
             path = self.target / "memory/claude-mem/settings.json"
             original = path.read_bytes()
             changed = json.loads(path.read_text(encoding="utf-8"))
@@ -122,6 +122,22 @@ class OwnedFactoryTests(unittest.TestCase):
         with mock.patch.object(home.platform, "system", return_value="Windows"), self.assertRaisesRegex(home.HomeError, "requires Linux"):
             self.scaffold(profile="full")
         self.assertFalse(self.target.exists())
+
+    @mock.patch.object(home.platform, "system", return_value="Linux")
+    def test_owned_full_rejects_native_budget_fallback_before_creation(self, _platform):
+        with self.assertRaisesRegex(home.HomeError, "Observer capture requires"):
+            home.owned_service_provider(self.target, self.binding, profile="full", base_url=self.binding["base_url"],
+                                        model=self.binding["model_id"], context_window=4_000_000, max_output=1_000_001,
+                                        model_profile="generic-local")
+        self.assertFalse(self.target.exists())
+
+    def test_attached_full_unsupported_capture_budget_is_explicit_in_doctor(self):
+        self.scaffold(profile="full", owned_model_service=None, local_provider=None,
+                      context_window=4096, max_output=128)
+        with mock.patch.object(model_service_handoff, "launch_environment") as resolver:
+            report = home.doctor(self.target)
+        self.assertTrue(any("Observer capture requires native context" in e for e in report["failures"]))
+        resolver.assert_not_called()
 
     def test_protocol_budget_refuses_before_factory_writes(self):
         binding = dict(self.binding, context=4096, max_output=128)

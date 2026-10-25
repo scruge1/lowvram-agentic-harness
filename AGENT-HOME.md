@@ -810,6 +810,20 @@ ownership. Owned capture validates the actual worker's current credential and
 lease. A stale worker after service-key rotation is held for explicit stop/start;
 resolving a fresh key for a helper does not silently rotate or replace it.
 
+The native `CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW` and
+`CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS` settings are bound to this home's
+configured context/output limits in both disk settings and the worker environment.
+Capture/start checks the actual worker values before submitting a hook.
+Pinned Claude-mem otherwise defaults a custom endpoint to a 131072 context window
+and 4096 output tokens; an accepted override can raise the output request.
+Unsupported native capture budgets are held instead of being silently clamped
+or replaced by defaults. The observer requires at least 8192 context, output 256
+through 1000000, exact native integers and the existing half-context output rule;
+the owned factory's existing 32768/4096 minimum remains unchanged. Status,
+historical keyword recall and exact stop do not require fresh budget/authentication.
+These controls bind upstream windowing and request limits; they do not establish
+tokenizer equivalence, generated capture or recall quality.
+
 An isolated Linux component run qualified the actual Bun1.4.4 and patched
 Claude-mem13.29.0 foreground lifecycle: startup and health, exact owned process,
 source, data, listener and READ lease, empty drain, stop and exclusive cleanup.

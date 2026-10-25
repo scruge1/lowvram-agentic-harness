@@ -25,6 +25,18 @@ secret-free observer settings without starting capture or resolving a key.
 Windows owned-full creation refuses explicitly. This adds no new profile,
 credential store, router or observer mode.
 
+Pinned upstream source inspection found native output default 4096, not 16000,
+but a custom endpoint's unconfigured context defaults to 131072. Bind the native
+observer context/output settings to the home's selected limits on disk and in
+the child environment; capture admission also checks the actual worker values.
+Reject the native parser's unsupported ranges instead of accepting silent
+clamping/default substitution. Read-only status/keyword recall and exact stop
+stay independent of stale auth/budgets. The provider/backend is not patched.
+An isolated probe of the exact compiled native parser/window/wire functions used
+in-memory settings and an injected fetch, with no worker, network or inference.
+It confirmed the defaults, selected 32768/4096 limits, unbound 16000 override and
+invalid 4096/128 fallback. This is source proof; actual full capture remains open.
+
 Existing Pi input, tool-result and settled-turn hooks can capture; session
 shutdown only waits for queued work. The foreground worker remains a shared
 reader until explicit memory stop. Stale service credentials require explicit

@@ -91,7 +91,8 @@ class ClaudeMemoryTests(unittest.TestCase):
         key = "a" * 64
         name = config["owned_model_service"]["environment_variable"]
         ambient = {"HOME": str(Path.home()), name: "old", "CLAUDE_MEM_OPENAI_COMPAT_API_KEY": "ambient",
-                   "CLAUDE_MEM_OPENAI_COMPAT_API_KEYS": "ambient-pool"}
+                   "CLAUDE_MEM_OPENAI_COMPAT_API_KEYS": "ambient-pool",
+                   "CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": "131072", "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": "16000"}
         before = (self.root / "memory/claude-mem/settings.json").read_bytes()
         with patch.object(claude_memory, "environment", return_value=dict(ambient)), \
                 patch.object(model_service_handoff, "launch_environment", return_value=
@@ -101,6 +102,8 @@ class ClaudeMemoryTests(unittest.TestCase):
         self.assertEqual(result["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], key)
         self.assertEqual(result["CLAUDE_MEM_OPENAI_COMPAT_API_KEYS"], "")
         self.assertEqual(result["CLAUDE_MEM_QUOTA_FALLBACK_PROVIDER"], "")
+        self.assertEqual(result["CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW"], str(config["context_window"]))
+        self.assertEqual(result["CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS"], str(config["max_output"]))
         self.assertEqual(ambient[name], "old")
         self.assertEqual(required["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], "local")
         self.assertEqual((self.root / "memory/claude-mem/settings.json").read_bytes(), before)
@@ -122,7 +125,7 @@ class ClaudeMemoryTests(unittest.TestCase):
         self.assertEqual(env["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], "local")
 
     @contextmanager
-    def worker_fixture(self, startup_key, current_key, *, foreign=False, resolver_error=None, live=True):
+    def worker_fixture(self, startup_key, current_key, *, foreign=False, resolver_error=None, live=True, worker_budget=None):
         """Exercise actual identity/auth code with a fictional proc view; no sockets or workers."""
         config = self.owned_config()
         root = self.root / "memory/claude-mem"
@@ -136,6 +139,8 @@ class ClaudeMemoryTests(unittest.TestCase):
         stat = b"314159 (synthetic worker) S " + b"0 " * 18 + b"12345"
         env = [os.fsencode("CLAUDE_MEM_DATA_DIR=" + str(root)),
                b"CLAUDE_MEM_OPENAI_COMPAT_API_KEY=" + startup_key.encode()]
+        budget = claude_memory.observer_budget(config) if worker_budget is None else worker_budget
+        env.extend(os.fsencode(key + "=" + value) for key, value in budget.items())
         original_read, original_resolve = Path.read_bytes, Path.resolve
         state = {"live": live, "commands": [], "searches": [], "requests": [], "stops": []}
         def read(path):
@@ -211,6 +216,54 @@ class ClaudeMemoryTests(unittest.TestCase):
                 self.assertEqual(state["commands"], [])
                 self.assertNotIn("a" * 64, str(error.exception))
                 self.assertNotIn("b" * 64, str(error.exception))
+
+    def test_native_parser_bounds_and_persisted_budget_drift_hold_capture(self):
+        self.assertEqual(claude_memory.observer_budget({"context_window": 8192, "max_output": 256}), {
+            "CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": "8192", "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": "256"})
+        for changes in ({"context_window": 8191}, {"context_window": 2**53}, {"max_output": 128},
+                        {"max_output": 1_000_001}, {"max_output": 32768}, {"max_output": True}):
+            with self.subTest(changes=changes), self.assertRaisesRegex(home.HomeError, "Observer capture requires"):
+                claude_memory.observer_budget({**self.config, **changes})
+        path = self.root / "memory/claude-mem/settings.json"
+        original = path.read_bytes()
+        for key in ("CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW", "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS"):
+            try:
+                changed = json.loads(original)
+                changed[key] = "16000"
+                path.write_text(json.dumps(changed), encoding="utf-8")
+                with self.subTest(setting=key), self.assertRaisesRegex(home.HomeError, "budget settings differ"):
+                    claude_memory.settings(self.root, self.config)
+                # Stop/status/search can still use exact ownership on a stale
+                # budget; settings validation does not resolve a credential.
+                claude_memory.settings(self.root, self.config, require_budget=False)
+            finally:
+                path.write_bytes(original)
+
+    def test_missing_or_stale_worker_budget_blocks_start_and_hook_before_submission(self):
+        correct = claude_memory.observer_budget(self.config)
+        for budget in ({}, {**correct, "CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": "131072"},
+                       {**correct, "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": "16000"}):
+            for action in ("start", "hook"):
+                with self.subTest(budget=budget, action=action), self.worker_fixture("a" * 64, "a" * 64, worker_budget=budget) as (state, _):
+                    with self.assertRaisesRegex(home.HomeError, "worker budget is stale"):
+                        claude_memory.invoke(self.root, action, {"sessionId": "s", "toolName": "read"},
+                                             "observation" if action == "hook" else None)
+                    self.assertEqual(state["requests"], [])
+                    self.assertEqual(state["commands"], [])
+
+    def test_stale_auth_and_budget_preserve_status_search_and_exact_stop(self):
+        with self.worker_fixture("a" * 64, "b" * 64, worker_budget={},
+                                 resolver_error=AssertionError("Read/stop must not resolve credentials")) as (state, resolver):
+            path = self.root / "memory/claude-mem/settings.json"
+            changed = json.loads(path.read_text(encoding="utf-8"))
+            changed["CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS"] = "128"
+            path.write_text(json.dumps(changed), encoding="utf-8")
+            self.assertEqual(claude_memory.invoke(self.root, "status")["status"], "running")
+            self.assertEqual(claude_memory.invoke(self.root, "search", event="synthetic retained observation")["results"][0]["id"], 42)
+            self.assertEqual(claude_memory.invoke(self.root, "stop")["status"], "stopped")
+        resolver.assert_not_called()
+        self.assertEqual(state["stops"], [314159])
+        self.assertEqual(state["commands"], [])
 
     def test_owned_status_works_offline_without_claiming_auth_or_capture_ready(self):
         with self.worker_fixture("a" * 64, "b" * 64,
