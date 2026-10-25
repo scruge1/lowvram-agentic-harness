@@ -3,6 +3,7 @@ import { Type } from 'typebox';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { registerRequestIntake } from '../intake/request-intake-138.ts';
 import { registerProjectContext } from '../context/project-context.ts';
 import { projectKanbanReply } from './kanban-reply-projector.mjs';
@@ -78,6 +79,52 @@ function callAdapter(request: Record<string, unknown>, signal?: AbortSignal): Pr
     });
     child.stdin.on('error', (error) => { child.kill('SIGKILL'); finish(error); });
     child.stdin.end(JSON.stringify(request));
+  });
+}
+
+function createManagedProject(name: string, signal?: AbortSignal): Promise<Reply> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new Error('Project creation cancelled before launch')); return; }
+    let python: string, helper: string;
+    try {
+      const home = requiredEnvironment('AGENT_HOME');
+      python = requiredEnvironment('AGENT_HOME_PYTHON');
+      const config = JSON.parse(readFileSync(join(home, 'home.json'), 'utf8'));
+      const raw = readFileSync(join(home, 'runtime', 'runtime-manifest.json'));
+      if (config?.schema !== 'agent-home/v1' || config.home !== home
+          || createHash('sha256').update(raw).digest('hex') !== config.runtime_manifest_sha256)
+        throw new Error('Managed home/runtime binding differs');
+      helper = join(home, 'runtime', 'adapters', 'pi', 'project-workflow', 'project_create.py');
+      const expected = JSON.parse(raw.toString('utf8')).files.find((item: any) => item.path === 'adapters/pi/project-workflow/project_create.py')?.sha256;
+      if (!expected || createHash('sha256').update(readFileSync(helper)).digest('hex') !== expected)
+        throw new Error('Managed project helper source drift');
+    } catch (error) { reject(error); return; }
+    const child = spawn(python, ['-s', '-B', helper, '--name=' + name], {
+      stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PI_TASK_TIMEOUT: '90', CUDA_VISIBLE_DEVICES: '' },
+    });
+    let out = Buffer.alloc(0), error = Buffer.alloc(0), done = false;
+    const finish = (failure?: Error, value?: Reply) => {
+      if (done) return;
+      done = true; clearTimeout(timer); signal?.removeEventListener('abort', abort);
+      child.stdin.end(); // EOF asks the existing guard to settle its descendants.
+      failure ? reject(failure) : resolve(value!);
+    };
+    const abort = () => finish(new Error('Project creation cancelled; inspect any partial project before adoption'));
+    const timer = setTimeout(() => finish(new Error('Project creation deadline; preserve and inspect any partial project')), 105000);
+    signal?.addEventListener('abort', abort, { once: true });
+    child.on('error', failure => finish(failure));
+    child.stdout.on('data', chunk => { out = Buffer.concat([out, chunk]); if (out.length > MAX_OUTPUT) finish(new Error('Project creation result exceeds its bound')); });
+    child.stderr.on('data', chunk => { error = Buffer.concat([error, chunk]); if (error.length > 8192) finish(new Error('Project creation diagnostics exceed their bound')); });
+    child.on('close', code => {
+      let value: Reply;
+      try { value = JSON.parse(out.toString('utf8')); }
+      catch { finish(new Error('Project creation returned no complete result; inspect any partial project')); return; }
+      if (code !== 0 || value.schema !== 'pi-kanban-result/v1' || value.ok !== true)
+        finish(new Error(value.error || 'Project creation failed; inspect any partial project'));
+      else finish(undefined, value);
+    });
+    child.stdin.on('error', () => finish(new Error('Project creation ownership pipe failed')));
+    // Retain the owner pipe through the existing lifecycle/worker guard.
   });
 }
 
@@ -195,6 +242,60 @@ export default function (pi: ExtensionAPI) {
     return { ...request, project_root: activeProject.root };
   };
 
+  const selectAdmission = (value: Reply) => {
+    const result = value.result as any;
+    const projectId = result?.identity?.project_id;
+    const boardId = result?.identity?.board_id;
+    const root = result?.project_root;
+    if (typeof root !== 'string' || typeof projectId !== 'string' || typeof boardId !== 'string') throw new Error('project admission returned an incomplete identity');
+    const sameProject = activeProject?.root === root && activeProject?.projectId === projectId
+      && activeProject?.boardId === boardId;
+    activeProject = { root, projectId, boardId };
+    if (!sameProject) activeTask = null;
+    boardAdmissionFailed = false;
+    resetDiscovery();
+    saveSelection();
+  };
+  const clearAdmission = () => {
+    if (!activeProject && !activeTask && boardAdmissionFailed) return;
+    activeProject = null;
+    activeTask = null;
+    boardAdmissionFailed = true;
+    resetDiscovery();
+    saveSelection();
+  };
+  const failedAdmission = (error: unknown) => { clearAdmission(); return failure(error); };
+
+  pi.registerTool({
+    name: 'project_create', label: 'Create managed project',
+    description: 'Create a NEW short-named project under this managed home/projects with Git, AGENTS.md, .gitignore and its isolated ICM/board, then select it. Selects no task and grants no execution permission. Existing/external projects use project_admit without initialize.',
+    parameters: Type.Object({ name: Type.String({ minLength: 1, maxLength: 80, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$' }) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      try {
+        clearAdmission();
+        if (Object.keys(params).length !== 1 || !Object.prototype.hasOwnProperty.call(params, 'name')
+            || typeof params.name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(params.name))
+          throw new Error('project_create accepts only one short project name');
+        const created = await createManagedProject(params.name, signal);
+        const root = join(requiredEnvironment('AGENT_HOME'), 'projects', params.name);
+        const result = created.result as any;
+        if (result?.project_root !== root) throw new Error('Created managed project root differs');
+        if (signal?.aborted) throw new Error('Project creation cancelled before readmission');
+        const admitted = await callAdapter({ action: 'project_admit', project_root: root }, signal);
+        if (signal?.aborted) throw new Error('Project creation cancelled during readmission');
+        const actual = admitted.result as any;
+        if (actual?.identity?.project_id !== result?.identity?.project_id || actual?.identity?.board_id !== result?.identity?.board_id)
+          throw new Error('Created project identity changed during admission');
+        if (signal?.aborted) throw new Error('Project creation cancelled before selection');
+        selectAdmission(admitted);
+        return response({ ...admitted, action: 'project_create', limits: created.limits });
+      } catch (error) {
+        const cause = error instanceof Error ? error.message : String(error);
+        return failedAdmission(new Error(cause + '. Preserve any partial project; inspect Git, instructions and ICM/board before project_admit without initialize. Do not recreate or reinitialize it.'));
+      }
+    },
+  });
+
   pi.registerTool({
     name: 'project_admit', label: 'Admit project',
     description: 'Resolve or explicitly initialize one project identity and select its isolated host-local board for this Pi session. Initialization never overwrites an existing identity.',
@@ -209,33 +310,9 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal) {
       try {
         const value = await callAdapter({ action: 'project_admit', ...params }, signal);
-        const result = value.result as any;
-        const projectId = result?.identity?.project_id;
-        const boardId = result?.identity?.board_id;
-        const root = result?.project_root;
-        if (typeof root !== 'string' || typeof projectId !== 'string' || typeof boardId !== 'string') throw new Error('project admission returned an incomplete identity');
-        const sameProject = activeProject?.root === root && activeProject?.projectId === projectId
-          && activeProject?.boardId === boardId;
-        activeProject = { root, projectId, boardId };
-        if (!sameProject) activeTask = null;
-        boardAdmissionFailed = false;
-        capabilitiesObserved = false;
-        systemToolsQueried = false;
-        memoryQueried = false;
-        knowledgeQueried = false;
-        saveSelection();
+        selectAdmission(value);
         return response(value);
-      } catch (error) {
-        activeProject = null;
-        activeTask = null;
-        boardAdmissionFailed = true;
-        capabilitiesObserved = false;
-        systemToolsQueried = false;
-        memoryQueried = false;
-        knowledgeQueried = false;
-        saveSelection();
-        return failure(error);
-      }
+      } catch (error) { return failedAdmission(error); }
     },
   });
 
@@ -426,6 +503,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on('tool_call', async (event: any) => {
+    if (event.toolName === 'project_create') { clearAdmission(); return; }
     if (event.toolName === 'codex_plan_consult') {
       if (!activeProject) return { block: true, reason: 'Admit the project with project_admit before planning consultation.' };
       if (!capabilitiesObserved) return { block: true, reason: 'Call agent_capabilities before planning so the plan uses the tools actually loaded in this Pi session.' };
@@ -470,6 +548,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on('tool_result', async (event: any, ctx: any) => {
+    if (event.toolName === 'project_create' && event.isError) { clearAdmission(); return; }
     if (event.toolName === 'agent_capabilities' && !event.isError && event.details?.ok === true) {
       if (!activeProject) return;
       try {

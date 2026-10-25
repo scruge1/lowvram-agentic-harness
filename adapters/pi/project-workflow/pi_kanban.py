@@ -23,7 +23,7 @@ from hermes_cli import kanban_db as kb
 from hermes_cli import kanban_db_connect as kbc
 from hermes_cli import kanban_db_graph as graph
 
-from project_identity import initialize_identity, load_identity
+from project_identity import _project_id, initialize_identity, load_identity
 from project_closeout import compile_closeout
 from memory_claim_candidate import compile_candidate as compile_memory_claim_candidate
 from project_knowledge import build as build_knowledge
@@ -371,6 +371,9 @@ def validate_initialization(request: Mapping[str, Any]) -> None:
         require(supplied is None or supplied == existing,
                 "native_authority differs from the existing project identity; do not replace an established authority")
     else:
+        state = STATE_BASE / _project_id(root)
+        require(not state.exists() and not state.is_symlink(),
+                "Project state already exists without its identity. Preserve it and explicitly recover/adopt the original project; do not initialize a new identity over retained board state.")
         require(bool(supplied),
                 "initialize=true requires native_authority: cite the user's request or the existing native project plan. This is a provenance reference, not Codex approval. No project files were created.")
 
