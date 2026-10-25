@@ -7,6 +7,8 @@ general browser agent, authentication bridge, crawler, or service.
 
 The existing Linux Pi process guard owns the one-operation worker and all its
 browser descendants. Windows process ownership is not qualified by this module.
+Text capture skips image, media and font network requests. HTML, CSS,
+JavaScript, data requests and explicit downloads retain the guarded transport.
 """
 from __future__ import annotations
 
@@ -235,6 +237,11 @@ async def _browse_native(request, fetcher=None):
                     value, method = route.request.url, route.request.method
                     if method != "GET" or not value.startswith(("http://", "https://")):
                         blocked.append({"url": value[:8192], "method": method, "reason": "read_only_public_http"})
+                        return await route.abort("blockedbyclient")
+                    resource_type = route.request.resource_type
+                    if resource_type in {"image", "media", "font"}:
+                        blocked.append({"url": value[:8192], "method": method, "resource_type": resource_type,
+                                        "reason": "nonessential_text_resource"})
                         return await route.abort("blockedbyclient")
                     metadata = route.request.headers
                     packet = await get(value, origin=metadata.get("origin"), referrer=metadata.get("referer"))

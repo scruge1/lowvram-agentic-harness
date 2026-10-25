@@ -219,13 +219,21 @@ oversized, timed-out and partial results retain their status. A cached successfu
 read does not promote a failed source request to successful acquisition. The
 original DDG no-results failure remains unexplained; a later diagnostic returned
 HTTP200/three hits. Native installed search, static fetch and complete cached
-recovery passed. Normal installed browser network acceptance remains separate.
+recovery passed. A normal Pi-tool browser check returned3,022 characters in4.126s
+with partial-resource status and the unchanged40-second default.
 
 Browser network requests pass through the reviewed public HTTP route, including
 DNS/redirect checks and bounded streaming. Native routing preserves CSP/CORS;
 unintercepted browser networking is denied. Downloads use explicitly labelled
 host-fetch/browser-blob bytes with matching hashes. This does not establish
 general authenticated browsing or original download-UI parity.
+
+This text-research route omits image, media and font requests before the shared
+fetch queue. Each omission records `nonessential_text_resource` and its resource
+type, with partial-result status. A native slow-image fixture reproduced a queued
+JavaScript timeout before this change. Pages that depend on resource load events
+can remain partial; this is not a full visual rendering route. CSS, JavaScript,
+data and explicit download operations keep their existing checks and deadlines.
 
 The dependency plan pins16 tested Python runtime distributions and Playwright's
 matching Chromium revision1248. Source/native-file inventory is recorded under

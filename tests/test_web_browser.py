@@ -78,6 +78,10 @@ class FixtureHandler(BaseHTTPRequestHandler):
             content_type, raw = 'application/octet-stream', _DOWNLOAD
         elif self.path == '/js':
             raw = b'<html><main id="result">Waiting</main><script src="/app.js"></script></html>'
+        elif self.path == '/slow-image-before-script':
+            raw = b'<html><img src="/slow-image.png"><main id="result">Waiting</main><script src="/app.js"></script></html>'
+        elif self.path == '/slow-image.png':
+            content_type, raw = 'image/png', b'SYNTHETIC_IMAGE_RESOURCE_73'
         elif self.path == '/pages':
             raw = b'<html><main>' + _BODY + b'<table><tr><th>Page</th></tr><tr><td id="cell">One</td></tr></table><button id="next" onclick="document.querySelector(\'#cell\').textContent=\'Two\'">Next</button></main></html>'
         elif self.path == '/download':
@@ -184,6 +188,25 @@ class NativeBrowserTests(unittest.TestCase):
         result = self.run_page('/js', wait_selector='#result[data-ready="yes"]')
         self.assertIn('SYNTHETIC_RENDERED_JS_73', result['document']['text'])
         self.assertEqual({urllib.parse.urlsplit(source['url']).path for source in result['sources']}, {'/js', '/app.js', '/data.json'})
+
+    def test_slow_image_before_script_never_fetches_and_javascript_still_renders(self):
+        images = []
+        def slow_image(url, **options):
+            if urllib.parse.urlsplit(url).path == '/slow-image.png':
+                images.append(url)
+                time.sleep(7)  # Exceeds the six-second operation on the old serial route.
+            return self.fixture_fetch(url, **options)
+        request = {'url': self.origin + '/slow-image-before-script', 'timeout': 6, 'max_chars': 12000,
+                   'offset': 0, 'wait_selector': '#result[data-ready="yes"]', 'click_selectors': [], 'download_selector': None}
+        result = asyncio.run(asyncio.wait_for(browser._browse_native(request, slow_image), timeout=request['timeout']))
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['status'], 'partial')
+        self.assertIn('SYNTHETIC_RENDERED_JS_73', result['document']['text'])
+        self.assertEqual(images, [])
+        self.assertTrue(any(item.get('resource_type') == 'image' and item['reason'] == 'nonessential_text_resource'
+                            and urllib.parse.urlsplit(item['url']).path == '/slow-image.png' for item in result['blocked_requests']))
+        self.assertEqual({urllib.parse.urlsplit(source['url']).path for source in result['sources']},
+                         {'/slow-image-before-script', '/app.js', '/data.json'})
 
     def test_javascript_error_is_visible_partial_not_full_success(self):
         result = self.run_page('/js-error')

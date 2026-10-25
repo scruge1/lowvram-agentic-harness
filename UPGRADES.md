@@ -27,7 +27,7 @@ requested owner and model limits, omitted optional observer tools and checked
 empty reviewed-memory abstention. Direct SDK startup first lacked the required
 hub; normal owned hub startup resolved that prerequisite without a code change.
 
-Twenty static HTTP/search controls and13 actual Chromium controls passed. Review
+Twenty HTTP/search controls and14 browser controls passed;11 use actual Chromium. Review
 caught and reproduced hidden-ancestor text extraction; native text-range geometry
 now preserves visibility overrides and display-contents behavior. Earlier native
 tests also caught CORS header widening and a download network bypass; their
@@ -35,7 +35,14 @@ failures and corrected native checks are retained. Real partial-page and deadlin
 results stay explicit. The first DDG no-results error remains unexplained; later
 diagnostic and installed-tool searches succeeded. A separate installed browser
 attempt correctly failed because that machine could not resolve its target;
-DNS/host availability is not hidden as empty evidence.
+DNS/host availability is not hidden as empty evidence. Instrumentation then
+located a separate normal-route timeout: slow external images/fonts serialized
+ahead of JavaScript and consumed the navigation budget. The text-research route
+now omits image/media/font requests with explicit partial-coverage reasons. A
+native slow-image regression failed before the change and passed afterward.
+One normal Pi-tool render then passed in4.126s, returning3,022 characters with
+partial status at the unchanged40-second default. CSS/JS/document/data and
+explicit-download guards remain intact. No visual/full-resource parity is claimed.
 
 One native Pi tool stores complete allowed evidence under the selected project's
 content hashes and returns at most12KiB. Cached Unicode windows recover complete
