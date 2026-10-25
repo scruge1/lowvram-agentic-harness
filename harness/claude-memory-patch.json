@@ -1,0 +1,16 @@
+{
+  "schema": "agent-home-claude-memory-patch/v1",
+  "patch_id": "disable-global-orphan-sweep-v1",
+  "package": "claude-mem",
+  "upstream_version": "13.29.0",
+  "upstream_sha256": "e201a443d4f7445156bce266655c006b0e11a36c832e525cfcba46b55b45ad3b",
+  "upstream_bytes": 3228766,
+  "start_byte": 193302,
+  "end_byte_exclusive": 194768,
+  "span_sha256": "bdc44723caec58d67ffe97eb11770a09e634eff9319a9abc3bd8dc385c9719be",
+  "replacement": "async function $5(t={}){return{matched:0,trees:0,orphans:0,killed:0,failed:0,unregistered:0,skipped:\"agent_home_unscoped_cleanup_disabled\"}}",
+  "replacement_sha256": "d6242ddf4b5b132b08d96e2ab3af8c0aed9b88f671482837fe583668ab495adf",
+  "effective_sha256": "48aa2fb3c029c99e69cf339ecc216011a93eb7d9d059e671ba8883d7f45f2300",
+  "effective_bytes": 3227440,
+  "license_marker": "/*! Bundled license information:"
+}

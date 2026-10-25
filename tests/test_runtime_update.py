@@ -34,7 +34,8 @@ class UpdateFixture(unittest.TestCase):
             for path in (REPO / name).rglob("*"):
                 if path.is_file() and "__pycache__" not in path.parts and (path.suffix in {".py", ".ts", ".mjs", ".md"}
                                                                          or "templates" in path.parts
-                                                                         or path.relative_to(REPO).as_posix() == "harness/model-service-pins.json"):
+                                                                         or path.relative_to(REPO).as_posix() in {
+                                                                             "harness/model-service-pins.json", "harness/claude-memory-patch.json"}):
                     target = self.baseline / path.relative_to(REPO)
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(path, target)
