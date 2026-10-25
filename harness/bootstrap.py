@@ -29,6 +29,11 @@ PYTHON_KEY = "cpython-3.12.13-linux-x86_64-gnu"
 UV_SHA256 = "1db18b5e76fa645a7f3865773139bdec8e2d46adbdbb35e7410b34fa8015ccd2"
 RESERVE = 2 * 1024 ** 3
 SOURCE = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    # install.sh uses isolated Python; import only this complete checkout.
+    sys.path.insert(0, str(SOURCE))
+LOCAL_CPU_MEMORY = 20 * 1024 ** 3
+LOCAL_CPU_STORAGE = 20 * 1024 ** 3
 NATIVE_PIDFD_SOURCE = "adapters/pi/project-workflow/native_pidfd.py"
 NATIVE_PIDFD_SHA256 = "0bec3bbf24319a07206388771f7f03bb95ae989d00b1fba40959437dae556423"
 
@@ -245,15 +250,112 @@ def installer_command(receipt, arguments, *, resume=False):
             "--managed-node", receipt["node"]["path"], *arguments]
 
 
+def local_cpu_options(arguments):
+    """Keep this finite candidate distinct from arbitrary installer overrides."""
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False, exit_on_error=False)
+    parser.add_argument("--profile", choices=("agent", "pi"), default="agent")
+    parser.add_argument("--name", default="Owner")
+    require(sum(value == "--profile" or value.startswith("--profile=") for value in arguments) <= 1
+            and sum(value == "--name" or value.startswith("--name=") for value in arguments) <= 1,
+            "Supply each local CPU install option once")
+    try:
+        options, unknown = parser.parse_known_args(arguments)
+    except argparse.ArgumentError as error:
+        raise BootstrapError("Invalid local CPU option: " + str(error)) from error
+    require(not unknown, "--local-cpu accepts only --profile agent|pi and --name; omit endpoint/model/budget/offline/resume overrides")
+    require(options.name.strip() and not any(char in options.name for char in "\r\n\0"), "Use a nonempty one-line owner name")
+    return options
+
+
+def local_cpu_plan(home):
+    """Authoritative read-only candidate plan from the existing native pin file."""
+    from harness import hardware_probe, home as factory, model_service
+    require(home.is_absolute() and home.resolve() == home and not home.exists() and not home.is_symlink(),
+            "Local CPU setup requires a new canonical absolute home")
+    require(not home.is_relative_to(SOURCE) and not SOURCE.is_relative_to(home), "Installer source and home must be separate trees")
+    require(all((SOURCE / "harness/templates/agent-home" / name).is_file() for name in factory.REQUIRED_TEMPLATES),
+            "Required home templates are missing; no model transfer was started")
+    pins = json.loads(model_service.PINS.read_text(encoding="utf-8"))
+    spec = model_service.specification(model=pins["model"]["id"], backend="cpu", context=32768, max_output=4096,
+                                       threads=8, batch_threads=8, ram_required_bytes=LOCAL_CPU_MEMORY)
+    report = model_service.plan(home, spec)
+    available = hardware_probe.ram_info().get("available_gb")
+    report["memory"] = {"available_gb": available, "required_bytes": LOCAL_CPU_MEMORY,
+                        "sufficient": available is not None and available * 1e9 >= LOCAL_CPU_MEMORY}
+    affinity = getattr(os, "sched_getaffinity", None)
+    cpus = len(affinity(0)) if affinity is not None else os.cpu_count()
+    report["cpu"] = {"available_logical_cpus": cpus, "source": "process_affinity" if affinity is not None else "os_cpu_count",
+                     "required": 8, "sufficient": cpus is not None and cpus >= 8, "exclusive_reservation": False}
+    report["storage"]["required_free_bytes"] = max(LOCAL_CPU_STORAGE, report["storage"]["required_free_bytes"])
+    report["storage"]["sufficient"] = report["storage"]["free_bytes"] >= report["storage"]["required_free_bytes"]
+    report["scope"] = "CPU candidate; no task-quality, speed, GPU-fit or vision acceptance"
+    report["additional_downloads"] = "Pinned agent packages, browser and first-use embeddings; total bytes unknown before resolution"
+    return report
+
+
+def install_local_cpu(receipt, arguments):
+    """Compose existing provision/start/capture/factory APIs without replay."""
+    from harness import model_service, model_service_handoff, model_service_setup
+    options = local_cpu_options(arguments)
+    home, root = Path(receipt["home"]), Path(receipt["runtime_root"])
+    report = local_cpu_plan(home)
+    require(report["cpu"]["sufficient"], "Local CPU setup requires at least 8 available affinity/logical CPUs before model transfer")
+    require(report["memory"]["sufficient"], "Local CPU setup requires at least 20 GiB available system RAM before model transfer")
+    require(report["storage"]["sufficient"], "Local CPU setup requires at least 20 GiB free on the selected volume before model transfer")
+    target = root / "installer-handoff.json"
+    require(not target.exists() and not target.is_symlink(), "Prior installer handoff exists; inspect its evidence instead of replaying local CPU setup")
+    operation = {"schema": "agent-home-bootstrap-handoff/v1", "home": str(home), "mode": "local_cpu",
+                 "plan": report, "automatic_replay": False, "claim": "factory/protocol only; model task capability remains separate"}
+    def phase(value):
+        operation["phase"] = value
+        publish_json(target, operation)
+    try:
+        phase("provisioning_model")
+        model_service.provision(home, report["specification"], allow_download=True)
+        phase("starting_pre_home")
+        model_service.start(home, startup_timeout=120)
+        phase("capturing_pre_home")
+        selection = model_service_handoff.capture(home)
+        phase("creating_home")
+        result = model_service_setup.create(home, selection=selection, source=SOURCE, profile=options.profile, name=options.name,
+                                            python312=receipt["python"]["path"], managed_node=Path(receipt["node"]["path"]))
+        operation.update(result=result, exit_code=0)
+        phase("complete")
+        print(json.dumps(result, indent=2), flush=True)
+        print("Managed command: " + str(home / "bin/harness-agent"), flush=True)
+        return 0
+    except BaseException as error:
+        operation.update(failed_stage=operation["phase"], error=type(error).__name__ + ": " + str(error), exit_code=1,
+                         recovery="Preserve this handoff and state/model-service receipts. Inspect native status; use explicit service stop/recovery and doctor/resume-install for a partial home. Do not replay uncertain setup.")
+        phase("failed")
+        raise
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", required=True, type=Path)
     parser.add_argument("--runtime-root", required=True, type=Path)
     parser.add_argument("--runtimes-only", action="store_true")
     parser.add_argument("--resume-install", action="store_true")
+    parser.add_argument("--local-cpu", action="store_true")
+    parser.add_argument("--confirmed", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--plan", action="store_true", help="Read-only authoritative local CPU plan")
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     try:
+        arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
+        if args.local_cpu:
+            require(not args.runtimes_only and not args.resume_install, "Local CPU setup cannot mix runtime-only or resume modes")
+            local_cpu_options(arguments)
+            report = local_cpu_plan(args.home)
+            print(json.dumps(report, indent=2), flush=True)
+            if args.plan:
+                return 0
+            require(args.confirmed, "Review install.sh --local-cpu --plan, then confirm through install.sh or its --yes option")
+            require(report["cpu"]["sufficient"] and report["memory"]["sufficient"] and report["storage"]["sufficient"],
+                    "Local CPU setup requires at least 8 available affinity/logical CPUs, 20 GiB available RAM and 20 GiB free storage")
+        else:
+            require(not args.plan, "Use install.sh --plan for the pre-Python runtime plan")
         receipt, env = provision(args.home, args.runtime_root)
         print(json.dumps({"status": receipt["status"], "runtime_root": receipt["runtime_root"],
                           "python": receipt["python"]["path"], "node": receipt["node"]["path"],
@@ -261,7 +363,8 @@ def main(argv=None):
                           "receipt": str(args.runtime_root / "runtime-receipt.json")}), flush=True)
         if args.runtimes_only:
             return 0
-        arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
+        if args.local_cpu:
+            return install_local_cpu(receipt, arguments)
         if args.home.exists():
             require(args.resume_install, "Home exists; preserve it and use explicit --resume-install without initial install options")
             config = json.loads((args.home / "home.json").read_text())

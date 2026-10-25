@@ -33,7 +33,8 @@ permanent `HOME-runtimes` sibling: installed environments use its Python. Runtim
 downloads resume with exact size/hash checks. Conflicts and failed partials are
 retained. Global Python, Node, PATH and shell profiles are not changed. See the
 [runtime sources and licences](harness/BOOTSTRAP-NOTICES.md).
-No agent model weights or GPU server are downloaded or started. Memory embeddings
+The default attachment route downloads no agent model weights and starts no model
+server. Memory embeddings
 have their own first-use download and readiness checks.
 
 Use `bash install.sh --home /data/my-agent --plan` for the read-only plan.
@@ -44,6 +45,54 @@ pass the existing install options directly after it. For example:
 bash install.sh --home /data/my-agent --yes --profile agent \
   --base-url http://127.0.0.1:8080/v1 --model my-local-model --name Owner
 ```
+
+For an opt-in local CPU candidate, without an existing endpoint:
+
+```bash
+bash install.sh --home /data/my-agent --local-cpu --plan
+bash install.sh --home /data/my-agent --local-cpu --yes --name Owner
+```
+
+This route selects the exact Qwen3-VL-8B-Instruct-Q4_K_M text-only artifact
+and native llama.cpp CPU release in `harness/model-service-pins.json`. Their
+downloads total5,050,222,955bytes, in addition to Python, Node, agent packages,
+browser and memory embeddings. Package/browser totals are unknown before
+resolution. Setup requires at least eight available affinity/logical CPUs,
+20GiB available RAM and20GiB free storage,
+with additional headroom for later use. It uses eight CPU threads and eight batch
+threads, one slot, context32768/output4096, no GPU layers and no cloud fallback.
+The CPU count follows process affinity when available; it is not an exclusive
+reservation or a speed guarantee.
+These are explicit candidate settings, not detected fit, speed or accepted
+agent task capability. The previous two-thread32K/4K report attempt failed the
+600-second agent task during input prefill, with no generated report. This
+eight-thread recipe is the next candidate and requires the same task qualification.
+Native protocol/lifecycle evidence does not establish useful task quality.
+This route does not supply a vision projector.
+
+`--plan` creates nothing. The confirmation, or `--yes`, covers the displayed
+downloads and owned model start. Managed Python checks the canonical pins and
+resources before model transfer. Only `--name` and `--profile agent|pi` can be
+combined with `--local-cpu`; endpoint/model/budget/transport overrides, `full`,
+offline mode and resume/runtime-only modes are refused. The existing endpoint
+attachment route remains the default.
+
+Setup uses the existing owned service and factory: start before home creation,
+capture the nonsecret binding, exact stop, normal package installation, then
+same-port restart with the child's home lease and a fresh private key. Successful
+setup leaves the model running. Use the installed managed command to launch Pi.
+For model status or explicit stop, change to `HOME/runtime` and use the managed
+Python: `PYTHON -m harness.model_service status --home HOME` (replace `status`
+with `stop` to stop it). `PYTHON` is the managed interpreter path printed during
+bootstrap. No key is printed or stored in `models.json`.
+This route does not change global services, PATH or OS HOME.
+
+If CPU setup fails, preserve `HOME-runtimes/installer-handoff.json` and
+`HOME-runtimes/state/model-service/` (including `setup.json` when present).
+Inspect the reported stage and native status before explicit recovery. A prior
+handoff blocks replay through `--local-cpu`; this frontend adds no automatic
+rollback or retry. For a partial home, use the existing doctor/resume-install
+route below, then review the owned service's same-port restart separately.
 
 After a failure, preserve both directories and inspect their logs. Correct the
 stated cause, then use `bash install.sh --home /data/my-agent --yes --resume-install`
