@@ -119,6 +119,30 @@ python /data/my-agent/agent-home.py palace status
 /data/my-agent/bin/mempalace status
 ```
 
+Inside a managed Pi session, `project_create` accepts only `{"name":"example"}`.
+It calls the same home factory as the CLI above: the new project is placed under
+`HOME/projects/example` with its own Git root, instructions, ignore rules and
+isolated ICM/board. It selects that project and clears the previous task and
+discovery observations. It does not create a ready card or grant execution;
+context, source intake, capability, memory and knowledge gates still apply.
+A successful creation already selects the project, so another admission is not
+needed just to continue setup.
+
+Names begin with a letter or digit and contain only letters, digits, hyphens or
+underscores (80 characters maximum). The tool cannot choose another path, home,
+configuration or authority. Existing destinations, redirected project parents and retained project-state
+namespaces refuse. A missing directory is not proof that its old board is gone. Use `project_admit` without `initialize` to adopt an existing project;
+that existing route does not add Git or replace its instructions.
+
+Creation uses the existing Linux home lease and process-owner guard. Its
+90-second operation budget and105-second tool deadline apply to creation only.
+On failure or cancellation, selection is cleared and any partial
+project remains intact. Inspect its Git, instructions and ICM/board before
+read-only adoption. Do not automatically delete, recreate or reinitialize it.
+Actual Pi/Hermes inert checks covered creation, isolation, failure and cancellation
+without a model request; choosing and using the tool in a model task remains
+separate acceptance.
+
 On Windows, use `py -3` for the core if `python` is unavailable. The pinned board
 adapter uses Linux file locks, and the reviewed process owner requires Linux
 `/proc`, pidfds and child-subreaper support. Windows/macOS currently support the
