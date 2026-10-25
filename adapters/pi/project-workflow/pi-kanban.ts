@@ -86,6 +86,24 @@ function failure(error: unknown) {
   return { content: [{ type: 'text' as const, text: `Kanban operation failed: ${message}` }], details: { ok: false, error: message }, isError: true };
 }
 
+function successfulCanonicalMemorySearch(event: any): boolean {
+  // Pi preserves the full MCP result here, before model-facing output limits.
+  // MemPalace can report semantic errors as JSON without setting MCP isError.
+  const raw = event.structuredContent;
+  if (event.isError || raw?.isError) return false;
+  const blocks = raw?.content ?? event.content;
+  if (!Array.isArray(blocks) || blocks.length !== 1
+      || blocks[0]?.type !== 'text' || typeof blocks[0].text !== 'string') return false;
+  try {
+    const value = JSON.parse(blocks[0].text);
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+      && Array.isArray(value.results)
+      && !Object.prototype.hasOwnProperty.call(value, 'error');
+  } catch {
+    return false;
+  }
+}
+
 export default function (pi: ExtensionAPI) {
   const pendingConsultations = new Map<string, { taskId: string; cardId?: string; objective: string; draftPlan: string }>();
   let activeProject: { root: string; projectId: string; boardId: string } | null = null;
@@ -438,6 +456,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if ((event.toolName === 'mcp__mempalace__mempalace_search'
+          && successfulCanonicalMemorySearch(event)
         || event.toolName === 'validated_memory_query'
           && event.details?.schema === 'validated-memory-query/v1'
           && Array.isArray(event.details.results)

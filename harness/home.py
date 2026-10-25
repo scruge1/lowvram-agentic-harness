@@ -300,7 +300,7 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
     memory_wrapper = runtime / "harness/memory_runtime.py"
     write_json(home / "agent/mcp.json", {"mcpServers": {"mempalace": {
         "command": str(memory_python), "args": ["-B", str(memory_wrapper), "--home", str(home), "mcp"],
-        "enabled": profile != "core", "exposure": "direct",
+        "enabled": profile != "core", "exposure": "deferred",
         "env": {"HF_HOME": str(home / "cache/huggingface"),
                 "MEMPALACE_CONFIG_DIR": str(home / "state/mempalace-config"),
                 "MEMPALACE_PALACE_PATH": str(home / "memory/palace")},
@@ -318,7 +318,8 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         {"name": "workflow_step", "description": "Supervised file action with independent predicate and negative control; Linux process owner required."},
         {"name": "project_admit", "description": "Select project identity, local Hermes Kanban board and knowledge."},
         {"name": "kanban_select", "description": "Resume an existing source-bound work card; selection is not authority."},
-        {"name": "mempalace", "description": "Local session memory retrieval through the configured MCP server; hits are guidance."},
+        {"name": "mempalace", "description": "Local session memory retrieval. Discover mcp__mempalace__mempalace_search with native tool_search, then call it; discovery alone is not recall. Hits are guidance."},
+        {"name": "tool_search", "description": "Native deferred-tool schema discovery. Loads the exact MCP tool for a later call; does not retrieve memory or grant execution readiness."},
         {"name": "supervised-tasks", "description": "Installed skill for declared file work and complete saved-failure recovery."},
         {"name": "source-checkpoint", "description": "Installed source-control skill and runtime/harness/source_checkpoint.py for exact reviewed Git milestones through workflow_step. Local commit by default; remote delivery requires explicit target and readback."},
         {"name": "validated_memory_query", "description": "Recall only reviewed safe summaries bound to exact current source bytes; empty registry abstains."},

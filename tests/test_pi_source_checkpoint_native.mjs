@@ -185,7 +185,8 @@ async function discover(loadSourceSkill = false, loadContext = true) {
   await tool('system_tool_query', { terms: 'source checkpoint Git' });
   await tool('project_knowledge_query', { terms: 'source checkpoint' });
   await session.extensionRunner.emitToolResult({ type: 'tool_result', toolCallId: 'explicit-memory-fixture',
-    toolName: 'mcp__mempalace__mempalace_search', input: {}, content: [], details: { ok: true, fixture: true }, isError: false });
+    toolName: 'validated_memory_query', input: {}, content: [],
+    details: { schema: 'validated-memory-query/v1', results: [], reason: 'no_current_provenanced_result', fixture: true }, isError: false });
   await tool('read', { path: skillFiles['supervised-tasks'] });
   if (loadSourceSkill) await tool('read', { path: skillFiles['source-control'] });
   if (loadContext) await context();

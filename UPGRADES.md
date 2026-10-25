@@ -5,6 +5,48 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Native deferred memory discovery and recall readiness — 2026-10-25
+
+Parent commit: `a616de8857beaaae66adcb118ef7a627008c2797`.
+
+Fresh homes use Pi1.4 native deferred MemPalace exposure. The capability catalog
+and compact prompt explain discovery before recall and require checking the
+returned canonical tool name. Discovery is ranked search, not a literal-name
+lookup. All47 memory tools remain registered; workflow and context tools stay
+active. Existing homes are not migrated or reloaded.
+
+Actual native testing found a separate existing readiness defect in both direct
+and deferred modes. A schema-valid search with an invalid wing returned JSON
+`error` without MCP `isError`; the coordinator counted it as memory retrieval.
+The canonical search guard now reads the full preserved MCP result, requires a
+JSON object with a results array, and rejects a top-level error property. Empty
+successful results remain valid. Recalled document text is not scanned for error
+words. Model-facing truncation does not discard the full host result.
+
+Qualification:30 actual native checks pass with an offline-generated current
+home, unchanged installed dependencies and a synthetic palace. The current
+eight-extension direct profile declares81 active tools and61,683bytes of
+serialized provider tool schemas. Deferred exposure declares35 and26,241bytes
+(57.46% fewer bytes); successful canonical discovery declares36 and28,673bytes.
+Both profiles retain47 registered memory tools. These are matched provider
+tools-array bytes, not tokens, whole requests, inference speed or model quality.
+No provider HTTP or generative call was made.
+
+Real synthetic recall, semantic error refusal, metadata-only refusal, actual
+wrong-tool and SDK errors, intake/context readiness, reload and reconnect passed.
+The current generated posture reached the native session prompt. The owned hub
+stopped and existing home configuration hashes remained unchanged. Twelve
+coordinator unit cases include valid empty results, malformed/error envelopes
+and document text containing an error example. Empty-result acceptance is
+unit-tested; native positive retrieval used populated results.
+
+Retained failures include the original semantic-error admission, an incorrect
+fixture layout, and an optional generic server description that changed search
+ranking to the status tool. That description was removed before final native
+qualification. The shipping PR records complete platform gate outcomes.
+This qualifies the current native shadow path, not a new package installation,
+private-runtime adoption or an ordinary model-driven task on a new host.
+
 ## Bounded Kanban model replies — 2026-10-25
 
 Parent commit: `f9bd5ad2f0c825318f3ba7f8178d787c2641650e`.

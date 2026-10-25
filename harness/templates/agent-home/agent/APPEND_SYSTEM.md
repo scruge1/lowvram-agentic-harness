@@ -17,6 +17,11 @@ prove the root outcome. Publish measured results from their actual receipts;
 do not promote guesses or save an inconsistent result as current context.
 Read current tool and model metadata before claiming capability or health.
 
+For MCP tools not yet declared, use native `tool_search`. For MemPalace recall,
+search `mcp__mempalace__mempalace_search`, check that the loaded name matches,
+then call it. Refine discovery if another tool is returned. Tool discovery
+alone is not memory retrieval.
+
 Read the nearest project and topic instructions when entering that scope.
 Keep unrelated context unloaded. This posture guides behavior; executable
 hooks and host checks enforce the installed action boundaries. Trusted project
