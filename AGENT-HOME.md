@@ -377,6 +377,14 @@ and let their exact results reach the next model-input context. A successful
 context tool call alone does not open the gate for a sibling action in the same
 tool-call batch. The existing task, pause, skill and effect checks still apply.
 
+For an already admitted project, `project_prepare({query: "relevant task terms"})`
+delivers callable capabilities, relevant system tools, validated memory, project
+knowledge and missing instructions through their existing native readers. An
+optional `path` selects the relevant directory. Read omitted or unavailable
+sections with the existing tools, and follow context `remaining_reads`. The
+bounded packet must reach later model context unchanged before its observations
+count. It does not admit a project, select a task or grant permission.
+
 ## Launch from any directory
 
 A fresh home includes a command bound to its absolute launcher:
@@ -810,6 +818,15 @@ port is held. It is never stopped or adopted as this home's worker.
 and bounded complete API delivery. Chroma is disabled for this new observer;
 MemPalace supplies separate semantic recall. Hook delivery does not establish
 observer output quality or freshness. No global Claude/Codex profile is edited.
+
+An isolated Linux component run qualified the actual Bun1.4.4 and patched
+Claude-mem13.29.0 foreground lifecycle: startup and health, exact owned process,
+source, data, listener and READ lease, empty drain, stop and exclusive cleanup.
+Foreign-port and persisted-registry refusals passed. It recorded zero model
+POSTs and capture hooks. Only two copied public packages were installed; seven
+selected packages remained uninstalled. Full installation/profile admission,
+generated capture and useful recall remain separate acceptance requirements.
+An empty queue does not establish generation or recall quality.
 
 The existing private preservation fork is not stock13.29.
 Never migrate an existing store during fresh-home setup. Such a migration needs

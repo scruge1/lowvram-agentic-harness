@@ -83,7 +83,7 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
   // Ephemeral delivery evidence. Existing Pi project/card entries remain the only saved identity.
   const delivered = new Map<string, string>();
   const coverage = new Map<string, { sha256: string; next: number }>();
-  const pending = new Map<string, { root: string; text: string; documents: Document[] }>();
+  const pending = new Map<string, { root: string; text: string; documents: Document[]; valid?: () => boolean }>();
   let suggested: { root: string; path: string } | undefined;
   const reset = () => { delivered.clear(); coverage.clear(); pending.clear(); suggested = undefined; };
   pi.on('session_start', reset);
@@ -187,9 +187,16 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
       if (message.role !== 'toolResult') continue;
       const proof = pending.get(message.toolCallId);
       if (!proof || proof.root !== root) continue;
+      pending.delete(message.toolCallId);
+      try { if (proof.valid && !proof.valid()) continue; } catch { continue; }
       const text = message.content?.length === 1 && message.content[0].type === 'text' ? message.content[0].text : undefined;
       if (!message.isError && text === proof.text) {
         for (const doc of proof.documents) {
+            // A source can change between tool execution and delivery.
+            let current: Document | undefined;
+            try { current = snapshot(project, doc.path).documents.find(value => value.path === doc.path); }
+            catch { continue; }
+            if (current?.sha256 !== doc.sha256) continue;
           const id = key(root, doc.path);
           if (doc.range) {
             const previous = coverage.get(id);
@@ -203,7 +210,6 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
           while (delivered.size > 256) delivered.delete(delivered.keys().next().value!);
         }
       }
-      pending.delete(message.toolCallId);
     }
   });
 
@@ -272,4 +278,16 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
         + '. Inspect identity/routes with native read-only tools; do not reset the board or invent context.' };
     }
   });
+  return {
+    // Native nested results have no separate transcript message. Bind only exact
+    // returned child bytes to their actual enclosing result, without marking delivery.
+    enclose(childId: string, parentId: string, childText: string, parentText: string, valid: () => boolean) {
+      const proof = pending.get(childId);
+      pending.delete(childId);
+      if (!proof || proof.text !== childText || !bindings.project()
+          || proof.root !== bindings.project()!.root) return false;
+      pending.set(parentId, { ...proof, text: parentText, valid });
+      return true;
+    },
+  };
 }

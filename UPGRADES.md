@@ -46,6 +46,32 @@ isolation and source/plan/span/health drift. Native qualification is separate
 from useful model-driven research acceptance. Question planning, narrative
 grounding and the complete research journey remain open.
 
+## Deliver existing project discovery through one native tool - 2026-10-25
+
+Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.
+
+Add `project_prepare` to the existing project integration. An explicit relevance
+query drives only the fixed capability, system-tool, validated-memory, project
+knowledge and context readers through Pi1.4's public `ctx.executeTool` API.
+Native child validation, hooks, permission checks and call lineage remain intact.
+Return bounded actual child content; nested-call metadata alone is not delivery.
+Validate the normal workflow's compact capability projection against its retained
+full host snapshot. Keep the compact model bytes; use the full snapshot only for
+the existing host-side project observation.
+Record discovery only after the unchanged enclosing result reaches later model
+context. Recheck source/session/project/cancellation bindings, preserve instruction
+windows and remaining reads, and keep skills, intake, board and effects separate.
+Repeat the full proof after the awaited capability observation write. Drift holds
+readiness while retaining any old source-bound board observation.
+No task is selected and no execution authority is inferred.
+
+Native inert qualification captures actual serialized provider input and stops
+before HTTP. It covers the normal workflow compaction and default deferred-tool configuration, unchanged active
+tools, same-batch holds, final-hook replacement, omitted output, cancellation,
+sensitive-query abstention, source drift, session/project changes and partial
+instruction delivery. Synthetic board/catalog inputs and an empty validated
+registry do not establish model behavior, memory quality or installed adoption.
+
 ## Mine cached research with the selected local model - 2026-10-25
 
 Parent commit: `f0803125054c86ac29d19b1a7f9431b6aeec41ee`.
@@ -346,10 +372,18 @@ seven offline selftests passed. A new archive QA home staged the actual public
 worker under an observed exclusive lease: upstream `e201a443` became reviewed
 effective `48aa2fb3`, original/licence/inventory checks passed, donor unchanged.
 Its data remained settings-only and its installed registry remained empty.
-This is source and byte-staging proof, not a fresh installation. Actual Bun
-foreground startup, zero-POST lifecycle, generated capture/readback and owned
-full-profile admission remain held for separate qualification. No worker was
-imported or launched. No private store, profile or package was migrated.
+That stage proved source and byte staging without launching a worker. Separate
+Linux component qualification then passed with Bun1.4.4 and the patched
+Claude-mem13.29.0: actual foreground startup, health, exact process/source/data
+and listener identity, its own READ lease, foreign-port and registry refusal,
+empty queue drain, exact worker stop and exclusive home cleanup. The isolated
+run recorded zero model POSTs and capture hooks. Independent cleanup passed and
+all six borrowed-artifact hashes remained unchanged.
+
+Only two copied public packages had installed records; seven selected packages
+remained uninstalled. This does not qualify a full fresh installation, full
+profile admission, generated capture/readback or useful recall. Empty drain
+does not prove generation. No private store, profile or package was migrated.
 
 ## Human-terminal optional search setup — 2026-10-25
 
