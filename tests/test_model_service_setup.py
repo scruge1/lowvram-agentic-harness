@@ -24,8 +24,6 @@ from harness import model_service_setup as setup
 class OwnedFactoryTests(unittest.TestCase):
     def setUp(self):
         root = os.environ.get("MODEL_SERVICE_TEST_ROOT")
-        if not root and os.name == "nt" and Path("E:/AgentData/AgentHomeQualification").is_dir():
-            root = "E:/AgentData/AgentHomeQualification"
         temporary = tempfile.TemporaryDirectory(prefix="owned-factory-", dir=root)
         self.addCleanup(temporary.cleanup)
         self.base = Path(temporary.name).resolve()
