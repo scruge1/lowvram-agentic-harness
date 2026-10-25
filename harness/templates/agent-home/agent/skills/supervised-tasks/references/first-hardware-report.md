@@ -9,9 +9,16 @@ Read `FIRST-PROJECT.md` and `hardware-facts.json`. Preserve the prepared
 `first-project.json` and the original manifest hash returned by prepare. Do not
 alter the checker or its inputs to satisfy the report.
 
-Use the normal native intake, project context, capability, tool, memory and
-knowledge observations before `workflow_step`. The model must write a useful
-250-400 word `hardware-report.md`. Copy the five exact fact labels and explicit
+Before drafting, read the complete installed `supervised-tasks/SKILL.md` with
+native `read`. Use `project_admit` first, then `agent_capabilities`,
+`system_tool_query`, relevant local memory and `project_knowledge_query`.
+Read `project_context` for the report directory and finish its `remaining_reads`.
+Select an authorized ready card. After compaction, refresh `project_context`;
+do not restart project admission and erase the observations already collected.
+Tool discovery does not replace the actual query or skill read.
+
+Write a useful 250-400 word `hardware-report.md`; aim near300 words so the
+action and complete report fit in one response. Copy the five exact fact labels and explicit
 units into a three-column Markdown table. Write `unknown` for unavailable
 observations. Cite `hardware-facts.json` and explain the limits in ordinary text.
 
