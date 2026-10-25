@@ -6,10 +6,12 @@ answers in real cited sources**.
 
 Independent pieces, useful together or apart:
 
-For a private agent-home setup with routed instructions, a current-agent
-personalization handoff, isolated tools and project Git/board initialization,
-see the [agent-home installer candidate](AGENT-HOME.md). Its export inventory
-keeps the remaining current-Pi integration work explicit.
+For the complete agent setup on Linux x86_64/glibc, clone this repository and
+run `bash install.sh`. It asks where to create the agent home, provisions owned
+Python/Node runtimes, and installs Pi, project Git/boards, memory, Agent Framework
+and research tools. Supply your existing local model endpoint and exact model ID.
+The [agent-home guide](AGENT-HOME.md) covers the current-agent personalization
+handoff, optional packages, launch, repair and the remaining acceptance limits.
 
 For slow or unreliable workflows, start with [evidence-first diagnostics](DIAGNOSTICS.md).
 Agents use this procedure before selecting an optimization. [Upgrade notes](UPGRADES.md)

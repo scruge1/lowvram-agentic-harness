@@ -9,23 +9,51 @@ are retained below.
 
 ## Run from a repository checkout
 
-Install Git and Python first. The dependency-free core supports Python3.9+.
-The isolated full tool stack uses Python3.12 and Node22.19+.
+On Linux x86_64 with glibc, install Git, curl, tar, coreutils and flock first.
+The bootstrap installs its own pinned Python and Node beside the new agent home.
+Its process-API self-check must pass before agent packages are installed. Hosts
+without usable Linux pidfd APIs are refused with the owned runtime retained.
 
 ```bash
 git clone https://github.com/scruge1/lowvram-agentic-harness.git
 cd lowvram-agentic-harness
-python -m harness.home install --python312 /path/to/python3.12
+bash install.sh
 ```
 
-The wizard asks for a new agent-home directory, local OpenAI-compatible endpoint
-and exact model ID. It creates a dedicated home. Existing agent profiles,
+The wizard asks for a new agent-home directory, shows its download/storage plan,
+then asks for the local OpenAI-compatible endpoint and exact model ID. It creates
+a dedicated home. Existing agent profiles,
 memory databases, services and project directories are not migrated by setup.
 Setup checks all 14 required templates before creating the home. Its Git-ignore
 template is installed as `.gitignore`.
 Choose storage with room for package environments, memory and embedding caches.
+The bootstrap requires at least8GiB free before runtime provisioning; this is
+headroom for that step, not a complete model/package capacity estimate. Keep the
+permanent `HOME-runtimes` sibling: installed environments use its Python. Runtime
+downloads resume with exact size/hash checks. Conflicts and failed partials are
+retained. Global Python, Node, PATH and shell profiles are not changed. See the
+[runtime sources and licences](harness/BOOTSTRAP-NOTICES.md).
 No agent model weights or GPU server are downloaded or started. Memory embeddings
 have their own first-use download and readiness checks.
+
+Use `bash install.sh --home /data/my-agent --plan` for the read-only plan.
+Use `--yes` to accept that displayed runtime plan in an unattended install, and
+pass the existing install options directly after it. For example:
+
+```bash
+bash install.sh --home /data/my-agent --yes --profile agent \
+  --base-url http://127.0.0.1:8080/v1 --model my-local-model --name Owner
+```
+
+After a failure, preserve both directories and inspect their logs. Correct the
+stated cause, then use `bash install.sh --home /data/my-agent --yes --resume-install`
+without initial install options. Resume retains the existing home configuration
+and verified package steps. `--runtimes-only` provisions just the owned Python
+and Node. Neither option accepts another home, interpreter or Node override.
+
+For an existing reviewed Python3.12/Node22.19+ installation, the direct entry
+remains `python -m harness.home install --python312 /path/to/python3.12`. The
+dependency-free core supports Python3.9+.
 
 For a fully specified command, put the global home option before the action:
 
@@ -504,6 +532,15 @@ or topic does not admit another. The two required internal Pi APIs have explicit
 behavior from the private system or prove final-provider consumption.
 
 ## Current qualification
+
+The owned-runtime shell path has also been exercised on a fresh Linux home.
+Fresh Python/Node provisioning and all five default packages passed without
+borrowed environments. Network SSL failures were retained; explicit normal
+installer resume completed the remaining packages in251.778 seconds. Normal
+managed Pi health, stable doctor and exact owned-hub shutdown passed afterward,
+without a generative request. The complete resume/health/shutdown check took
+272.690 seconds. This does not claim an uninterrupted download/install or a
+successful model-led project.
 
 The current source snapshot passes the offline release gate on Linux and
 Windows: 21 checks, including all seven self-tests. Ruff 0.16.10 also passes.

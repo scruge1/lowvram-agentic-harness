@@ -23,11 +23,11 @@ SPEC.loader.exec_module(guard)
 from pi_native_events import tool_results  # noqa: E402
 
 
-LINUX_OWNERSHIP = (
-    sys.platform == "linux"
-    and hasattr(os, "pidfd_open")
-    and hasattr(signal, "pidfd_send_signal")
-)
+try:
+    guard.require_process_ownership()
+    LINUX_OWNERSHIP = True
+except (OSError, ValueError):
+    LINUX_OWNERSHIP = False
 
 
 class PortableGuardTests(unittest.TestCase):
@@ -47,10 +47,10 @@ class PortableGuardTests(unittest.TestCase):
                 return "State:\tT (stopped)\n"
             return "1 (fixture) " + " ".join(["T"] + ["0"] * 18 + [next(identities)])
 
-        with mock.patch.object(guard.os, "pidfd_open", side_effect=[91, 92], create=True), \
+        with mock.patch.object(guard.PIDFD, "pidfd_open", side_effect=[91, 92]), \
              mock.patch.object(guard.os, "fstat", return_value=SimpleNamespace(st_dev=6, st_ino=7)), \
              mock.patch.object(guard.os, "close") as close, \
-             mock.patch.object(guard.signal, "pidfd_send_signal", create=True) as send, \
+             mock.patch.object(guard.PIDFD, "pidfd_send_signal") as send, \
              mock.patch.object(guard.signal, "SIGSTOP", 19, create=True), \
              mock.patch.object(guard.signal, "SIGKILL", 9, create=True), \
              mock.patch.object(guard.Path, "read_text", proc_text), \
@@ -65,10 +65,10 @@ class PortableGuardTests(unittest.TestCase):
                 return "State:\tT (stopped)\n"
             return "1 (fixture) " + " ".join(["T"] + ["0"] * 18 + ["100"])
 
-        with mock.patch.object(guard.os, "pidfd_open", side_effect=[91, PermissionError("denied"), 92], create=True), \
+        with mock.patch.object(guard.PIDFD, "pidfd_open", side_effect=[91, PermissionError("denied"), 92]), \
              mock.patch.object(guard.os, "fstat", return_value=SimpleNamespace(st_dev=6, st_ino=7)), \
              mock.patch.object(guard.os, "close"), \
-             mock.patch.object(guard.signal, "pidfd_send_signal", create=True) as send, \
+             mock.patch.object(guard.PIDFD, "pidfd_send_signal") as send, \
              mock.patch.object(guard.signal, "SIGSTOP", 19, create=True), \
              mock.patch.object(guard.signal, "SIGKILL", 9, create=True), \
              mock.patch.object(guard.Path, "read_text", proc_text), \

@@ -183,6 +183,14 @@ def environment(home, project_root=None):
         "PI_BOUNDED_COMPACTION_CONFIG": str(home / "state/bounded-compaction.json"),
     })
     config = json.loads((home / "home.json").read_text(encoding="utf-8"))
+    if "managed_node" in config:
+        from harness import node_runtime
+        problem = node_runtime.check(home, config["managed_node"])
+        if problem:
+            raise HomeError(problem)
+        value["PATH"] = str(Path(config["managed_node"]["path"]).parent) + os.pathsep + value.get("PATH", "")
+        value.pop("NODE_OPTIONS", None)
+        value.pop("NODE_PATH", None)
     if "research" in config.get("selected_packages", {}):
         helper = home / "runtime/harness/research_runtime.py"
         guard = home / "runtime/pi-task-worker.py"
@@ -215,7 +223,7 @@ def environment(home, project_root=None):
 
 
 def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner", offline=False,
-             context_window=32768, max_output=4096, model_profile="generic-local"):
+             context_window=32768, max_output=4096, model_profile="generic-local", managed_node=None):
     home = home.expanduser().resolve(strict=False)
     source = source.resolve(strict=True)
     if home.is_symlink() or home.resolve() in {Path.home().resolve(), Path(home.anchor)}:
@@ -236,6 +244,13 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         selected_model = model_definition(model, context_window, max_output, model_profile)
     except ValueError as error:
         raise HomeError(str(error)) from error
+    node_binding = None
+    if managed_node is not None:
+        from harness import node_runtime
+        try:
+            node_binding = node_runtime.bind(home, Path(managed_node).expanduser().absolute())
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise HomeError(str(error)) from error
     files = source_files(source)
     if "research" in PROFILES[profile]:
         required = ("harness/research_install.py", "harness/research_runtime.py",
@@ -247,6 +262,8 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
     missing = [name for name in REQUIRED_TEMPLATES if not (templates / name).is_file()]
     if missing:
         raise HomeError("Agent-home templates are missing from the selected source: " + ", ".join(missing))
+    if any(not (source / "harness" / name).is_file() for name in ("home_entry.py", "home_lifecycle.py")):
+        raise HomeError("The complete stable home entry source is required before creating a home.")
     if not shutil.which("git"):
         raise HomeError("Git is required. Install Git before creating an agent home.")
     parent = home.parent
@@ -268,7 +285,7 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         shutil.copyfile(file, target)
         manifest.append({"path": relative.as_posix(), "sha256": digest(target)})
     workflow = runtime / "adapters/pi/project-workflow"
-    for guard_name in ("pi-task-worker.py", "pi_native_events.py"):
+    for guard_name in ("pi-task-worker.py", "pi_native_events.py", "native_pidfd.py"):
         file = workflow / guard_name
         if file.is_file():
             shutil.copyfile(file, runtime / guard_name)
@@ -292,6 +309,8 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
     if "research" in configuration["selected_packages"]:
         from harness.research_install import REQUIREMENTS
         configuration["research_requirements"] = list(REQUIREMENTS)
+    if node_binding is not None:
+        configuration["managed_node"] = node_binding
     write_json(home / "state/bounded-compaction.json", {
         "schema": "pi-bounded-compaction/v1",
         "models": [{"provider": "local", "id": model, "base_url": base_url}],
@@ -503,11 +522,13 @@ def _install_packages(home, config, python312=None):
     version = run([python, "-c", "import sys; print('.'.join(map(str,sys.version_info[:3])))"], cwd=home).strip()
     if tuple(map(int, version.split(".")[:2])) != (3, 12):
         raise HomeError("The complete stack requires Python 3.12. Supply --python312; the core supports Python 3.9+.")
-    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
-    node = shutil.which("node")
-    if not npm or not node:
+    env = environment(home)
+    managed_node = config.get("managed_node")
+    node = managed_node["path"] if managed_node else shutil.which("node")
+    npm = None if managed_node else shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    if not node or (not managed_node and not npm):
         raise HomeError("Install Node 22.19+ and npm before the Pi profile.")
-    node_version = run([node, "--version"], cwd=home).strip().lstrip("v")
+    node_version = run([node, "--version"], cwd=home, env=env).strip().lstrip("v")
     if tuple(map(int, node_version.split("."))) < (22, 19, 0):
         raise HomeError("Pi requires Node 22.19 or newer.")
     bun_package = None
@@ -515,9 +536,8 @@ def _install_packages(home, config, python312=None):
         arch = {"x86_64": "x64", "amd64": "x64", "aarch64": "aarch64", "arm64": "aarch64"}.get(platform.machine().lower())
         if arch is None:
             raise HomeError("This Bun distribution is qualified only for Linux x64/aarch64.")
-        libc = run([node, "-p", "process.report.getReport().header.glibcVersionRuntime || 'musl'"], cwd=home).strip()
+        libc = run([node, "-p", "process.report.getReport().header.glibcVersionRuntime || 'musl'"], cwd=home, env=env).strip()
         bun_package = "@oven/bun-linux-" + arch + ("-musl" if libc == "musl" else "")
-    env = environment(home)
     env["PIP_CACHE_DIR"] = str(home / "cache/pip")
     env["npm_config_cache"] = str(home / "cache/npm")
     temporary = home / "cache/tmp"
@@ -535,8 +555,8 @@ def _install_packages(home, config, python312=None):
             prefix = home / "packages" / key
             prefix.mkdir(exist_ok=True)
             # npm.cmd is a Windows command script. Invoke npm's JS CLI directly.
-            npm_cli = Path(npm).parent / "node_modules/npm/bin/npm-cli.js"
-            command = [node, npm_cli] if npm_cli.is_file() else [npm]
+            npm_cli = Path(managed_node["npm_cli"]) if managed_node else Path(npm).parent / "node_modules/npm/bin/npm-cli.js"
+            command = [node, npm_cli] if managed_node or npm_cli.is_file() else [npm]
             npm_name = bun_package if key == "bun" else NPM_NAMES[key]
             requirement = npm_name + "@" + PINS["bun"].rsplit("@", 1)[1] if key == "bun" else PINS[key]
             output = run([*command, "install", "--prefix", prefix, "--save-exact", "--no-audit", "--no-fund", "--prefer-offline", requirement], cwd=home, env=env)
@@ -635,6 +655,11 @@ def doctor(home):
         package_plan(config)
     except HomeError as error:
         failures.append(str(error))
+    if "managed_node" in config:
+        from harness import node_runtime
+        problem = node_runtime.check(home, config["managed_node"])
+        if problem:
+            failures.append(problem)
     if config.get("lifecycle_guard_sha256"):
         for relative, field in (("home-lifecycle.py", "lifecycle_guard_sha256"),
                                 ("agent-home.py", "lifecycle_launcher_sha256")):
@@ -705,7 +730,7 @@ def _launch(home, args, project_root=None, inherited=()):
     report = doctor(home)
     if report["failures"]:
         raise HomeError("Run doctor and resolve installation failures before launch.")
-    node = shutil.which("node")
+    node = config["managed_node"]["path"] if "managed_node" in config else shutil.which("node")
     cli = home / "packages/pi/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
     if not node or not cli.is_file():
         raise HomeError("Pi is not installed in this home.")
@@ -731,9 +756,13 @@ def launch_status(home, project_root=None):
     selected = managed_launch.select_project(home, project_root)
     report = doctor(home)
     cli = home / "packages/pi/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
+    binding = config.get("managed_node")
+    node = binding.get("path") if isinstance(binding, dict) else None
+    if "managed_node" not in config:
+        node = shutil.which("node")
     return {"home": str(home), "project": str(selected) if selected else None,
             "cwd": str(selected or home), "profile": config["profile"], "model": "local/" + config["model"],
-            "node": shutil.which("node"), "pi_cli": str(cli), "pi_cli_present": cli.is_file(),
+            "node": node, "pi_cli": str(cli), "pi_cli_present": cli.is_file(),
             "agent_dir": str(home / "agent"), "session_dir": str(managed_launch.session_directory(home, selected or home)),
             "failures": report["failures"], "pending_acceptance": report["pending_acceptance"],
             "project_validation": "required at launch" if selected else "home landing; no cwd adoption",
@@ -785,12 +814,14 @@ def main(argv=None, *, bound_home=None):
                          help="Native transport profile; select only for its actual serving backend")
     install.add_argument("--name", default="Owner")
     install.add_argument("--python312")
+    install.add_argument("--managed-node", type=Path, help="Exact Node binary from this home's reviewed native bootstrap")
     install.add_argument("--context-window", type=int, default=32768, help="Actual server context limit; configured default32768 is not detected hardware/model fit")
     install.add_argument("--max-output", type=int, default=4096)
     install.add_argument("--offline", action="store_true", help="Create files only; do not install optional packages")
     commands.add_parser("doctor")
     resume = commands.add_parser("resume-install")
     resume.add_argument("--python312")
+    resume.add_argument("--managed-node", type=Path, help="Confirm the existing exact managed Node binding; never rebind it")
     start = commands.add_parser("start")
     start.add_argument("--project", type=Path)
     start.add_argument("pi_args", nargs=argparse.REMAINDER)
@@ -841,7 +872,7 @@ def main(argv=None, *, bound_home=None):
             model = args.model or input("Exact local model ID: ").strip()
             config = scaffold(home, source=args.source, profile=args.profile, base_url=url, model=model,
                               name=args.name, offline=args.offline, context_window=args.context_window,
-                              max_output=args.max_output, model_profile=args.model_profile)
+                              max_output=args.max_output, model_profile=args.model_profile, managed_node=args.managed_node)
             home = Path(config["home"])
             if not args.offline:
                 install_packages(home, config, args.python312)
@@ -855,6 +886,10 @@ def main(argv=None, *, bound_home=None):
             return 1 if result["failures"] else 0
         if args.command == "resume-install":
             home, config = load(args.home)
+            if args.managed_node is not None:
+                binding = config.get("managed_node")
+                if not isinstance(binding, dict) or str(args.managed_node.expanduser().absolute()) != binding.get("path"):
+                    raise HomeError("Resume cannot adopt or replace a managed Node runtime; preserve the existing home binding.")
             install_packages(home, config, args.python312)
             result = doctor(home)
             print(json.dumps(result, indent=2))

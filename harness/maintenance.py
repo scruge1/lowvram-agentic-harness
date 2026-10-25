@@ -208,7 +208,7 @@ def source_inventory(source):
         name = path.relative_to(source).as_posix()
         inside(source, name, exists=True)
         records[name] = digest(path)
-    for name in ("pi-task-worker.py", "pi_native_events.py"):
+    for name in ("pi-task-worker.py", "pi_native_events.py", "native_pidfd.py"):
         original = "adapters/pi/project-workflow/" + name
         require(original in records, "Missing process-owner source: " + name)
         records[name] = records[original]

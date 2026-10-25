@@ -2,3 +2,4 @@
 /tests/test_enforcement.py text eol=lf
 /examples/** text eol=lf
 /adapters/pi/project-workflow/** text eol=lf
+/install.sh text eol=lf
