@@ -20,6 +20,11 @@ import sys
 import tempfile
 from urllib.parse import urlsplit
 
+try:
+    from . import managed_launch
+except ImportError:  # Retain direct-script bootstrap as well as python -m.
+    import managed_launch
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "agent-home/v1"
@@ -70,12 +75,14 @@ def run(argv, *, cwd, env=None, input=None, timeout=900):
     """Retain complete command output privately; show bounded failure details."""
     log_root = Path(cwd) / "logs"
     log_root.mkdir(exist_ok=True)
+    child_env = dict(os.environ if env is None else env)
+    child_env.update(PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     with tempfile.NamedTemporaryFile(dir=log_root, prefix="command-", suffix=".log", delete=False) as log, \
             tempfile.NamedTemporaryFile(dir=log_root, prefix="command-", suffix=".stderr.log", delete=False) as errors:
         with tempfile.TemporaryFile() as request:
             request.write((input or "").encode("utf-8"))
             request.seek(0)
-            child = subprocess.Popen([str(arg) for arg in argv], cwd=cwd, env=env,
+            child = subprocess.Popen([str(arg) for arg in argv], cwd=cwd, env=child_env,
                                      stdin=request, stdout=log, stderr=errors,
                                      shell=False)
             try:
@@ -134,13 +141,14 @@ def source_files(source):
     return paths
 
 
-def environment(home):
+def environment(home, project_root=None):
     value = dict(os.environ)
     # Keep existing user HOME intact. Pi has a supported independent agentDir.
     value.update({
         "AGENT_HOME": str(home), "AGENT_HOME_PYTHON": sys.executable,
         "PI_PROJECT_CONTEXT_PI_PACKAGE": str(home / "packages/pi/node_modules/@earendil-works/pi-coding-agent"),
         "PI_CODING_AGENT_DIR": str(home / "agent"),
+        "PI_CODING_AGENT_SESSION_DIR": str(managed_launch.session_directory(home, project_root or home)),
         "PI_PROJECT_STATE_BASE": str(home / "state/projects"),
         "PI_PROJECT_KANBAN_PYTHON": str(executable(home / "envs/hermes")),
         "PI_PROJECT_KANBAN_ADAPTER": str(home / "runtime/adapters/pi/project-workflow/pi_kanban.py"),
@@ -335,9 +343,10 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         "root = Path(__file__).resolve().parent\n"
         "sys.path.insert(0, str(root / 'runtime'))\n"
         "from harness.home import main\n"
-        "raise SystemExit(main(['--home', str(root), *sys.argv[1:]]))\n"
+        "raise SystemExit(main(['--home', str(root), *sys.argv[1:]], bound_home=root))\n"
     )
     (home / "agent-home.py").write_text(launcher, encoding="utf-8")
+    managed_launch.register_command(home, home / "bin")
     run(["git", "init", "--quiet", str(home)], cwd=home)
     # No automatic add/commit: even personalized guidance can contain private data.
     return configuration
@@ -589,6 +598,8 @@ def doctor(home):
 
 def launch(home, args, project_root=None):
     home, config = load(home)
+    args = managed_launch.pi_arguments(args, config["model"])
+    selected = managed_launch.select_project(home, project_root)
     report = doctor(home)
     if report["failures"]:
         raise HomeError("Run doctor and resolve installation failures before launch.")
@@ -596,13 +607,29 @@ def launch(home, args, project_root=None):
     cli = home / "packages/pi/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
     if not node or not cli.is_file():
         raise HomeError("Pi is not installed in this home.")
-    cwd = home
-    if project_root is not None:
-        cwd = (home / "projects" / project_root).resolve(strict=True)
+    cwd = selected or home
+    if selected is not None:
         board(home, {"action": "project_admit", "project_root": str(cwd)})
     palace(home, "start")
+    mode = args[args.index("--mode") + 1] if "--mode" in args else "text"
+    print(json.dumps({"managed_agent": {"home": str(home), "project": str(selected) if selected else None,
+                                       "profile": config["profile"], "model": "local/" + config["model"], "mode": mode}}), file=sys.stderr)
     # Explicit provider/model and fresh isolated profile prevent ambient defaults.
-    return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *args], cwd=cwd, env=environment(home))
+    return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *args], cwd=cwd, env=environment(home, cwd))
+
+
+def launch_status(home, project_root=None):
+    home, config = load(home)
+    selected = managed_launch.select_project(home, project_root)
+    report = doctor(home)
+    cli = home / "packages/pi/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
+    return {"home": str(home), "project": str(selected) if selected else None,
+            "cwd": str(selected or home), "profile": config["profile"], "model": "local/" + config["model"],
+            "node": shutil.which("node"), "pi_cli": str(cli), "pi_cli_present": cli.is_file(),
+            "agent_dir": str(home / "agent"), "session_dir": str(managed_launch.session_directory(home, selected or home)),
+            "failures": report["failures"], "pending_acceptance": report["pending_acceptance"],
+            "project_validation": "required at launch" if selected else "home landing; no cwd adoption",
+            "resume": "unsupported until selected-project session ownership is qualified"}
 
 
 def palace(home, operation):
@@ -633,8 +660,8 @@ def project(home, name):
                         "target": name, "why": "Keep project source, instructions, board and verified work together"})
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(argv=None, *, bound_home=None):
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
     install = commands.add_parser("install")
@@ -653,6 +680,13 @@ def main(argv=None):
     start = commands.add_parser("start")
     start.add_argument("--project", type=Path)
     start.add_argument("pi_args", nargs=argparse.REMAINDER)
+    managed = commands.add_parser("managed", help="Home-bound command entry; selectors precede Pi arguments")
+    managed.add_argument("arguments", nargs=argparse.REMAINDER)
+    command = commands.add_parser("command", help="Install, inspect or reverse commands in an explicit bin directory")
+    command.add_argument("operation", choices=("install", "status", "remove"))
+    command.add_argument("--bin-dir", required=True, type=Path)
+    command.add_argument("--name", default="harness-agent")
+    command.add_argument("--default-pi", action="store_true", help="Also register pi if the selected directory has no collision")
     new = commands.add_parser("project")
     new.add_argument("name")
     memory = commands.add_parser("memory")
@@ -662,6 +696,8 @@ def main(argv=None):
     palace_command.add_argument("operation", choices=("start", "stop", "status"))
     args = parser.parse_args(argv)
     try:
+        if bound_home is not None and (args.home is None or args.home.expanduser().resolve() != Path(bound_home).resolve()):
+            raise HomeError("This installed launcher is bound to a different agent home")
         if args.command == "install":
             home = args.home or Path(input("New agent-home directory: ").strip())
             url = args.base_url or input("Local OpenAI-compatible endpoint [http://127.0.0.1:8080/v1]: ").strip() or "http://127.0.0.1:8080/v1"
@@ -686,7 +722,28 @@ def main(argv=None):
             print(json.dumps(result, indent=2))
             return 1 if result["failures"] else 0
         if args.command == "start":
-            return launch(args.home, args.pi_args, args.project)
+            pi_args = args.pi_args[1:] if args.pi_args[:1] == ["--"] else args.pi_args
+            return launch(args.home, pi_args, args.project)
+        if args.command == "managed":
+            arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
+            project_root, inspect, pi_args = managed_launch.managed_arguments(args.home, arguments)
+            if inspect:
+                print(json.dumps(launch_status(args.home, project_root), indent=2))
+                return 0
+            return launch(args.home, pi_args, project_root)
+        if args.command == "command":
+            home, _config = load(args.home)
+            if args.operation != "install" and args.default_pi:
+                raise HomeError("--default-pi is an explicit installation option")
+            if args.operation == "install":
+                result = managed_launch.register_command(home, args.bin_dir, args.name, args.default_pi)
+            elif args.operation == "remove":
+                result = managed_launch.remove_command(home, args.bin_dir, args.name)
+            else:
+                result = managed_launch.inspect_command(home, args.bin_dir, args.name)
+                result["configuration"] = launch_status(home)
+            print(json.dumps(result, indent=2))
+            return 1 if result.get("status") == "collision" else 0
         if args.command == "project":
             print(json.dumps(project(args.home, args.name), indent=2))
             return 0

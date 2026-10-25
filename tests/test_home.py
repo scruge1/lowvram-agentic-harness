@@ -38,6 +38,8 @@ class AgentHomeTests(unittest.TestCase):
         self.assertIn(self.root.as_posix(), skill)
         self.assertNotIn("{{HOME}}", skill)
         self.assertTrue((self.root / "runtime/harness/source_checkpoint.py").is_file())
+        self.assertTrue((self.root / "runtime/harness/managed_launch.py").is_file())
+        self.assertTrue(home.managed_launch.command_file(self.root / "bin", "harness-agent").is_file())
         projector = self.root / "runtime/adapters/pi/project-workflow/kanban-reply-projector.mjs"
         self.assertEqual(projector.read_bytes(), (home.ROOT / "adapters/pi/project-workflow/kanban-reply-projector.mjs").read_bytes())
         manifest = json.loads((self.root / "runtime/runtime-manifest.json").read_text())
