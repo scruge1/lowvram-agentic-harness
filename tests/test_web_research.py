@@ -116,6 +116,37 @@ class PublicResearchTests(unittest.TestCase):
             with mock.patch.object(web.subprocess, 'run', return_value=completed):
                 self.assertFalse(web.search('fixture')['ok'])
 
+    def test_configured_provider_credentials_use_only_private_worker_stdin(self):
+        from harness import research_search
+        providers = [{'provider': 'exa', 'state': 'ready', 'credential': 'synthetic-secret', 'endpoint': None}]
+        response = {'schema': 'web-search/v1', 'ok': False, 'status': 'empty'}
+        completed = subprocess.CompletedProcess([], 0, json.dumps(response), '')
+        with mock.patch.object(research_search, 'bindings', return_value=('/owned/home', providers)), \
+             mock.patch.object(web.subprocess, 'run', return_value=completed) as run:
+            result = web.search('fixture', home='/owned/home')
+        self.assertEqual(result, response)
+        argv, options = run.call_args
+        self.assertNotIn('synthetic-secret', str(argv))
+        self.assertNotIn('synthetic-secret', str(options['env']))
+        self.assertEqual(json.loads(options['input'])['providers'][0]['credential'], 'synthetic-secret')
+        self.assertNotIn('synthetic-secret', json.dumps(result))
+
+    def test_configured_secret_query_and_echoed_native_output_abstain(self):
+        from harness import research_search
+        providers = [{'provider': 'exa', 'state': 'ready', 'credential': 'synthetic-secret', 'endpoint': None}]
+        with mock.patch.object(research_search, 'bindings', return_value=('/owned/home', providers)), \
+             mock.patch.object(web, '_run') as run:
+            result = web.search('synthetic-secret', home='/owned/home')
+            run.assert_not_called()
+            self.assertEqual(result['status'], 'sensitive_query')
+            self.assertEqual(result['query'], '[redacted]')
+            run.return_value = {'schema': 'web-search/v1', 'ok': True, 'hits': [{'title': 'synthetic-secret'}]}
+            result = web.search('fixture', home='/owned/home')
+        self.assertEqual(result['status'], 'invalid_response')
+        self.assertNotIn('synthetic-secret', json.dumps(result))
+        with self.assertRaises(ValueError):
+            web.search('fixture', policy={})
+
     def test_owned_cache_and_temporary_paths_survive_without_shared_home_fallback(self):
         completed = subprocess.CompletedProcess([], 0, '{"schema":"web-search/v1","ok":false,"status":"empty"}', '')
         with tempfile.TemporaryDirectory() as directory:

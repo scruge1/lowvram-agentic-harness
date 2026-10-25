@@ -323,9 +323,42 @@ the existing supervised workflow. It does not attribute arbitrary shell edits.
 
 The `agent` and `full` profiles install the single native `web_research` tool.
 Admit/select the project through the existing coordinator first. Use `search`
-for explicit DuckDuckGo discovery, `fetch` for public HTTP extraction, `render`
+for the home-configured provider cascade, `fetch` for public HTTP extraction, `render`
 for a clean read-only Chromium context and `read` for saved evidence windows.
-No provider keys, personal browser profile, cookies or stealth service are used.
+DuckDuckGo works without a key. [Optional provider setup](RESEARCH-SETUP.md)
+provides official signup links and hidden terminal entry:
+
+```text
+python /chosen/agent-home/agent-home.py research setup
+python /chosen/agent-home/agent-home.py research status
+```
+
+Only explicitly enabled providers are considered. Skip overrides an environment
+key, and Brave stays held until storage rights cover artifacts and session
+history. The model tool cannot accept keys, change provider settings or approve
+rights. No personal browser profile, cookies or stealth service are used.
+
+The source port is deliberately identified by what it contains:
+
+| Existing script | Public adaptation | Remaining scope |
+|---|---|---|
+| `scripts/rig/search_core.py` | URL identity/domain grouping and configured provider request, cooldown, relevance and coverage policy | Search coverage does not establish factual corroboration |
+| `scripts/rig/godmode_miner.py` | HTML extraction and response/redirect provenance | Complete mining and consensus orchestration remain separate |
+| Existing browser workflow | New guarded Playwright adapter and project evidence cache/pager | The complete private browser service is not bundled |
+
+Raw session calls and failures are reviewed privately. Public regressions use
+synthetic queries and credentials; no private transcript, profile or corpus is
+part of the installation.
+
+Fetch retries eligible transient failures within one total budget. Published
+arXiv HTML/abstract representations are labelled separately. Thin, successful,
+unchallenged HTML can use the clean browser automatically. `allow_archive=true`
+permits an eligible public archive fallback; it defaults to false. Authentication,
+challenge and policy denials are retained. These fallbacks do not bypass them.
+Search defaults to30 seconds, fetch to60 and direct render to40. The fetch budget
+reserves native browser settlement time. These are individual network-operation
+budgets, not an agent-session deadline. Partial source scope and actual selected
+URL remain visible in initial and cached results.
 
 ```json
 {"action":"search","query":"Python unittest documentation","max_results":3}

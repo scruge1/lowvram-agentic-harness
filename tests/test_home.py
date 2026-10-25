@@ -1,5 +1,6 @@
 """Exercise the actual fresh-home CLI and its overwrite/privacy boundaries."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -19,6 +20,31 @@ class AgentHomeTests(unittest.TestCase):
 
     def create(self):
         return home.scaffold(self.root, profile="core", base_url="http://127.0.0.1:8080/v1", model="local-test", name="Test Owner", offline=True)
+
+    def test_installed_research_status_is_keyless_and_piped_setup_refuses_secrets(self):
+        self.create()
+        environment = dict(os.environ, EXA_API_KEY="synthetic-not-for-model-context")
+        command = [sys.executable, str(self.root / "agent-home.py"), "research"]
+        report = subprocess.run([*command, "status"], cwd=self.temporary.name,
+                                env=environment, capture_output=True, text=True)
+        self.assertEqual(report.returncode, 0, report.stderr)
+        status = json.loads(report.stdout)
+        self.assertEqual(status["providers"]["exa"]["state"], "unconfigured")
+        self.assertFalse(status["providers"]["exa"]["credential_present"])
+        self.assertNotIn(environment["EXA_API_KEY"], report.stdout + report.stderr)
+        self.assertFalse((self.root / "state/research").exists())
+        refused = subprocess.run([*command, "setup", "--provider", "exa"],
+                                 input="synthetic-not-for-model-context\n", cwd=self.temporary.name,
+                                 env=environment, capture_output=True, text=True)
+        self.assertEqual(refused.returncode, 2, refused.stderr)
+        self.assertNotIn(environment["EXA_API_KEY"], refused.stdout + refused.stderr)
+        self.assertFalse((self.root / "state/research").exists())
+        mistaken = subprocess.run([*command, "setup", "--provider", "exa", "--api-key",
+                                   environment["EXA_API_KEY"]], cwd=self.temporary.name,
+                                  capture_output=True, text=True)
+        self.assertEqual(mistaken.returncode, 2)
+        self.assertNotIn(environment["EXA_API_KEY"], mistaken.stdout + mistaken.stderr)
+        self.assertFalse((self.root / "state/research").exists())
 
     def test_cli_home_and_launcher_preserve_paths_and_private_files(self):
         result = subprocess.run([sys.executable, "-m", "harness.home", "--home", str(self.root), "install", "--profile", "core", "--offline", "--base-url", "http://127.0.0.1:8080/v1", "--model", "local-test"], cwd=home.ROOT, capture_output=True, text=True)
