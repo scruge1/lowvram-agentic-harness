@@ -5,6 +5,39 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Owned native inference provisioning and lifecycle candidate — 2026-10-25
+
+Parent commit: `538a019472510272d869c83f3b351dee8a174b7d`.
+
+Reuse stock llama-server, the repository's serving flags and the existing exact
+download transaction. Plan explicit artifact/resource selections; provision
+hash-pinned native archives, public GGUF and licences in the selected storage.
+Retain bootstrap-owned state before the agent home exists. Exact static model
+data is copied with its module; missing or redirected data refuses scaffolding.
+No new inference engine, global model registry or scheduler is introduced.
+
+Nineteen Linux controls passed under managed Python3.12.13 using the actual libc
+pidfd facade, synthetic protocol processes and real kernel ownership/leases.
+The exact upstream CPU archive and an independent copy of public weights were
+then verified. One actual native CPU start took9.740 seconds. One32-token-capped
+request took2.769 seconds and returned CPU_LOCAL_OK with19 input/four output
+tokens. Peak sampled RSS/HWM was9,040,150,528 bytes. The actual loopback socket,
+nonce-bearing argv, PID identity and inherited exclusive lease were observed.
+Exact stop released PID/socket/lease and preserved the original model's hash,
+mtime and inode. No GPU action or model download occurred in this qualification.
+
+A measured initial exec transition briefly exposed an empty argv while UID,
+cwd, executable and boot identity matched. Only that initial empty-argv case
+gets a bounded one-second readiness wait inside the startup deadline; steady
+ownership and stop checks stay strict. Earlier failing evidence is retained.
+An installed-runtime metadata test also checks the source-bound JSON and actual
+module import outside the checkout; missing/redirected data controls remain
+separate. CPU protocol/lifecycle is qualified for this fixture. Agent task
+quality, model recommendation, vision and GPU fit remain open. CUDA start is
+held pending qualified atomic resource-owner admission; UUID/idle metadata does
+not grant that ownership. Native start requires the complete source checkout or
+generated agent runtime, including its bound process helper.
+
 ## Owned Python/Node bootstrap and portable pidfd wrappers — 2026-10-25
 
 Parent commit: `004b0a70b221adcccd16155d68cecef643715d70`.

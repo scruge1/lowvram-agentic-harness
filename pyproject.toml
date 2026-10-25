@@ -26,7 +26,7 @@ source-checkpoint = "harness.source_checkpoint:main"
 include = ["harness*", "ssot*"]
 
 [tool.setuptools.package-data]
-harness = ["templates/*.md", "templates/agent-home/**/*", "templates/agent-home/*"]
+harness = ["templates/*.md", "templates/agent-home/**/*", "templates/agent-home/*", "model-service-pins.json"]
 
 [tool.ruff]
 target-version = "py39"

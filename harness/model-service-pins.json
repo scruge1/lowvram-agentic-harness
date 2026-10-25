@@ -1,0 +1,55 @@
+{
+  "schema": "local-model-service-pins/v1",
+  "acceptance": "Exact public artifact identities only. No model recommendation, hardware-fit or task-capability acceptance is implied.",
+  "model": {
+    "id": "qwen3vl-8b-instruct-q4-k-m",
+    "repository": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
+    "revision": "f982a07559d4a2f6c8744d840bf6fccab30eea96",
+    "name": "Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+    "url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/f982a07559d4a2f6c8744d840bf6fccab30eea96/Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+    "sha256": "67d1659bfe71b89d50b45a4ad1a9e5b997e5bb16ce5da66a6a6167abd569e9e2",
+    "bytes": 5027784800,
+    "license": "Apache-2.0",
+    "license_source": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/raw/f982a07559d4a2f6c8744d840bf6fccab30eea96/README.md",
+    "license_source_sha256": "6017026aa3f34f73ecff79aba398fd2c797baa99804e2e16f8b2ee2818a84078",
+    "scope": "Text-only native serving qualification candidate; no vision projector or main-agent quality claim."
+  },
+  "runtime": {
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "release": "b11869",
+    "revision": "d327bf1f0780f87b8c01b367b61853b0c291d7c4",
+    "platform": "linux-x86_64",
+    "license": "MIT",
+    "license_source": "https://raw.githubusercontent.com/ggml-org/llama.cpp/d327bf1f0780f87b8c01b367b61853b0c291d7c4/LICENSE",
+    "license_source_sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+    "cpu": [
+      {
+        "name": "llama-b11869-bin-ubuntu-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11869/llama-b11869-bin-ubuntu-x64.tar.gz",
+        "sha256": "529ebb30c8aafcfd7d2ae0606aef346a3f3209d0a49addf382070c0c78fa2a6e",
+        "bytes": 22438155,
+        "unpacked_max_bytes": 536870912,
+        "license": "MIT"
+      }
+    ],
+    "cuda": [
+      {
+        "name": "llama-b11869-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11869/llama-b11869-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        "sha256": "260500a8e02598978b9a625386c4c9f5a2e9f4a142d2c4bee60b2e9a6f979821",
+        "bytes": 178017445,
+        "unpacked_max_bytes": 1073741824,
+        "license": "MIT"
+      },
+      {
+        "name": "cudart-llama-b11869-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11869/cudart-llama-b11869-bin-ubuntu-cuda-12.8-x64.tar.gz",
+        "sha256": "de0121a472ac03f47ff4e8cb7c05ececd71d2bfd5cdf8173228c8c058323564f",
+        "bytes": 594377836,
+        "unpacked_max_bytes": 2147483648,
+        "license": "NVIDIA CUDA EULA; preserve notices in the unmodified upstream archive",
+        "license_source": "https://docs.nvidia.com/cuda/eula/index.html"
+      }
+    ]
+  }
+}
