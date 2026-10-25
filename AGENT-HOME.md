@@ -377,6 +377,14 @@ and let their exact results reach the next model-input context. A successful
 context tool call alone does not open the gate for a sibling action in the same
 tool-call batch. The existing task, pause, skill and effect checks still apply.
 
+For an already admitted project, `project_prepare({query: "relevant task terms"})`
+delivers callable capabilities, relevant system tools, validated memory, project
+knowledge and missing instructions through their existing native readers. An
+optional `path` selects the relevant directory. Read omitted or unavailable
+sections with the existing tools, and follow context `remaining_reads`. The
+bounded packet must reach later model context unchanged before its observations
+count. It does not admit a project, select a task or grant permission.
+
 ## Launch from any directory
 
 A fresh home includes a command bound to its absolute launcher:

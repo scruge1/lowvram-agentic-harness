@@ -179,6 +179,22 @@ export default function (pi: ExtensionAPI) {
   let systemToolsQueried = false;
   let memoryQueried = false;
   let knowledgeQueried = false;
+  const preparing = new Set<string>();
+  const prepared = new Map<string, {
+    project: NonNullable<typeof activeProject>; session: string; text: string;
+    stamp: string; sources: [string, string][]; observations: string[]; signal?: AbortSignal;
+  }>();
+  const sourceDigest = (file: string | URL) => createHash('sha256').update(readFileSync(file)).digest('hex');
+  const preparationStamp = () => JSON.stringify([
+    ...['PI_PROJECT_KANBAN_ADAPTER', 'PI_SYSTEM_TOOL_HELPER', 'PI_SYSTEM_TOOL_DATABASE',
+      'PI_VALIDATED_MEMORY_HELPER', 'PI_VALIDATED_MEMORY_POLICY', 'PI_VALIDATED_MEMORY_REGISTRY',
+      'PI_MEMORY_RUNTIME_WRAPPER'].map(key => {
+      const file = process.env[key]; return [key, file ?? null, file ? sourceDigest(file) : null];
+    }),
+    ...['./pi-kanban.ts', './agent-capabilities.ts', './system-tool-knowledge.ts',
+      '../memory/validated-memory-query.ts', '../context/project-context.ts'].map(file =>
+      [file, sourceDigest(new URL(file, import.meta.url))]),
+  ]);
 
   // Navigation is persisted in the native branch. It is never execution permission.
   const saveSelection = () => pi.appendEntry('pi-kanban-selection/v1', {
@@ -190,6 +206,7 @@ export default function (pi: ExtensionAPI) {
     memoryQueried = false;
     knowledgeQueried = false;
     pendingConsultations.clear();
+    prepared.clear();
   };
   const restoreSelection = async (_event: any, ctx: any) => {
     // Adding discovery never removes a tool explicitly active on a resumed branch.
@@ -225,7 +242,7 @@ export default function (pi: ExtensionAPI) {
   pi.on('session_start', restoreSelection);
   pi.on('session_tree', restoreSelection);
 
-  registerProjectContext(pi, { project: () => activeProject });
+  const contextDelivery = registerProjectContext(pi, { project: () => activeProject });
   registerRequestIntake(pi, {
     project: () => activeProject,
     task: () => activeTask?.cardId ?? null,
@@ -265,6 +282,117 @@ export default function (pi: ExtensionAPI) {
     saveSelection();
   };
   const failedAdmission = (error: unknown) => { clearAdmission(); return failure(error); };
+
+  pi.registerTool({
+    name: 'project_prepare', label: 'Read project preparation context',
+    description: 'For an already admitted project, deliver actual callable capabilities, relevant system tools, validated memory, project knowledge and missing instructions in one bounded packet. Supply explicit relevance query. No admission, task selection, permission, skill or execution authority. Follow incomplete sections and remaining_reads; readiness counts only after unchanged result delivery to model context.',
+    parameters: Type.Object({ query: Type.String({ minLength: 1, maxLength: 1000 }),
+      path: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })) }, { additionalProperties: false }),
+    async execute(id, params, signal, _update, ctx) {
+      const project = activeProject;
+      if (!project || !params.query.trim()) return failure(new Error('Select an existing project and supply a relevant query first'));
+      if (typeof ctx.executeTool !== 'function') return failure(new Error('Native nested tool calls are unavailable'));
+      preparing.add(id);
+      try {
+        const stamp = preparationStamp(), session = ctx.sessionManager.getSessionId();
+        const sections: any[] = [], observations: string[] = [], sources: [string, string][] = [];
+        let contextChild: { id: string; text: string } | undefined;
+        const children = [
+          ['project_context', params.path ? { path: params.path } : {}],
+          ['agent_capabilities', {}], ['system_tool_query', { terms: params.query, limit: 5 }],
+          ['validated_memory_query', { query: params.query, limit: 5 }],
+          ['project_knowledge_query', { terms: params.query, limit: 5 }],
+        ] as const;
+        let used = 4096;
+        for (const [name, args] of children) {
+          if (signal?.aborted) throw new Error('Preparation cancelled');
+          if (!ctx.tools.some(tool => tool.name === name)) {
+            // The public search tool may expose a fixed deferred read tool. It does not
+            // count as executing that read tool, and cannot widen this fixed child set.
+            await ctx.executeTool('tool_search', { query: name, limit: 1 }, { signal });
+          }
+          const outcome = await ctx.executeTool(name, args, { signal });
+          if (signal?.aborted || activeProject !== project || ctx.sessionManager.getSessionId() !== session)
+            throw new Error('Preparation identity changed or was cancelled');
+          const raw = outcome.result;
+          const text = raw?.content?.length === 1 && raw.content[0].type === 'text' ? raw.content[0].text : undefined;
+          const size = typeof text === 'string' ? Buffer.byteLength(JSON.stringify(text)) : Infinity;
+          if (size > 32768 || used + size > 61440) {
+            sections.push({ tool: name, call_id: outcome.toolCall.id, status: 'omitted', reason: 'result_exceeds_packet_bound' });
+            continue;
+          }
+          used += size;
+          let value: any;
+          try { value = JSON.parse(text); } catch { /* Preserve error text, without success evidence. */ }
+          let ok = !outcome.isError && raw?.details?.ok !== false;
+          if (name === 'agent_capabilities') ok &&= raw?.details?.ok === true
+            && value?.schema === 'pi-native-capabilities/v1' && value.session_id === session;
+          else if (name === 'validated_memory_query') ok &&= value?.schema === 'validated-memory-query/v1'
+            && Array.isArray(value.results) && value.reason !== 'sensitive_query';
+          else if (name === 'project_context') ok &&= value?.ok === true && value.root === project.root;
+          else ok &&= value?.ok === true && (name !== 'system_tool_query' || Array.isArray(value.results));
+          sections.push({ tool: name, call_id: outcome.toolCall.id,
+            status: !ok ? 'unavailable' : name === 'project_context' && value.remaining_reads?.length ? 'partial' : 'returned',
+            content: text, content_sha256: createHash('sha256').update(text).digest('hex') });
+          if (!ok) continue;
+          if (name === 'project_context') contextChild = { id: outcome.toolCall.id, text };
+          else observations.push(name);
+          const records = name === 'project_knowledge_query' ? value.result?.results : value.results;
+          for (const record of records ?? []) {
+            const file = name === 'project_knowledge_query' ? join(project.root, record.path ?? '')
+              : record.source_path ?? record.source_file;
+            const hash = name === 'project_knowledge_query' ? record.sha256 : record.source_sha256;
+            // Palace URIs are verified by the existing validated query, not host file paths.
+            if (typeof file === 'string' && (file.startsWith('/') || /^[A-Za-z]:[\\/]/.test(file))
+                && /^[a-f0-9]{64}$/.test(hash)) sources.push([file, hash]);
+          }
+        }
+        if (signal?.aborted || activeProject !== project || preparationStamp() !== stamp)
+          throw new Error('Preparation source or identity changed');
+        const packet = { schema: 'pi-project-preparation/v1', ok: true, project_root: project.root,
+          project_id: project.projectId, session_id: session, query: params.query, sections,
+          complete: sections.every(section => section.status === 'returned'),
+          limits: 'Read-only context delivery, not permission or completion. Omitted/unavailable sections do not count. Memory source freshness is checked by the validated query; helper/registry bindings are rechecked at delivery. Follow project_context remaining_reads and existing skill/intake/board/effect gates.' };
+        const text = JSON.stringify(packet);
+        if (Buffer.byteLength(text) > 65536) throw new Error('Preparation packet exceeds64KiB');
+        if (contextChild) contextDelivery.enclose(contextChild.id, id, contextChild.text, text, () =>
+          !signal?.aborted && activeProject === project && ctx.sessionManager.getSessionId() === session
+          && preparationStamp() === stamp && sources.every(([file, hash]) => sourceDigest(file) === hash));
+        prepared.set(id, { project, session, stamp, sources, observations, text, signal });
+        while (prepared.size > 16) prepared.delete(prepared.keys().next().value!);
+        return { content: [{ type: 'text' as const, text }], details: { ok: true, schema: packet.schema, complete: packet.complete } };
+      } catch {
+        prepared.delete(id);
+        return failure(new Error('Project preparation unavailable, cancelled or changed. Inspect incomplete sections with the existing read tools.'));
+      } finally { preparing.delete(id); }
+    },
+  });
+
+  pi.on('context', async (event: any, ctx: any) => {
+    for (const message of event.messages) {
+      const proof = prepared.get(message.toolCallId);
+      if (message.role !== 'toolResult' || !proof) continue;
+      prepared.delete(message.toolCallId);
+      const text = message.content?.length === 1 && message.content[0].type === 'text' ? message.content[0].text : undefined;
+      if (message.isError || proof.signal?.aborted || text !== proof.text || activeProject !== proof.project
+          || ctx.sessionManager.getSessionId() !== proof.session) continue;
+      try {
+        if (preparationStamp() !== proof.stamp || proof.sources.some(([file, hash]) => sourceDigest(file) !== hash)) continue;
+        // Keep the existing project-bound snapshot operation. Only delivered capability
+        // bytes can reach it; failure does not unlock planning or execution.
+        const packet = JSON.parse(text);
+        if (proof.observations.includes('agent_capabilities')) {
+          const section = packet.sections.find((value: any) => value.tool === 'agent_capabilities');
+          await callAdapter(projectRequest({ action: 'capability_snapshot', snapshot: JSON.parse(section.content), session_id: proof.session }));
+          if (activeProject !== proof.project) continue;
+          capabilitiesObserved = true;
+        }
+        if (proof.observations.includes('system_tool_query')) systemToolsQueried = true;
+        if (proof.observations.includes('validated_memory_query')) memoryQueried = true;
+        if (proof.observations.includes('project_knowledge_query')) knowledgeQueried = true;
+      } catch { /* Drift or unavailable snapshot storage cannot establish readiness. */ }
+    }
+  });
 
   pi.registerTool({
     name: 'project_create', label: 'Create managed project',
@@ -527,6 +655,7 @@ export default function (pi: ExtensionAPI) {
       if (!memoryQueried) missing.push('mcp__mempalace__mempalace_search or validated_memory_query with a relevant query');
       if (!knowledgeQueried) missing.push('project_knowledge_query with relevant terms');
       return { block: true, reason: 'Discovery is incomplete. Missing successful calls: ' + missing.join('; ')
+        + '. project_prepare with an explicit relevant query can deliver the fixed read-only discovery set together; incomplete sections remain held'
         + '. Use tool_search to discover a missing tool and its actual argument schema, then call it. '
         + 'A search for a tool does not execute that tool. Completed observations remain recorded until project selection or session reload resets them.' };
     }
@@ -548,6 +677,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on('tool_result', async (event: any, ctx: any) => {
+    if (preparing.has(event.parentToolCallId)) return;
     if (event.toolName === 'project_create' && event.isError) { clearAdmission(); return; }
     if (event.toolName === 'agent_capabilities' && !event.isError && event.details?.ok === true) {
       if (!activeProject) return;
