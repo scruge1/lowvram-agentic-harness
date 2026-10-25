@@ -279,8 +279,13 @@ hash. Do not replay apply or edit the sentinel. Rollback preserves personalized
 files, sessions and new user data and restores the exact predecessor source and
 bindings.
 
-This route has isolated source/transaction tests. Actual installed controller
-migration and rollback need their own native qualification before adoption.
+The reviewed controller source at `d00415fe4974bdf4d6480dc10cfbea161f6343aa`
+passed an isolated installed-home migration, stable doctor, redacted research
+status, normal managed Pi health and rollback check without model generation.
+Rollback restored the exact predecessor and preserved personalized bytes plus
+a file created after activation. The owned model service and memory hub stopped,
+and exclusive home leases passed. This qualifies that controller source; the
+later research-budget changes and new hosts require separate native evidence.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
