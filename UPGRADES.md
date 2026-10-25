@@ -5,6 +5,51 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Add a reviewed agent core-source migration - 2026-10-25
+
+Parent commit: `f4b8d6b0e5e8944c064ff9152b98764b4d24340f`.
+
+The existing compatible and controller-CLI scopes correctly refuse the newer
+observer-install changes to the home controller. Add the separate
+`agent-core-source-v1` scope to the same staged updater. Bind the reviewed six
+prior/new function AST pairs and one added helper, unchanged remaining home
+nodes, actual payload hashes, executing recovery closure and interpreter.
+Keep the integrated Linux `agent` profile and its exact five selected/installed
+packages unchanged. Bun, Claude-mem and partial observer package artifacts
+refuse this route; normal scaffold settings do not count as installed packages.
+
+Reuse the existing exclusive exchange, journal, pending sentinel, recovery and
+rollback. Core pending/failure states require the explicit new verifier; the
+retained actual prior verifier body refuses both. Acceptance still requires the
+stable doctor, redacted research status and normal managed Pi health without
+inference. Recheck package bindings before acceptance. Preserve personal files,
+package records/artifacts, stable entry/lifecycle, templates, trust and model
+configuration. The known gitignore source-data packaging exception stays
+separate from the home's personalized `.gitignore`.
+
+Source tests use synthetic packages and consumer replies. They cover the
+function boundary, unrelated definitions/imports/CLI, template/control changes,
+extra packages/profile, settings-only versus partial installation, qualification
+and artifact drift, distinct verification failure, real source exchange,
+interrupted recovery and rollback with later personal data preserved. These
+checks do not qualify native target adoption or observer installation.
+
+The first complete source gate exhausted its existing 300-second unit budget
+without an assertion failure in its retained tail. Preserve that failed run.
+Consolidate nine fixtures into four while retaining the counterexamples and two
+Linux transaction cases; restore each mutated input in `finally`. Keep product
+guards, suite limits and child settlement unchanged. The same 39 assertion calls
+remain. Four Linux cases passed in 27.237 seconds versus 31.989 seconds before;
+Windows ran two metadata cases plus two Linux-only skips in 143.017 seconds
+versus 254.696 seconds before. Instrumented clone/scaffold counts were four
+on Linux and two on Windows, versus the original nine/seven fixture calls.
+Ruff 0.16.10 passed. The consolidated full gate also exhausted the unchanged
+300-second unit limit. Its retained tail showed no assertion failure; the other
+20 release checks and all seven offline self-tests passed. The existing
+controller/runtime/maintenance subset passed 49 cases in 258.457 seconds, with
+two declared skips. Complete release-gate acceptance and separate native
+adoption remain open.
+
 ## Create managed projects through the existing home factory - 2026-10-25
 
 Parent commit: `f4b8d6b0e5e8944c064ff9152b98764b4d24340f`.

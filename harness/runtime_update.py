@@ -32,6 +32,31 @@ except ImportError:
 SCHEMA = "agent-home-runtime-update/v1"
 QUALIFICATION = "agent-home-runtime-qualification/v1"
 CONTROLLER_SCOPE = "controller-cli-v1"
+CORE_SOURCE_SCOPE = "agent-core-source-v1"
+CORE_PACKAGES = ("pi", "hermes", "mempalace", "framework", "research")
+CORE_GITIGNORE_DATA = {
+    "367766716a99ff32e361c36df5742dcc69552b7f99e66379c7d162c34098aaf6",  # Git LF
+    "a74cdce0a126f37225e79df7f0ace93dbec6bff263901b2f4a5d61991328e3ec",  # Windows payload
+}
+# Reviewed source40 -> observer source41 home definitions. No other AST node
+# may change; a later core frontier needs its own reviewed hash pairs.
+CORE_OLD_NODES = {
+    "run": "20a521018a1aa2eb9e12542ecd6f0f5f16a18bbfb6d549f6b4a844d38f0a4fb6",
+    "source_files": "6f705a1251762e966d63c0e52eed7b6a588cb6c170021833ad74eeb3779a2bbd",
+    "package_artifacts": "99f34f6d4c44e8221e645e2c019d932d4d01c09efcedecfb05ae19a32437bc67",
+    "check_package": "7d652926d4b0afce317a7507a66a90ab259559634ec23777d9b8bd8830bc1109",
+    "install_packages": "40caacd3c6437aa0ce08389bf23c2ea8383ef2eb03c3a2248f38be14936f40c5",
+    "_install_packages": "b27ccaad7444eaff543b3d65cf2b4367bb9d1731708736c3c16641fdd12750af",
+}
+CORE_NEW_NODES = {
+    "run": "8ecc5da5fb654bee491e4d65e5060b4a8d4649b0213117ae90b3cc0637c5ab30",
+    "source_files": "9e1e0a9f41ec14cdd56cf760b2089ef6a8aa8ef692d1784c2f27e18be0fdc5a0",
+    "package_artifacts": "4d6760369c18ad9d7ff1028650dd8e810105089bc30115092910c8751ee59462",
+    "check_package": "1e0c615933b3fc7bbccf7df723d5888493fcf8018e35de1232510e2ab4cec4c3",
+    "install_packages": "449222c62526725a5f4213a5a9384ad5bebdbdefde5f23f8952144138b353476",
+    "_install_packages": "360c362b8d50fb5886991059f2e5abaf05f189f0ceb88b89cc99af061e5c4b44",
+    "_observer_install_exclusive": "70633f2094a023b5a6b64dc51482a811202685df07a534d0c57fb6abca4aa528",
+}
 # Reviewed research CLI definitions, from source commit 98076e3. Other AST
 # nodes must match the installed controller, including imports and constants.
 CONTROLLER_MAIN = "5e33d2aa155aa9e5a5a0a763429e0da1958d2c3dee2dffc39af108ca77001c90"
@@ -172,28 +197,30 @@ def executing_controller(candidate):
     return {name: state.digest(path) for name, path in closure.items()}
 
 
+def home_nodes(path):
+    """Reuse the source-qualified C7 AST encoding across supported Python versions."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if hasattr(node, "type_params"):
+            require(not node.type_params, "Generic controller definitions are outside reviewed source scopes")
+            del node.type_params
+    return tree.body
+
+
+def node_dump(node):
+    options = {"show_empty": True} if sys.version_info >= (3, 13) else {}
+    return ast.dump(node, include_attributes=False, **options)
+
+
+def node_hash(node):
+    return hashlib.sha256(node_dump(node).encode()).hexdigest()
+
+
 def controller_bindings(home, candidate):
     """Narrow reviewed CLI migration, with exact executing recovery closure."""
-    def nodes(path):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        # Python 3.12 adds empty type_params to function/class AST nodes.
-        # Remove only that empty field to retain the reviewed 3.9+ encoding.
-        for node in ast.walk(tree):
-            if hasattr(node, "type_params"):
-                require(not node.type_params, "Generic controller definitions are outside controller-cli-v1")
-                del node.type_params
-        return tree.body
 
-    def node_dump(node):
-        # Python 3.13 otherwise omits empty fields that older dumps include.
-        options = {"show_empty": True} if sys.version_info >= (3, 13) else {}
-        return ast.dump(node, include_attributes=False, **options)
-
-    def node_hash(node):
-        return hashlib.sha256(node_dump(node).encode()).hexdigest()
-
-    before = nodes(home / "runtime/harness/home.py")
-    after = nodes(candidate / "harness/home.py")
+    before = home_nodes(home / "runtime/harness/home.py")
+    after = home_nodes(candidate / "harness/home.py")
     old_main = [n for n in before if isinstance(n, ast.FunctionDef) and n.name == "main"]
     new_main = [n for n in after if isinstance(n, ast.FunctionDef) and n.name == "main"]
     parser = [n for n in after if isinstance(n, ast.ClassDef) and n.name == "CommandParser"]
@@ -212,6 +239,54 @@ def controller_bindings(home, candidate):
             "recovery_controller": str(candidate / "harness/runtime_update.py")}
 
 
+def core_package_bindings(home):
+    """Observe the fixed five packages; never run installation or observer entry."""
+    _home, config = integrated(home)
+    require(config["profile"] == "agent" and tuple(state.bootstrap.package_plan(config)) == CORE_PACKAGES
+            and set(config["installed"]) == set(CORE_PACKAGES), "Core source adoption requires exactly the unchanged five agent packages")
+    require(config["selected_packages"] == {key: state.bootstrap.PINS[key] for key in CORE_PACKAGES},
+            "Core source package declarations differ")
+    for key in ("bun", "claude-mem"):
+        prefix = home / "packages" / key
+        require(not prefix.is_symlink() and (not prefix.exists() or prefix.is_dir()), "Observer package prefix is redirected or malformed")
+        # memory/claude-mem/settings.json is normal scaffold data, not Bun or
+        # Claude-mem installation. Empty/settings-only prefixes are also inert.
+        for name in ("package.json", "package-lock.json", "npm-shrinkwrap.json", "node_modules", "bin", "agent-home-patch"):
+            item = prefix / name
+            require(not item.exists() and not item.is_symlink(), "Observer package or partial package state is outside core source adoption: " + key)
+    artifacts = []
+    for key in CORE_PACKAGES:
+        record = config["installed"][key]
+        require(record.get("requested") == config["selected_packages"][key], "Installed agent package pin differs: " + key)
+        require(state.bootstrap.check_package(home, key, record) is None, "Installed agent package drift: " + key)
+        artifacts.extend((key, item["path"], state.digest(Path(item["path"]))) for item in record["artifacts"])
+    return {"profile": "agent", "selected": config["selected_packages"],
+            "installed_sha256": state.canonical_hash(config["installed"]),
+            "artifacts_sha256": state.canonical_hash(artifacts)}
+
+
+def core_source_bindings(home, candidate):
+    before = home_nodes(home / "runtime/harness/home.py")
+    after = home_nodes(candidate / "harness/home.py")
+    def checked(nodes, expected):
+        selected = [node for node in nodes if isinstance(node, ast.FunctionDef) and node.name in expected]
+        require(len(selected) == len(expected) and {node.name: node_hash(node) for node in selected} == expected,
+                "Home definitions are outside agent-core-source-v1")
+        return [node_dump(node) for node in nodes if node not in selected]
+    require(checked(before, CORE_OLD_NODES) == checked(after, CORE_NEW_NODES),
+            "Unreviewed home definitions/constants/imports changed")
+    relative = "harness/templates/agent-home/gitignore.template"
+    if not (home / "runtime" / relative).exists():
+        # Preserve the existing packaging-only exception. It is not rendered
+        # over this home's personal .gitignore during runtime exchange.
+        require(state.digest(candidate / relative) in CORE_GITIGNORE_DATA, "Unreviewed gitignore source data")
+    return {"scope": CORE_SOURCE_SCOPE, "old": {name: state.digest(home / "runtime" / name) for name in FIXED_SOURCE},
+            "new": {name: state.digest(candidate / name) for name in FIXED_SOURCE},
+            "executing_closure": executing_controller(candidate), "packages": core_package_bindings(home),
+            "python": str(Path(sys.executable).resolve()), "python_sha256": state.digest(Path(sys.executable).resolve()),
+            "recovery_controller": str(candidate / "harness/runtime_update.py")}
+
+
 def plan(home, identifier):
     return _plan(home, identifier)
 
@@ -220,7 +295,12 @@ def controller_plan(home, identifier):
     return _plan(home, identifier, controller=True)
 
 
-def _plan(home, identifier, *, controller=False):
+def core_source_plan(home, identifier):
+    return _plan(home, identifier, core_source=True)
+
+
+def _plan(home, identifier, *, controller=False, core_source=False):
+    require(not (controller and core_source), "Select one explicit source migration scope")
     home, target, stage, journal = operation(home, identifier)
     home, config = integrated(home)
     require(target.stat().st_dev == home.stat().st_dev, "Runtime exchange requires the operation and home on one filesystem")
@@ -234,7 +314,7 @@ def _plan(home, identifier, *, controller=False):
     candidate = target / "candidate/runtime"
     holds = []
     for relative in FIXED_SOURCE:
-        if controller and relative in {"harness/home.py", "harness/runtime_update.py"}:
+        if (controller or core_source) and relative in {"harness/home.py", "harness/runtime_update.py"}:
             continue
         if stage["candidate_files"].get(relative) != active["runtime_files"].get(relative):
             holds.append("Entry/configuration protocol migration is unsupported: " + relative)
@@ -259,6 +339,9 @@ def _plan(home, identifier, *, controller=False):
     if controller:
         result["controller"] = controller_bindings(home, candidate)
         result["apply_result"] = "controller_pending_consumer_acceptance; not accepted"
+    if core_source:
+        result["core_source"] = core_source_bindings(home, candidate)
+        result["apply_result"] = "core_source_pending_consumer_acceptance; not accepted"
     result["plan_sha256"] = state.canonical_hash(result)
     return result
 
@@ -269,7 +352,8 @@ def qualified(file, expected, selected, execute):
     require(file.is_absolute() and file.is_file() and not file.is_symlink() and state.digest(file) == expected,
             "Qualification contract drift or invalid path")
     value = state.read_json(file)
-    require(value.get("schema") == QUALIFICATION and value.get("scope") == (CONTROLLER_SCOPE if "controller" in selected else "compatible-runtime-only")
+    scope = CORE_SOURCE_SCOPE if "core_source" in selected else CONTROLLER_SCOPE if "controller" in selected else "compatible-runtime-only"
+    require(value.get("schema") == QUALIFICATION and value.get("scope") == scope
             and value.get("execution_authorized") is True and value.get("qualified") is True,
             "A reviewed explicit runtime qualification contract is required")
     for key in ("home", "operation", "stage_receipt_sha256", "candidate_sha256"):
@@ -277,6 +361,9 @@ def qualified(file, expected, selected, execute):
     if "controller" in selected:
         require(value.get("controller") == selected["controller"] and value.get("active_sha256") == selected["active_sha256"],
                 "Controller qualification old/new/executing bindings differ")
+    if "core_source" in selected:
+        require(value.get("core_source") == selected["core_source"] and value.get("active_sha256") == selected["active_sha256"],
+                "Core source qualification old/new/executing/package bindings differ")
     evidence = value.get("evidence")
     require(isinstance(evidence, list) and evidence, "Qualification needs retained reviewed evidence")
     for item in evidence:
@@ -373,15 +460,20 @@ def controller_apply(home, identifier, expected_plan, qualification, qualificati
                   execute_qualified_runtime=execute_qualified_runtime, controller=True)
 
 
-def _apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False, controller=False):
-    selected = _plan(home, identifier, controller=controller)
+def core_source_apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False):
+    return _apply(home, identifier, expected_plan, qualification, qualification_sha256,
+                  execute_qualified_runtime=execute_qualified_runtime, core_source=True)
+
+
+def _apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False, controller=False, core_source=False):
+    selected = _plan(home, identifier, controller=controller, core_source=core_source)
     require(selected["plan_sha256"] == expected_plan, "Reviewed update plan drift")
     require(not selected["holds"], "; ".join(selected["holds"]))
     contract = qualified(qualification, qualification_sha256, selected, execute_qualified_runtime)
     home, target, stage, journal = operation(home, identifier)
     with exclusive(home), state.operation_lock(home, identifier):
         stopped(home)
-        require(_plan(home, identifier, controller=controller)["plan_sha256"] == expected_plan, "Active/staged state changed before activation")
+        require(_plan(home, identifier, controller=controller, core_source=core_source)["plan_sha256"] == expected_plan, "Active/staged state changed before activation")
         qualified(qualification, qualification_sha256, selected, execute_qualified_runtime)
         require(shutil.disk_usage(home).free >= sum(p.stat().st_size for p in (target / "candidate/runtime").rglob("*")
                                                    if p.is_file()) * 2 + 8 * 1024 * 1024,
@@ -420,6 +512,8 @@ def _apply(home, identifier, expected_plan, qualification, qualification_sha256,
                  "events": [], "candidate_runtime_acceptance": "not_run", "personal_template_adoption": "none"}
         if controller:
             value["controller"] = selected["controller"]
+        if core_source:
+            value["core_source"] = selected["core_source"]
         save_journal(journal, value, "prepared")
         pending_new(home, identifier, journal)
         save_journal(journal, value, "pending-published")
@@ -470,7 +564,8 @@ def _apply(home, identifier, expected_plan, qualification, qualification_sha256,
         publish(home, target, journal, value, "home.json", raw_json(new_config))
         require(inventory(home / "runtime") == after_runtime and controls(home) == value["controls"], "Final active source/control drift")
         value["after_active_sha256"] = state.active_snapshot(home)[2]["sha256"]
-        value["status"] = "controller_pending_consumer_acceptance" if controller else "activated_pending_consumer_acceptance"
+        value["status"] = ("core_source_pending_consumer_acceptance" if core_source else
+                           "controller_pending_consumer_acceptance" if controller else "activated_pending_consumer_acceptance")
         save_journal(journal, value, "coherent-activation-committed")
         _fault("coherent-activation-committed")
         pending_retire(home, identifier, journal, target)
@@ -582,15 +677,31 @@ def managed_doctor(home, target):
     return {"command": record, "result": result, "runtime_manifest_sha256": config["runtime_manifest_sha256"]}
 
 
+def check_core_source_recovery(home, target, value):
+    if "core_source" not in value:
+        return
+    binding = value["core_source"]
+    require(isinstance(binding, dict) and binding.get("scope") == CORE_SOURCE_SCOPE, "Invalid core source scope binding")
+    contract = value["qualification"]["contract"]
+    require(contract.get("scope") == CORE_SOURCE_SCOPE and contract.get("core_source") == binding,
+            "Core source journal/qualification binding differs")
+    require(executing_controller(target / "candidate/runtime") == binding["executing_closure"], "Retained core controller closure drift")
+    require(str(Path(sys.executable).resolve()) == binding["python"]
+            and state.digest(Path(binding["python"])) == binding["python_sha256"], "Core controller interpreter drift")
+    require(core_package_bindings(home) == binding["packages"], "Core source installed package bindings changed")
+
+
 def recover(home, identifier, expected_journal):
     home, target, _stage, journal, value = load_update(home, identifier, expected_journal)
     with exclusive(home, recover=True), state.operation_lock(home, identifier):
         require(state.digest(journal) == expected_journal, "Journal changed before recovery admission")
         pending_check(home, identifier, journal)
         stopped(home)
+        check_core_source_recovery(home, target, value)
         require(value["status"] in {"activation_incomplete", "rollback_incomplete", "activated_pending_consumer_acceptance",
                                     "recovered_pending_consumer_acceptance", "rolled_back_pending_consumer_acceptance",
-                                    "controller_pending_consumer_acceptance", "controller_verification_failed"},
+                                    "controller_pending_consumer_acceptance", "controller_verification_failed",
+                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed"},
                 "Operation is not an incomplete recoverable transaction")
         restore_predecessor(home, target, journal, value)
         value["status"] = "recovered_pending_consumer_acceptance"
@@ -611,8 +722,10 @@ def rollback(home, identifier, expected_journal):
     with exclusive(home), state.operation_lock(home, identifier):
         require(state.digest(journal) == expected_journal, "Journal changed before rollback admission")
         stopped(home)
+        check_core_source_recovery(home, target, value)
         require(value["status"] in {"activated_pending_consumer_acceptance", "consumer_verification_failed", "accepted",
-                                    "controller_pending_consumer_acceptance", "controller_verification_failed"},
+                                    "controller_pending_consumer_acceptance", "controller_verification_failed",
+                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed"},
                 "Operation is not an active generation eligible for rollback")
         require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Active generation drift; rollback refused")
         require(controls(home) == value["controls"], "Control drift; rollback refused without changing user files")
@@ -643,33 +756,45 @@ def controller_verify(home, identifier, expected_journal):
     return _verify(home, identifier, expected_journal, controller=True)
 
 
-def _verify(home, identifier, expected_journal, *, controller=False):
+def core_source_verify(home, identifier, expected_journal):
+    return _verify(home, identifier, expected_journal, core_source=True)
+
+
+def _verify(home, identifier, expected_journal, *, controller=False, core_source=False):
+    require(not (controller and core_source), "Select one explicit source migration scope")
     home, target, _stage, journal, value = load_update(home, identifier, expected_journal)
     with home_entry.consumer(home), state.operation_lock(home, identifier):
         require(state.digest(journal) == expected_journal, "Journal changed before verification admission")
         require(bool(value.get("controller")) == controller, "Use the explicit controller verification scope")
-        statuses = {"controller_pending_consumer_acceptance", "controller_verification_failed"} if controller else {
-            "activated_pending_consumer_acceptance", "consumer_verification_failed"}
+        require(("core_source" in value) == core_source, "Use the explicit core source verification scope")
+        statuses = ({"core_source_pending_consumer_acceptance", "core_source_verification_failed"} if core_source else
+                    {"controller_pending_consumer_acceptance", "controller_verification_failed"} if controller else
+                    {"activated_pending_consumer_acceptance", "consumer_verification_failed"})
         require(value["status"] in statuses,
                 "Only a coherent activated generation can enter consumer verification")
         require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Activated generation drift")
         try:
+            if core_source:
+                check_core_source_recovery(home, target, value)
+                require(inventory(home / "runtime") == value["after_runtime"], "Core source runtime drift")
             value["doctor"] = managed_doctor(home, target)
-            if controller:
+            if controller or core_source:
                 retained = target / "candidate/runtime"
                 # Recovery must use the reviewed controller even after the source checkout moves.
                 require(inventory(home / "runtime") == value["after_runtime"], "Controller runtime drift")
-                binding = value["controller"]
-                require(value["qualification"]["contract"].get("controller") == binding,
-                        "Controller journal/qualification binding differs")
-                require(executing_controller(retained) == binding["executing_closure"], "Retained controller closure drift")
-                require(str(Path(sys.executable).resolve()) == binding["python"]
-                        and state.digest(Path(binding["python"])) == binding["python_sha256"], "Controller interpreter drift")
-                text, record = run_bound([Path(value["controller"]["python"]), "-B", home / "agent-home.py", "research", "status"],
+                if controller:
+                    binding = value["controller"]
+                    require(value["qualification"]["contract"].get("controller") == binding,
+                            "Controller journal/qualification binding differs")
+                    require(executing_controller(retained) == binding["executing_closure"], "Retained controller closure drift")
+                    require(str(Path(sys.executable).resolve()) == binding["python"]
+                            and state.digest(Path(binding["python"])) == binding["python_sha256"], "Controller interpreter drift")
+                binding = value["core_source" if core_source else "controller"]
+                text, record = run_bound([Path(binding["python"]), "-B", home / "agent-home.py", "research", "status"],
                                          home=home, target=target, label="managed-research-status")
                 observed = json.loads(text)
                 validate_research_status(observed)
-                value["controller_consumer"] = {"command": record, "schema": observed["schema"]}
+                value["core_source_consumer" if core_source else "controller_consumer"] = {"command": record, "schema": observed["schema"]}
             if value["profile"] == "core":
                 value["acceptance_scope"] = "Core inspection only; no Pi/model/runtime enforcement claim"
             else:
@@ -718,11 +843,14 @@ def _verify(home, identifier, expected_journal, *, controller=False):
                 value["native_health"] = {"command": record, "result": health}
                 value["acceptance_scope"] = "Actual stable doctor and normal managed Pi agent-health; no model inference"
             require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Source changed during normal consumer verification")
+            if core_source:
+                require(core_package_bindings(home) == value["core_source"]["packages"], "Core source packages changed during verification")
             value["status"] = "accepted"
             value["candidate_runtime_acceptance"] = value["acceptance_scope"]
             save_journal(journal, value, "normal-consumers-accepted")
         except (OSError, ValueError, subprocess.SubprocessError) as error:
-            value["status"] = "controller_verification_failed" if controller else "consumer_verification_failed"
+            value["status"] = ("core_source_verification_failed" if core_source else
+                               "controller_verification_failed" if controller else "consumer_verification_failed")
             value["consumer_error"] = str(error)
             save_journal(journal, value, "normal-consumer-verification-failed")
             raise
@@ -733,21 +861,22 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", required=True, type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("plan", "apply", "verify", "recover", "rollback", "controller-plan", "controller-apply", "controller-verify"):
+    for name in ("plan", "apply", "verify", "recover", "rollback", "controller-plan", "controller-apply", "controller-verify",
+                 "core-source-plan", "core-source-apply", "core-source-verify"):
         command = commands.add_parser(name, allow_abbrev=False)
         command.add_argument("--operation", required=True)
-        if name in {"apply", "controller-apply"}:
+        if name in {"apply", "controller-apply", "core-source-apply"}:
             command.add_argument("--expected-plan", required=True)
             command.add_argument("--qualification", required=True, type=Path)
             command.add_argument("--qualification-sha256", required=True)
             command.add_argument("--execute-qualified-runtime", action="store_true")
-        elif name not in {"plan", "controller-plan"}:
+        elif name not in {"plan", "controller-plan", "core-source-plan"}:
             command.add_argument("--expected-journal", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command in {"plan", "controller-plan"}:
+        if args.command in {"plan", "controller-plan", "core-source-plan"}:
             result = globals()[args.command.replace("-", "_")](args.home, args.operation)
-        elif args.command in {"apply", "controller-apply"}:
+        elif args.command in {"apply", "controller-apply", "core-source-apply"}:
             result = globals()[args.command.replace("-", "_")](args.home, args.operation, args.expected_plan, args.qualification, args.qualification_sha256,
                            execute_qualified_runtime=args.execute_qualified_runtime)
         else:
