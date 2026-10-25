@@ -7,7 +7,7 @@ out of the public repository. Git records the resulting commit after publication
 
 ## Join configured search, bounded retrieval and the managed home — 2026-10-25
 
-Parent commit: `c87e6cd` (joined source history, descended from
+Parent commit: `c87e6cd91fc6e44947769eacbdf97f1138766b24` (joined source history, descended from
 `4f9465dfbcd8883842dceaac18393f6391415803`; the integration merge retains PR34).
 
 Connect the sole provider resolver and human-terminal setup to the installed
