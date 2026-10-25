@@ -50,6 +50,7 @@ import vm from 'node:vm';
 const requests = [], tasks = new Map([['task-1', { id:'task-1',status:'ready',parents:[] }],
   ['task-2', { id:'task-2',status:'ready',parents:[] }]]);
 let board = 'board-1', createFailure = false, createMalformed = false, createPending = false, ownerCloses = 0;
+let abortBeforeAdmission, abortAfterAdmission;
 const creations = [];
 const spawn = (_python, argv = [], options = {}) => {
   const child = new EventEmitter();
@@ -66,6 +67,7 @@ const spawn = (_python, argv = [], options = {}) => {
         : {schema:'pi-kanban-result/v1',ok:true,action:'project_create',result:{project_root:root,
           identity:{project_id:'created-'+name,board_id:'board-'+name}},limits:['Fixture only']};
       child.stdout.emit('data',Buffer.from(JSON.stringify(value))); child.emit('close',createFailure?2:0);
+      abortBeforeAdmission?.abort();
     });
     return child;
   }
@@ -86,6 +88,7 @@ const spawn = (_python, argv = [], options = {}) => {
     if (request.action === 'create') result = { task:{id:'task-1',status:'ready'} };
     child.stdout.emit('data',Buffer.from(JSON.stringify({schema:'pi-kanban-result/v1',ok:true,result})));
     child.emit('close',0);
+    if (request.action==='project_admit' && request.project_root.startsWith(join(process.env.AGENT_HOME,'projects'))) abortAfterAdmission?.abort();
   });
   return child;
 };
@@ -231,6 +234,22 @@ createPending=true;
 const owner = new AbortController(), pending = tools.get('project_create').execute('cancelled',{name:'cancelled'},owner.signal);
 owner.abort();assert.equal((await pending).isError,true);createPending=false;
 assert.equal(creations.at(-1).options.env.PI_TASK_TIMEOUT,'90');assert.ok(ownerCloses>=4);
+// Abort after a successful helper response but before readmission starts.
+const beforeBoundary = new AbortController(); abortBeforeAdmission=beforeBoundary;
+const beforeReply = await tools.get('project_create').execute('abort-before-admit',{name:'abort-before-admit'},beforeBoundary.signal);
+abortBeforeAdmission=undefined;
+assert.equal(beforeReply.isError,true,'abort before readmission must hold selection');
+assert.equal(requests.some(request=>request.project_root===join(process.env.AGENT_HOME,'projects','abort-before-admit')),false);
+assert.equal(branch.at(-1).data.project,null);assert.equal(branch.at(-1).data.task,null);
+// Abort after readmission resolves and removes its listener, before selection.
+const afterBoundary = new AbortController(); abortAfterAdmission=afterBoundary;
+const afterReply = await tools.get('project_create').execute('abort-after-admit',{name:'abort-after-admit'},afterBoundary.signal);
+abortAfterAdmission=undefined;
+assert.equal(afterReply.isError,true,'abort after readmission must hold selection');
+assert.ok(requests.some(request=>request.project_root===join(process.env.AGENT_HOME,'projects','abort-after-admit')));
+assert.equal(branch.at(-1).data.project,null);assert.equal(branch.at(-1).data.task,null);
+await admit();await invoke('kanban_select',{task_id:'task-1'});
+for(const name of ['agent_capabilities','system_tool_query','validated_memory_query','project_knowledge_query']) assert.ok((await execute()).reason.includes(name),'abort keeps discovery invalid: '+name);
 await admit();assert.equal(branch.at(-1).data.project.root,'/project','external adoption remains available');
 assert.equal(requests.at(-1).initialize,undefined,'default adoption does not initialize');
 console.log('project creation coordinator cases passed');

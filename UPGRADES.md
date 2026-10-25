@@ -28,9 +28,15 @@ process guard and owner pipe for a90-second creation budget/105-second tool
 deadline. Preserve partial directories with explicit inspect/adopt guidance;
 never silently delete, retry or reinitialize them.
 
-Real Git/factory source controls and the complete coordinator module passed on
+An abort after a helper/readmission response must not install a selection. The
+original complete-module VM regression reproduced that window. Final checks
+before/after readmission and before selection keep project/task/discovery state
+invalid after cancellation; they add no session budget or retry mechanism.
+
+Prior real Git/factory source controls and the complete coordinator module passed on
 Linux and Windows within their recorded platform limits. Thirty-three actual
-Pi1.4/Hermes checks passed in a disposable Pi-profile home with four verified
+Pi1.4/Hermes checks passed on the preceding implementation `78d055e` in a
+disposable Pi-profile home with four verified
 borrowed dependencies and normal post-install binding/doctor checks.
 They exercised independent Git/boards, extra-field and escape refusal, an actual
 board initialization failure, external adoption and cancellation during a live

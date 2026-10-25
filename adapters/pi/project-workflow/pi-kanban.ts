@@ -280,10 +280,13 @@ export default function (pi: ExtensionAPI) {
         const root = join(requiredEnvironment('AGENT_HOME'), 'projects', params.name);
         const result = created.result as any;
         if (result?.project_root !== root) throw new Error('Created managed project root differs');
+        if (signal?.aborted) throw new Error('Project creation cancelled before readmission');
         const admitted = await callAdapter({ action: 'project_admit', project_root: root }, signal);
+        if (signal?.aborted) throw new Error('Project creation cancelled during readmission');
         const actual = admitted.result as any;
         if (actual?.identity?.project_id !== result?.identity?.project_id || actual?.identity?.board_id !== result?.identity?.board_id)
           throw new Error('Created project identity changed during admission');
+        if (signal?.aborted) throw new Error('Project creation cancelled before selection');
         selectAdmission(admitted);
         return response({ ...admitted, action: 'project_create', limits: created.limits });
       } catch (error) {
