@@ -5,6 +5,31 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Exact source update staging — 2026-10-25
+
+Parent commit: `cbad273cc4aa5e28b6063f0dfc9d9c9cb5321966`.
+
+Reuse existing home identities, doctor, package bindings and source inventory
+for read-only inspection/repair plans and exact source staging. Candidate AST,
+local imports, literal package pins and existing descriptor artifacts are
+checked without executing the candidate. Drift, new unqualified dependencies,
+symlink escapes, concurrent operations and replay hold the operation. Stage
+retains both source generations and admission history; withdrawal changes only
+the staged admission, preserving its prior bytes.
+
+Twenty-six Linux checks passed. Windows passed24 with two symlink privilege
+skips; the final affected assertion was checked separately. Twelve actual CLI
+commands preserved the active snapshot and six data sentinels. The installed
+standalone CLI also inspected/planned from an unrelated directory. A separate
+read-only existing full-profile plan verified eight package identities and89
+bound artifacts, then held newly introduced research dependencies.
+
+This release does not activate candidate source, install packages, coordinate
+live consumers or roll back an active generation. Those paths require a stable
+pre-import lifetime lease, stopped owned memory hub, coupled binding journal
+and actual normal-consumer qualification. Stage verification is not runtime
+acceptance. Existing data and personalized instructions are never re-scaffolded.
+
 ## Local service discovery and explicit model transport — 2026-10-25
 
 Parent commit: `92c7bcab0c863d10571ee230af237102d655485c`.

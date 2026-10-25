@@ -90,6 +90,28 @@ Already recorded package steps are retained. Setup never overwrites a home or
 automatically replays an uncertain external effect. An interrupted package step
 is not automatically accepted from its directory's presence.
 
+For runtime source maintenance, use the source-only staging commands from a
+reviewed repository checkout:
+
+```bash
+python -m harness.maintenance --home /data/my-agent inspect
+python -m harness.maintenance --home /data/my-agent repair-plan
+python -m harness.maintenance --home /data/my-agent plan --source /path/to/reviewed-checkout
+python -m harness.maintenance --home /data/my-agent stage \
+  --source /path/to/reviewed-checkout --operation update-001 --expected-plan PLAN_SHA256
+python -m harness.maintenance --home /data/my-agent verify-stage --operation update-001
+python -m harness.maintenance --home /data/my-agent withdraw \
+  --operation update-001 --expected-receipt RECEIPT_SHA256
+```
+
+Use the exact plan/receipt hashes returned by the preceding commands. Planning
+does not execute candidate code. Staging retains candidate and predecessor bytes
+under the home's update state, checks source/import/package bindings and refuses
+drift, unqualified dependencies and replay. Personalized context, credentials,
+sessions, boards, palaces and active runtime remain in place. Withdrawal retires
+staged bytes. Activation and rollback of an active runtime are still unavailable;
+do not copy staged files over the active runtime or call withdrawal a rollback.
+
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
 and let their exact results reach the next model-input context. A successful
