@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Select the prepared first-project identity — 2026-10-25
+
+Parent commit: `e91cce4affb8d79cb9c681fc524e11a8c893c87b`.
+
+A real model smoke test tried to initialize an already prepared project using
+the owner display name as its authority. Admission correctly refused; subsequent
+context and intake calls could not proceed. Keep that failure. Supply the exact
+read-only `project_admit` arguments in the first-project prompt, state that the
+host already created Git/identity/board, and distinguish the report input pin
+from a project identity hash. No gate, identity or authority rule is relaxed.
+
+Twenty focused Windows checks ran with two platform skips. Exact original
+verifier/manifest binding, failed-child retention, artifact drift and the new
+admission instruction passed. These checks establish the host prompt contract,
+not model obedience or a completed report. Ten-minute qualification exhaustion
+does not establish model quality failure or a session duration limit; normal
+managed Pi has no such fixed deadline. Hour-scale work retains explicit action,
+resource, ownership and verification boundaries.
+
 ## Opt-in single-command local CPU candidate — 2026-10-25
 
 Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
