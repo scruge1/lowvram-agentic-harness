@@ -40,9 +40,25 @@ raise SystemExit(run_owned())
 '''
 
 
+def timeout_budget(request):
+    """One fixed declared action/check budget within the existing core limits."""
+    if any(name in request for name in ('_action_timeout', '_check_timeout', '_worker_timeout')):
+        raise ValueError('Use action_timeout_seconds/check_timeout_seconds; hidden timeout overrides are not supported')
+    action = request.get('action_timeout_seconds', 585)
+    check = request.get('check_timeout_seconds', 45)
+    for name, value in (('action_timeout_seconds', action), ('check_timeout_seconds', check)):
+        if type(value) is not int or not 1 <= value <= 86400 - 15:
+            raise ValueError(name + ' must be an integer in 1..86385 (15 seconds reserved inside the core86400 limit)')
+    worker, verifier = action + 15, check + 15
+    return {'action_timeout_seconds': action, 'check_timeout_seconds': check,
+            'worker_timeout_seconds': worker, 'verifier_timeout_seconds': verifier,
+            'outer_timeout_seconds': worker + 2 * verifier + 60}
+
+
 def validate(request):
     if not isinstance(request, dict):
         raise ValueError('Request must be an object')
+    timeout_budget(request)
     if not isinstance(request.get('objective'), str) or not request['objective'].strip():
         raise ValueError('A short objective is required')
     root = Path(request['cwd']).resolve(strict=True)
@@ -75,6 +91,7 @@ def validate(request):
 
 def prepare(request, runtime=None):
     root = validate(request)
+    budget = timeout_budget(request)
     task_id = 'step-' + uuid.uuid4().hex
     relative = Path('.pi-workflow') / task_id
     directory = root / relative
@@ -89,11 +106,12 @@ def prepare(request, runtime=None):
     files = {
         'worker.py': WORKER,
         'verifier.py': VERIFIER,
-        'action.json': json.dumps(command(request['action'], request.get('_action_timeout', 585))),
-        'check.json': json.dumps(command(request['verify'], request.get('_check_timeout', 45))),
+        'action.json': json.dumps(command(request['action'], budget['action_timeout_seconds'])),
+        'check.json': json.dumps(command(request['verify'], budget['check_timeout_seconds'])),
         'plan.json': json.dumps({'objective': request['objective'], 'target': str(root),
                                 'outputs': request['outputs'], 'retry': 'no automatic replay',
                                 'recovery': request.get('recovery'),
+                                'timeout_budget': budget,
                                 'authority': 'supplied predicate only'}, indent=2),
     }
     for name, text in files.items():
@@ -104,14 +122,14 @@ def prepare(request, runtime=None):
     check = str(relative / 'check.json')
     spec = {
         'schema_version': 1, 'task_id': task_id, 'objective': request['objective'],
-        'worker': {'argv': ['{python}', worker, action], 'files': [worker, action, str(relative / 'plan.json')], 'timeout_seconds': request.get('_worker_timeout', 600)},
+        'worker': {'argv': ['{python}', worker, action], 'files': [worker, action, str(relative / 'plan.json')], 'timeout_seconds': budget['worker_timeout_seconds']},
         'outputs': request['outputs'], 'receipt_output': str(relative / 'receipt.json'),
         'retry': {'max_attempts': 1, 'retry_on': ['process_failure'], 'inner_tool_max_attempts': 0},
         'research': {'required': False},
         'verifier': {'argv': ['{python}', verifier, check], 'files': [verifier, check],
-                     'timeout_seconds': 60,
+                     'timeout_seconds': budget['verifier_timeout_seconds'],
                      'negative_control': {'argv': ['{python}', verifier, check, '--negative-control'],
-                                          'files': [verifier, check], 'timeout_seconds': 60}},
+                                          'files': [verifier, check], 'timeout_seconds': budget['verifier_timeout_seconds']}},
     }
     specification = directory / 'task.json'
     specification.write_text(json.dumps(spec, indent=2) + '\n', encoding='ascii')
@@ -144,9 +162,11 @@ def execute(request, runtime, runtime_sha, engine_sha):
     receipt = run_task(root, spec)
     if receipt['status'] != 'accepted':
         return {'status': 'failed', 'run_id': receipt['run_id'], 'reason': receipt.get('reason'),
+                'timeout_budget': timeout_budget(request),
                 'authority': 'none', 'task_root': str(root), 'task_spec': str(spec)}
     checked = verify_receipt(root, spec, spec.parent / 'receipt.json')
     return {'status': 'supplied_predicate_passed', 'run_id': checked['run_id'],
+            'timeout_budget': timeout_budget(request),
             'authority': 'tested', 'task_root': str(root), 'task_spec': str(spec),
             'receipt': str(spec.parent / 'receipt.json'),
             'limits': 'Not semantic goal acceptance, physical authorization, or a shell sandbox'}

@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Declare supervised action and verification budgets — 2026-10-25
+
+Parent commit: `9e5309b588cceab455ee3080a90ee21a18a1d143`.
+
+Expose `action_timeout_seconds` and `check_timeout_seconds` instead of fixed
+short action/outer timers. Choose budgets for the actual work; these are per-call
+limits, not project/session limits. Related substeps can remain one action.
+Preserve defaults585/45: worker=A+15, each verifier=C+15, outer=worker+2*verifier+60
+gives the original780-second per-call deadline. The existing86400-second core
+command ceiling admits declared values1..86385, including hour-scale work.
+Reject invalid values and hidden timeout aliases before writes or process start.
+Record the derived budgets in plans and host results. Keep the fixed deadline,
+owner pipe, PIDFD cleanup, negative control and no automatic replay.
+
+Ten focused Windows and Linux checks passed, including actual core validation
+of default/hour/maximum specifications, early invalid-input refusal and the
+complete TypeScript tool surface with timer/abort/owner-pipe checks. Existing
+negative-control and recovery checks, pinned Ruff0.16.10 and seven offline
+selftests passed. No test waited hours or established long-horizon model quality;
+installed-source adoption and end-to-end task results remain separate.
+
 ## Select the prepared first-project identity — 2026-10-25
 
 Parent commit: `e91cce4affb8d79cb9c681fc524e11a8c893c87b`.
