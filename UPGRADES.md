@@ -51,8 +51,11 @@ capture miner can then contend. The selected route uses MemPalace's existing
 loopback HTTP hub for both stdio MCP and CLI mining. Launch starts and verifies
 that home's exact owned hub. Explicit lifecycle commands preserve process
 identity and the existing single-writer lease. Native connected-memory
-acceptance is recorded separately; source and lifecycle tests alone do not
-qualify capture or recall.
+acceptance passed24 checks with six exact chunks, an unchanged repeat, tamper
+refusal and restored readback. One MCP connection stayed open across write,
+capture mining and recall. Pi's normal MCP discovery connected47 tools. All
+content was synthetic; the CPU cache stayed in the chosen home. No generative
+model or GPU request was made.
 
 Validation: focused source tests exercise new-home CLI delivery, privacy/overwrite
 boundaries, source drift refusal, direct no-adviser coordination and native
@@ -82,6 +85,12 @@ literal `.gitignore` hid its own context templates. The source now uses
 eleven-file template bundle before writing the new home. The corrected source
 passed both Linux and Windows offline release gates, each21checks/7self-tests,
 and the CI-pinned Ruff0.16.10 check.
+
+The final normal one-command Linux install also passed with all eight packages,
+no doctor failures and eight native extensions/30 tools. The hosted Windows
+runner exposed an8.3 TEMP alias in two test fixtures. They now resolve their
+temporary parent before comparing the canonical identity already recorded by
+the installer. Runtime identity and local-provider refusal checks stay intact.
 
 ## Bound release output collection after a timeout — 2026-10-10
 

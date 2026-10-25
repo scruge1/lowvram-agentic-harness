@@ -13,7 +13,9 @@ class AgentHomeTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="agent-home-test-")
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name) / "Agent home with spaces"
+        # Windows runners can expose TEMP through an 8.3 path alias. Compare
+        # the same canonical identity that the installed home records.
+        self.root = Path(self.temporary.name).resolve() / "Agent home with spaces"
 
     def create(self):
         return home.scaffold(self.root, profile="core", base_url="http://127.0.0.1:8080/v1", model="local-test", name="Test Owner", offline=True)

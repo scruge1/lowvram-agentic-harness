@@ -12,7 +12,7 @@ class ClaudeMemoryTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name) / "home"
+        self.root = Path(self.temporary.name).resolve() / "home"
         self.config = home.scaffold(self.root, profile="core", base_url="http://127.0.0.1:8080/v1", model="test", offline=True)
 
     def test_complete_provider_and_private_worker_root(self):

@@ -179,9 +179,19 @@ behavior from the private system or prove final-provider consumption.
 
 The current source snapshot passes the offline release gate on Linux and
 Windows: 21 checks, including all seven self-tests. Ruff 0.16.10 also passes.
-The fresh default full installation is being qualified on Linux. Final native
-startup with30 tools and the connected capture/mining/recall pipeline remain
-pending.
+The fresh default full installation passed on Linux as one normal command:
+all eight components installed and doctor returned no failures. Native startup
+loaded eight extensions and30 tools with the selected owner instructions and
+model limits, without a generative model request or configuration mutation.
+
+The connected memory test passed24 checks. One stdio MCP connection stayed open
+across an MCP write, transcript capture, native CLI mining and recall of distinct
+captured content. All six expected chunks and closet witnesses were read back.
+Unchanged repeat, tamper refusal, exact restoration, original JSONL conservation
+and owned-process shutdown passed. Pi's normal `mcp list` connected to47 tools
+with Node22.23.2. The174.5MB CPU embedding cache stayed on the selected archive
+volume; true HOME was preserved. These checks used public synthetic content
+and made no generative model or GPU calls.
 
 An earlier fresh Linux candidate installed all eight components, passed doctor,
 and passed a native29-tool startup before the latest context and hub changes.
@@ -215,7 +225,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Requirement | Current public state | Remaining acceptance |
 |---|---|---|
 | Home location, thin instructions, personalization handoff | Implemented | Normal current-agent handoff |
-| Local model routing and isolated packages | Earlier eight-component/doctor/29-tool checks passed; fresh default full installation under qualification | Finish current install, final30-tool home startup and real selected-model request |
+| Local model routing and isolated packages | Fresh full one-command Linux install, doctor and30-tool startup passed | Real selected-model request and new-host acceptance |
 | Per-project Git and board creation | Implemented; native board/context composition passed35 checks | First ordinary project and outcome acceptance |
 | Optional planning adviser, direct card select, saved navigation | Model-free native composition passed35 checks | Normal model-driven use |
 | Linux owned-process execution | Reviewed guard exported | New-host positive, negative, timeout and owner-loss controls |
@@ -223,13 +233,13 @@ private runtime source and active session identifiers stay outside this repo.
 | Root outcome, hierarchy, triage leaf specification and cancellation | Current backend exported | Source-bound retained-work tests; no general root acceptance claim |
 | Framework read-only decisions over the native board | Actual Framework/Pi/Hermes/context composition passed35 checks with a generated target binding | Normal model-driven use and root-outcome acceptance; no duplicate dispatcher/database |
 | Quiet intake and compact live state | Intake source exported | Final-provider coverage; separate private task/comment refresh behavior remains unexported |
-| Hierarchical project instructions and bounded checkpoint delivery | Current context gate exported;17 native groups and35 composition checks passed | Final30-tool home startup and model-driven use; no final-provider attestation |
+| Hierarchical project instructions and bounded checkpoint delivery | Current context gate exported;17 native groups,35 composition checks and30-tool startup passed | Model-driven use; no final-provider attestation |
 | Read-loop containment and evidence-bound recovery | Read-loop079 and exact failure-read/recovery gates exported | Full native model-path adoption; matching recovery evidence/receipt only clears its own latch |
 | Quiet session/task waits and receipt-driven one-time wakeups | Task-waits138 source exported | Watcher/race/pause/cancel/reload checks; interactive wakeup pilot still open upstream |
 | Local-provider bounded native compaction | Public native API and exact target selectors exported | Native API tests passed with synthetic stream; real summary quality remains model-specific |
 | Action failure dominates verifier success | Existing source needs newer ledger parity | Actual full host-action and model-facing result checks |
-| MCP lifecycle and health | Native Pi1.4 and owned loopback single-writer hub wired | Final native readiness, idle exit, reload, shutdown and reconnection checks |
-| Validated memory retrieval, exact chunks and promotion | Safe-summary registry/filter and older project-local candidates retained | Actual native mining/readback and later reviewed promotion |
+| MCP lifecycle and health | Native Pi1.4 connected47 tools; owned hub startup/idempotence/shutdown and connected recall passed | Long-idle reconnect and new-host lifecycle checks |
+| Validated memory retrieval, exact chunks and promotion | Empty safe registry abstention and synthetic native capture/mining/exact readback passed | Reviewed promotion, new-host freshness and private-history acceptance |
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
 | Source milestones, scoped commits and remote verification | Git initialization only | Portable source-checkpoint CLI/skill; automatic all-session attribution remains open upstream |
 | Terminal/project navigation and live-owner resume checks | Not exported | Fresh/known-live-owner collision and native resume controls |
