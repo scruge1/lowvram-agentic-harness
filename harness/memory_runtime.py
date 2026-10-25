@@ -326,15 +326,31 @@ def hub_start(home: Path, config: dict) -> dict:
             raise MemoryRuntimeError("Another live native writer is registered for this palace; no process changed")
         nonce = secrets.token_hex(32)
         command = hub_command(home, nonce)
+        launch_command = command
+        if config.get("lifecycle_guard_sha256"):
+            try:
+                from . import home_entry
+            except ImportError:
+                import home_entry
+            launch_command = home_entry.guarded_command(home, command, python=command[0])
         log = os.open(hub_directory(home) / "hub.log", os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         try:
-            process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+            process = subprocess.Popen(launch_command, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
                                        cwd=home, start_new_session=True)
         finally:
             os.close(log)
         # The child waits for this receipt before importing MemPalace. Its argv
         # already contains a fresh instance nonce, so no receipt can adopt a peer.
         receipt = process_identity(process.pid)
+        if launch_command != command:
+            # The stable stdlib verifier acquires its lifetime lease, then
+            # execs this exact wrapper/PID. Do not publish its transient argv.
+            settle = time.monotonic() + min(3.0, HUB_START_SECONDS)
+            while receipt is not None and receipt["command"] != command and time.monotonic() < settle:
+                if process.poll() is not None:
+                    break
+                time.sleep(0.01)
+                receipt = process_identity(process.pid)
         if receipt is None:
             raise MemoryRuntimeError("Memory hub child exited before its ownership receipt was created")
         receipt.update({"schema": HUB_SCHEMA, "home": str(home), "palace": str(home / "memory/palace"),
