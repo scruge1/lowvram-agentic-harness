@@ -9,6 +9,7 @@ re-scaffolded. This module uses HOME/runtime and the existing operation history.
 from __future__ import annotations
 
 import argparse
+import ast
 from contextlib import contextmanager
 import hashlib
 import json
@@ -29,6 +30,12 @@ except ImportError:
 
 SCHEMA = "agent-home-runtime-update/v1"
 QUALIFICATION = "agent-home-runtime-qualification/v1"
+CONTROLLER_SCOPE = "controller-cli-v1"
+# Reviewed research CLI definitions, from source commit 98076e3. Other AST
+# nodes must match the installed controller, including imports and constants.
+CONTROLLER_MAIN = "5e33d2aa155aa9e5a5a0a763429e0da1958d2c3dee2dffc39af108ca77001c90"
+PREVIOUS_MAIN = "5cf355a5d36ee806ffb5e4b6f2ba2d815a422d5e7eb3819c07ab774380abcfc0"
+CONTROLLER_PARSER = "b546b0054638ce3251bd18c558b59220df987e13a5f8858705287f73fc6f5175"
 PENDING = "state/updates/pending-activation.json"
 WORKFLOW = "adapters/pi/project-workflow/everyday-runtime.json"
 COMMAND_TIMEOUT = 90
@@ -155,7 +162,64 @@ def operation(home, identifier):
     return home, target, receipt, target / "runtime-update.json"
 
 
+def executing_controller(candidate):
+    closure = {"harness/runtime_update.py": Path(__file__), "harness/maintenance.py": Path(state.__file__),
+               "harness/home_entry.py": Path(home_entry.__file__), "harness/home.py": Path(state.bootstrap.__file__)}
+    for relative, loaded in closure.items():
+        require(not loaded.is_symlink() and state.digest(loaded) == state.digest(candidate / relative),
+                "Execute the exact staged controller closure: " + relative)
+    return {name: state.digest(path) for name, path in closure.items()}
+
+
+def controller_bindings(home, candidate):
+    """Narrow reviewed CLI migration, with exact executing recovery closure."""
+    def nodes(path):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        # Python 3.12 adds empty type_params to function/class AST nodes.
+        # Remove only that empty field to retain the reviewed 3.9+ encoding.
+        for node in ast.walk(tree):
+            if hasattr(node, "type_params"):
+                require(not node.type_params, "Generic controller definitions are outside controller-cli-v1")
+                del node.type_params
+        return tree.body
+
+    def node_dump(node):
+        # Python 3.13 otherwise omits empty fields that older dumps include.
+        options = {"show_empty": True} if sys.version_info >= (3, 13) else {}
+        return ast.dump(node, include_attributes=False, **options)
+
+    def node_hash(node):
+        return hashlib.sha256(node_dump(node).encode()).hexdigest()
+
+    before = nodes(home / "runtime/harness/home.py")
+    after = nodes(candidate / "harness/home.py")
+    old_main = [n for n in before if isinstance(n, ast.FunctionDef) and n.name == "main"]
+    new_main = [n for n in after if isinstance(n, ast.FunctionDef) and n.name == "main"]
+    parser = [n for n in after if isinstance(n, ast.ClassDef) and n.name == "CommandParser"]
+    require(len(old_main) == len(new_main) == len(parser) == 1
+            and node_hash(old_main[0]) == PREVIOUS_MAIN and node_hash(new_main[0]) == CONTROLLER_MAIN
+            and node_hash(parser[0]) == CONTROLLER_PARSER, "Controller CLI definitions are outside controller-cli-v1")
+    old_rest = [node_dump(n) for n in before if n is not old_main[0]]
+    new_rest = [node_dump(n) for n in after if n is not new_main[0] and n is not parser[0]]
+    require(old_rest == new_rest, "Controller core definitions/constants/imports changed")
+    closure = executing_controller(candidate)
+    return {"scope": CONTROLLER_SCOPE,
+            "old": {name: state.digest(home / "runtime" / name) for name in FIXED_SOURCE},
+            "new": {name: state.digest(candidate / name) for name in FIXED_SOURCE},
+            "executing_closure": closure,
+            "python": str(Path(sys.executable).resolve()), "python_sha256": state.digest(Path(sys.executable).resolve()),
+            "recovery_controller": str(candidate / "harness/runtime_update.py")}
+
+
 def plan(home, identifier):
+    return _plan(home, identifier)
+
+
+def controller_plan(home, identifier):
+    return _plan(home, identifier, controller=True)
+
+
+def _plan(home, identifier, *, controller=False):
     home, target, stage, journal = operation(home, identifier)
     home, config = integrated(home)
     require(target.stat().st_dev == home.stat().st_dev, "Runtime exchange requires the operation and home on one filesystem")
@@ -169,6 +233,8 @@ def plan(home, identifier):
     candidate = target / "candidate/runtime"
     holds = []
     for relative in FIXED_SOURCE:
+        if controller and relative in {"harness/home.py", "harness/runtime_update.py"}:
+            continue
         if stage["candidate_files"].get(relative) != active["runtime_files"].get(relative):
             holds.append("Entry/configuration protocol migration is unsupported: " + relative)
     templates = "harness/templates/agent-home/"
@@ -189,6 +255,9 @@ def plan(home, identifier):
               "candidate_execution": "Requires exact explicit qualification contract and execution acknowledgement",
               "apply_result": "activated_pending_consumer_acceptance; not accepted",
               "source": request["source"], "package_changes": [], "introduced_dependency_imports": []}
+    if controller:
+        result["controller"] = controller_bindings(home, candidate)
+        result["apply_result"] = "controller_pending_consumer_acceptance; not accepted"
     result["plan_sha256"] = state.canonical_hash(result)
     return result
 
@@ -199,11 +268,14 @@ def qualified(file, expected, selected, execute):
     require(file.is_absolute() and file.is_file() and not file.is_symlink() and state.digest(file) == expected,
             "Qualification contract drift or invalid path")
     value = state.read_json(file)
-    require(value.get("schema") == QUALIFICATION and value.get("scope") == "compatible-runtime-only"
+    require(value.get("schema") == QUALIFICATION and value.get("scope") == (CONTROLLER_SCOPE if "controller" in selected else "compatible-runtime-only")
             and value.get("execution_authorized") is True and value.get("qualified") is True,
             "A reviewed explicit runtime qualification contract is required")
     for key in ("home", "operation", "stage_receipt_sha256", "candidate_sha256"):
         require(value.get(key) == selected[key], "Qualification source/target binding differs: " + key)
+    if "controller" in selected:
+        require(value.get("controller") == selected["controller"] and value.get("active_sha256") == selected["active_sha256"],
+                "Controller qualification old/new/executing bindings differ")
     evidence = value.get("evidence")
     require(isinstance(evidence, list) and evidence, "Qualification needs retained reviewed evidence")
     for item in evidence:
@@ -291,14 +363,24 @@ def publish(home, target, journal, value, relative, raw):
 
 
 def apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False):
-    selected = plan(home, identifier)
+    return _apply(home, identifier, expected_plan, qualification, qualification_sha256,
+                  execute_qualified_runtime=execute_qualified_runtime)
+
+
+def controller_apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False):
+    return _apply(home, identifier, expected_plan, qualification, qualification_sha256,
+                  execute_qualified_runtime=execute_qualified_runtime, controller=True)
+
+
+def _apply(home, identifier, expected_plan, qualification, qualification_sha256, *, execute_qualified_runtime=False, controller=False):
+    selected = _plan(home, identifier, controller=controller)
     require(selected["plan_sha256"] == expected_plan, "Reviewed update plan drift")
     require(not selected["holds"], "; ".join(selected["holds"]))
     contract = qualified(qualification, qualification_sha256, selected, execute_qualified_runtime)
     home, target, stage, journal = operation(home, identifier)
     with exclusive(home), state.operation_lock(home, identifier):
         stopped(home)
-        require(plan(home, identifier)["plan_sha256"] == expected_plan, "Active/staged state changed before activation")
+        require(_plan(home, identifier, controller=controller)["plan_sha256"] == expected_plan, "Active/staged state changed before activation")
         qualified(qualification, qualification_sha256, selected, execute_qualified_runtime)
         require(shutil.disk_usage(home).free >= sum(p.stat().st_size for p in (target / "candidate/runtime").rglob("*")
                                                    if p.is_file()) * 2 + 8 * 1024 * 1024,
@@ -335,6 +417,8 @@ def apply(home, identifier, expected_plan, qualification, qualification_sha256, 
                  "before_runtime": before_runtime, "after_runtime": after_runtime, "originals": originals,
                  "controls": selected["controls"], "allowed_binding_hashes": {key: [item] for key, item in originals.items()},
                  "events": [], "candidate_runtime_acceptance": "not_run", "personal_template_adoption": "none"}
+        if controller:
+            value["controller"] = selected["controller"]
         save_journal(journal, value, "prepared")
         pending_new(home, identifier, journal)
         save_journal(journal, value, "pending-published")
@@ -385,7 +469,7 @@ def apply(home, identifier, expected_plan, qualification, qualification_sha256, 
         publish(home, target, journal, value, "home.json", raw_json(new_config))
         require(inventory(home / "runtime") == after_runtime and controls(home) == value["controls"], "Final active source/control drift")
         value["after_active_sha256"] = state.active_snapshot(home)[2]["sha256"]
-        value["status"] = "activated_pending_consumer_acceptance"
+        value["status"] = "controller_pending_consumer_acceptance" if controller else "activated_pending_consumer_acceptance"
         save_journal(journal, value, "coherent-activation-committed")
         _fault("coherent-activation-committed")
         pending_retire(home, identifier, journal, target)
@@ -474,7 +558,8 @@ def recover(home, identifier, expected_journal):
         pending_check(home, identifier, journal)
         stopped(home)
         require(value["status"] in {"activation_incomplete", "rollback_incomplete", "activated_pending_consumer_acceptance",
-                                    "recovered_pending_consumer_acceptance", "rolled_back_pending_consumer_acceptance"},
+                                    "recovered_pending_consumer_acceptance", "rolled_back_pending_consumer_acceptance",
+                                    "controller_pending_consumer_acceptance", "controller_verification_failed"},
                 "Operation is not an incomplete recoverable transaction")
         restore_predecessor(home, target, journal, value)
         value["status"] = "recovered_pending_consumer_acceptance"
@@ -495,7 +580,8 @@ def rollback(home, identifier, expected_journal):
     with exclusive(home), state.operation_lock(home, identifier):
         require(state.digest(journal) == expected_journal, "Journal changed before rollback admission")
         stopped(home)
-        require(value["status"] in {"activated_pending_consumer_acceptance", "consumer_verification_failed", "accepted"},
+        require(value["status"] in {"activated_pending_consumer_acceptance", "consumer_verification_failed", "accepted",
+                                    "controller_pending_consumer_acceptance", "controller_verification_failed"},
                 "Operation is not an active generation eligible for rollback")
         require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Active generation drift; rollback refused")
         require(controls(home) == value["controls"], "Control drift; rollback refused without changing user files")
@@ -519,14 +605,41 @@ def rollback(home, identifier, expected_journal):
 
 
 def verify(home, identifier, expected_journal):
+    return _verify(home, identifier, expected_journal)
+
+
+def controller_verify(home, identifier, expected_journal):
+    return _verify(home, identifier, expected_journal, controller=True)
+
+
+def _verify(home, identifier, expected_journal, *, controller=False):
     home, target, _stage, journal, value = load_update(home, identifier, expected_journal)
     with home_entry.consumer(home), state.operation_lock(home, identifier):
         require(state.digest(journal) == expected_journal, "Journal changed before verification admission")
-        require(value["status"] in {"activated_pending_consumer_acceptance", "consumer_verification_failed"},
+        require(bool(value.get("controller")) == controller, "Use the explicit controller verification scope")
+        statuses = {"controller_pending_consumer_acceptance", "controller_verification_failed"} if controller else {
+            "activated_pending_consumer_acceptance", "consumer_verification_failed"}
+        require(value["status"] in statuses,
                 "Only a coherent activated generation can enter consumer verification")
         require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Activated generation drift")
         try:
             value["doctor"] = managed_doctor(home, target)
+            if controller:
+                retained = target / "candidate/runtime"
+                # Recovery must use the reviewed controller even after the source checkout moves.
+                require(inventory(home / "runtime") == value["after_runtime"], "Controller runtime drift")
+                binding = value["controller"]
+                require(value["qualification"]["contract"].get("controller") == binding,
+                        "Controller journal/qualification binding differs")
+                require(executing_controller(retained) == binding["executing_closure"], "Retained controller closure drift")
+                require(str(Path(sys.executable).resolve()) == binding["python"]
+                        and state.digest(Path(binding["python"])) == binding["python_sha256"], "Controller interpreter drift")
+                text, record = run_bound([Path(value["controller"]["python"]), "-B", home / "agent-home.py", "research", "status"],
+                                         home=home, target=target, label="managed-research-status")
+                observed = json.loads(text)
+                require(observed.get("schema") == "agent-home-research-status/v1"
+                        and isinstance(observed.get("providers"), dict), "Actual research status response is invalid")
+                value["controller_consumer"] = {"command": record, "schema": observed["schema"]}
             if value["profile"] == "core":
                 value["acceptance_scope"] = "Core inspection only; no Pi/model/runtime enforcement claim"
             else:
@@ -579,7 +692,7 @@ def verify(home, identifier, expected_journal):
             value["candidate_runtime_acceptance"] = value["acceptance_scope"]
             save_journal(journal, value, "normal-consumers-accepted")
         except (OSError, ValueError, subprocess.SubprocessError) as error:
-            value["status"] = "consumer_verification_failed"
+            value["status"] = "controller_verification_failed" if controller else "consumer_verification_failed"
             value["consumer_error"] = str(error)
             save_journal(journal, value, "normal-consumer-verification-failed")
             raise
@@ -590,25 +703,25 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", required=True, type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("plan", "apply", "verify", "recover", "rollback"):
-        command = commands.add_parser(name)
+    for name in ("plan", "apply", "verify", "recover", "rollback", "controller-plan", "controller-apply", "controller-verify"):
+        command = commands.add_parser(name, allow_abbrev=False)
         command.add_argument("--operation", required=True)
-        if name == "apply":
+        if name in {"apply", "controller-apply"}:
             command.add_argument("--expected-plan", required=True)
             command.add_argument("--qualification", required=True, type=Path)
             command.add_argument("--qualification-sha256", required=True)
             command.add_argument("--execute-qualified-runtime", action="store_true")
-        elif name != "plan":
+        elif name not in {"plan", "controller-plan"}:
             command.add_argument("--expected-journal", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "plan":
-            result = plan(args.home, args.operation)
-        elif args.command == "apply":
-            result = apply(args.home, args.operation, args.expected_plan, args.qualification, args.qualification_sha256,
+        if args.command in {"plan", "controller-plan"}:
+            result = globals()[args.command.replace("-", "_")](args.home, args.operation)
+        elif args.command in {"apply", "controller-apply"}:
+            result = globals()[args.command.replace("-", "_")](args.home, args.operation, args.expected_plan, args.qualification, args.qualification_sha256,
                            execute_qualified_runtime=args.execute_qualified_runtime)
         else:
-            result = globals()[args.command](args.home, args.operation, args.expected_journal)
+            result = globals()[args.command.replace("-", "_")](args.home, args.operation, args.expected_journal)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
