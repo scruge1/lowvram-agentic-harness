@@ -278,6 +278,10 @@ class ResearchRuntime:
         require(isinstance(request, dict) and not set(request) - allowed, "Unexpected research request fields")
         action = request.get("action")
         require(action in {"search", "fetch", "render", "read"}, "Unsupported research action")
+        timeout = request.get("timeout", 40 if action == "render" else 60 if action == "fetch" else 30)
+        maximum_timeout = 120 if action == "fetch" else 60
+        require(type(timeout) in (int, float) and 2 <= timeout <= maximum_timeout,
+                f"Research {action} timeout must be 2 through {maximum_timeout} seconds")
         binding, identity, before = self.selection(request)
         state = Path(identity["state_root"])
         require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project research storage escaped this home")
@@ -287,8 +291,6 @@ class ResearchRuntime:
             return projection(record, request["artifact_id"], view=request.get("view", "text"),
                               offset=request.get("offset", 0), limit=request.get("limit", 8192), cached=True)
         store.quota(ARTIFACT_BYTES)
-        timeout = request.get("timeout", 40 if action == "render" else 60 if action == "fetch" else 30)
-        require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research timeout must be 2 through 60 seconds")
         os.environ.update(self.env)  # This one-operation owned helper only.
         web = importlib.import_module("harness.web_research")
         if action == "search":

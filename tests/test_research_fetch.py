@@ -182,6 +182,106 @@ class FetchTests(unittest.TestCase):
         result = self.run_fetch(Mock(return_value=page("short shell")), timeout=30, allow_browser=True, renderer=Mock())
         self.assertEqual((result["content_scope"], result["status"]), ("thin_extraction", "partial"))
 
+    def test_slow_static_shell_reserves_meaningful_browser_work_and_full_settlement(self):
+        native = page("Application shell", status="empty_extraction")
+
+        def slow_static(url, **kwargs):
+            self.assertEqual(kwargs["timeout"], 19.75)
+            self.clock.value += kwargs["timeout"]
+            return native
+
+        def render(url, **kwargs):
+            self.assertGreaterEqual(kwargs["timeout"], fetch.BROWSER_MINIMUM_WORK)
+            self.assertEqual(self.clock() + kwargs["timeout"] + fetch.BROWSER_SETTLEMENT_RESERVE, 60)
+            # Use almost all declared work and the full worst-case settlement.
+            self.clock.value += kwargs["timeout"] - 1 + fetch.BROWSER_SETTLEMENT_RESERVE
+            return {"schema": "web-browser/v1", "ok": True, "status": "partial",
+                    "document": {"text": "Synthetic JS evidence", "truncated": True}}
+
+        result = self.run_fetch(slow_static, timeout=60, allow_browser=True, renderer=render)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["elapsed_seconds"], 59)
+        self.assertTrue(result["budget"]["browser_reserved"])
+        self.assertEqual(result["budget"]["static_phase_seconds"], 19.75)
+        self.assertEqual([item["mode"] for item in result["attempts"]], ["fetch", "render"])
+        self.assertIs(result["attempts"][0]["native"], native)
+        self.assertEqual(result["selected_native"]["schema"], "web-browser/v1")
+
+    def test_static_timeout_does_not_consume_reserved_phase_or_trigger_unvalidated_browser(self):
+        def timeout(url, **kwargs):
+            self.clock.value += kwargs["timeout"]
+            return {"ok": False, "status": "timeout"}
+
+        transport, browser = Mock(side_effect=timeout), Mock()
+        result = self.run_fetch(transport, timeout=60, allow_browser=True, renderer=browser)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["status"], "timeout")
+        self.assertIn("Retry deferred", result["reason"])
+        self.assertEqual(result["elapsed_seconds"], 19.75)
+        self.assertEqual(len(result["attempts"]), 1)
+        transport.assert_called_once()
+        browser.assert_not_called()
+
+    def test_noncompliant_slow_static_transport_cannot_admit_starved_browser(self):
+        def late_shell(url, **kwargs):
+            self.clock.value += 26.339  # Retained normal-path failure timing.
+            return page("Application shell", status="empty_extraction")
+
+        browser = Mock()
+        result = self.run_fetch(late_shell, timeout=60, allow_browser=True, renderer=browser)
+        browser.assert_not_called()
+        self.assertFalse(result["ok"])
+        self.assertIn("minimum render work", result["attempts"][0]["browser_hold"])
+        self.assertEqual(result["attempts"][0]["status"], "empty_extraction")
+
+    def test_explicit_larger_budget_preserves_slow_success_without_changing_default(self):
+        def slow_static(url, **kwargs):
+            self.assertEqual(kwargs["timeout"], 30)
+            self.clock.value += 26.339
+            return page("Application shell", status="empty_extraction")
+
+        def render(url, **kwargs):
+            self.assertEqual(kwargs["timeout"], 40)
+            self.clock.value += 40 + fetch.BROWSER_SETTLEMENT_RESERVE
+            return {"ok": True, "status": "partial", "document": {"text": "Synthetic JS evidence"}}
+
+        result = self.run_fetch(slow_static, timeout=120, allow_browser=True, renderer=render)
+        self.assertTrue(result["ok"])
+        self.assertLess(result["elapsed_seconds"], 120)
+        self.assertEqual(result["content_scope"], "captured_browser_window")
+        self.assertFalse(result["requested_source_complete"])
+
+    def test_insufficient_browser_budget_retains_static_path_and_explicit_hold(self):
+        transport, browser = Mock(return_value=page("", status="empty_extraction")), Mock()
+        result = self.run_fetch(transport, timeout=39, allow_browser=True, renderer=browser)
+        self.assertFalse(result["budget"]["browser_reserved"])
+        self.assertEqual(transport.call_args.kwargs["timeout"], 30)
+        self.assertIn("minimum render work", result["attempts"][0]["browser_hold"])
+        browser.assert_not_called()
+
+    def test_static_only_requests_keep_their_existing_budget(self):
+        transport = Mock(return_value=page())
+        result = self.run_fetch(transport, timeout=60)
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["budget"]["browser_reserved"])
+        self.assertEqual(transport.call_args.kwargs["timeout"], 30)
+
+    def test_opted_in_archive_uses_remaining_time_without_unused_browser_reserve(self):
+        def transport(url, **kwargs):
+            if "web.archive.org" not in url:
+                self.clock.value += kwargs["timeout"]
+                return page("", status="http_error", code=404)
+            self.assertEqual(kwargs["timeout"], 30)
+            self.clock.value += 25
+            return page()
+
+        browser = Mock()
+        result = self.run_fetch(transport, timeout=60, allow_archive=True, allow_browser=True, renderer=browser)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["content_scope"], "archived_snapshot")
+        self.assertEqual(result["elapsed_seconds"], 44.75)
+        browser.assert_not_called()
+
     def test_browser_cleanup_uncertain_or_late_result_never_becomes_success(self):
         initial = Mock(return_value=page("", status="empty_extraction"))
         browser = Mock(return_value={"ok": False, "status": "cleanup_uncertain"})
