@@ -356,9 +356,20 @@ reuse the existing commands and require the retained core controller/interpreter
 and unchanged package bindings. Stop the home's consumers before either route.
 
 This is a narrow source frontier. It does not combine the older research CLI
-migration with core changes or authorize other installed profiles. Source tests
-use synthetic package/consumer fixtures; separate native home adoption is
-required before claiming the complete migration is accepted on a host.
+migration with core changes or authorize other installed profiles. The exact
+source passed hosted Linux and Windows release gates. A separate isolated Linux
+home passed actual core plan/apply/verify and exact predecessor rollback, with
+the real prior verifier refusing the new pending generation. Normal doctor,
+research status and native Pi health passed with zero generation requests.
+The five package bindings and protected fixture files stayed unchanged; a file
+created after activation also survived rollback. The owned memory hub stopped,
+the exclusive lease passed, all watched donor files were preserved and the inert
+loopback endpoint received zero HTTP requests.
+
+That native evidence uses verified borrowed dependencies. It qualifies source
+adoption and rollback for that fixture, without observer installation, memory
+retrieval, model task quality or fresh installation claims. Other hosts and package
+profiles still require their own qualified adoption.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
