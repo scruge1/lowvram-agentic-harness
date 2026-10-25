@@ -303,12 +303,26 @@ def pending_operations(home):
     for path in sorted(directory.iterdir()):
         if path.name == ".maintenance.lock":
             result.append("operation lock requires inspection")
+        elif path.name == "pending-activation.json":
+            result.append("pending activation requires recovery")
         elif path.is_symlink():
             raise MaintenanceError("Unexpected update-state symlink")
         elif path.is_dir():
             receipt = path / "admission.json"
             status = read_json(receipt).get("status") if receipt.exists() else "incomplete"
-            if status != "withdrawn_not_active":
+            completed_update = False
+            update = path / "runtime-update.json"
+            if receipt.is_file() and update.exists():
+                try:
+                    record = read_json(update)
+                    completed_update = (isinstance(record, dict) and record.get("schema") == "agent-home-runtime-update/v1"
+                                        and record.get("home") == str(home)
+                                        and record.get("operation") == path.name
+                                        and record.get("stage_receipt_sha256") == digest(receipt)
+                                        and record.get("status") in {"accepted", "rolled_back", "recovered_predecessor"})
+                except (OSError, ValueError, TypeError):
+                    pass  # Unknown or damaged journals stay pending.
+            if status != "withdrawn_not_active" and not completed_update:
                 result.append(path.name + ": " + str(status))
     return result
 
@@ -470,10 +484,14 @@ def verify_stage(home, operation):
 
 def withdraw(home, operation, expected_receipt):
     home, target, receipt = selected_operation(home, operation)
+    update = target / "runtime-update.json"
+    require(not update.exists() and not update.is_symlink(),
+            "Runtime update history exists; use its recovery or rollback route without changing stage admission")
     path = target / "admission.json"
     require(receipt["status"] in {"staged_not_active", "failed_staging_not_active"}, "Operation is already terminal")
     require(digest(path) == expected_receipt, "Receipt drift; inspect the exact operation")
     with operation_lock(home, operation):
+        require(not update.exists() and not update.is_symlink(), "Runtime update appeared before withdrawal")
         original = path.read_bytes()
         require(hashlib.sha256(original).hexdigest() == expected_receipt, "Receipt changed before withdrawal")
         backup = path.with_name(path.name + ".previous-" + stamp())

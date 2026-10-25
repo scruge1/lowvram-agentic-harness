@@ -1,5 +1,8 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
+import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 function names(values: unknown): string[] {
   if (!Array.isArray(values) || values.length > 10000 || values.some((v) => typeof v !== 'string' || !v || v.length > 256)) throw new Error('invalid_registry');
@@ -42,6 +45,50 @@ export function collectCapabilities(pi: Pick<ExtensionAPI, 'getAllTools' | 'getA
 }
 
 export default function (pi: ExtensionAPI) {
+  pi.registerCommand('agent-health', {
+    description: 'Read this managed home\'s loaded native bindings and tool readiness without a model request.',
+    handler: async (_args, ctx) => {
+      try {
+        const home = process.env.AGENT_HOME;
+        if (!home || !path.isAbsolute(home) || fs.realpathSync(home) !== home) throw new Error('home');
+        const config = JSON.parse(fs.readFileSync(path.join(home, 'home.json'), 'utf8'));
+        if (config.schema !== 'agent-home/v1' || config.home !== home) throw new Error('identity');
+        const manifest = fs.readFileSync(path.join(home, 'runtime/runtime-manifest.json'));
+        const manifestHash = createHash('sha256').update(manifest).digest('hex');
+        if (manifestHash !== config.runtime_manifest_sha256) throw new Error('manifest');
+        const mcp = JSON.parse(fs.readFileSync(path.join(home, 'agent/mcp.json'), 'utf8'));
+        const mcpConfigured = mcp.mcpServers?.mempalace?.enabled === true;
+        const memoryTool = 'mcp__mempalace__mempalace_search';
+        const deadline = Date.now() + 15000;
+        while (mcpConfigured && !pi.getAllTools().some(tool => tool.name === memoryTool) && Date.now() < deadline)
+          await new Promise(resolve => setTimeout(resolve, 25));
+        const snapshot = collectCapabilities(pi, ctx.sessionManager.getSessionId());
+        const configured = snapshot.configured_tools.map(tool => tool.name);
+        const active = snapshot.configured_tools.filter(tool => tool.active).map(tool => tool.name);
+        const required = config.profile === 'core' ? ['agent_capabilities', 'system_tool_query']
+          : ['workflow_step', 'project_context', 'kanban_intake_route', 'validated_memory_query'];
+        if (config.selected_packages?.research) required.push('web_research');
+        const missing = required.filter(name => !active.includes(name));
+        const mcpObserved = configured.includes(memoryTool);
+        if (mcpConfigured && !mcpObserved) missing.push(memoryTool);
+        const report = { schema: 'pi-agent-health/v1', home, cwd: ctx.cwd,
+          runtime_manifest_sha256: manifestHash, active_tools: active, configured_tools: configured,
+          readiness: { ok: missing.length === 0, missing_tools: missing,
+            mcp_configured: mcpConfigured, mcp_observed: mcpObserved },
+          model: { provider: ctx.model?.provider ?? null, id: ctx.model?.id ?? null,
+            context_window: ctx.model?.contextWindow ?? null, max_output: ctx.model?.maxTokens ?? null },
+          session_id: snapshot.session_id,
+          prompt_sha256: createHash('sha256').update(ctx.getSystemPrompt()).digest('hex'),
+          authority: 'none', generative_requests: 0 };
+        // Pi's noninteractive output guard redirects console and stdout.write.
+        // A public native descriptor write preserves this machine JSON channel.
+        fs.writeSync(1, JSON.stringify(report) + '\n');
+      } catch {
+        fs.writeSync(1, JSON.stringify({ schema: 'pi-agent-health/v1', readiness: { ok: false },
+          error: 'managed_native_health_unavailable', authority: 'none', generative_requests: 0 }) + '\n');
+      }
+    },
+  });
   pi.registerTool({
     name: 'agent_capabilities', label: 'Agent callable tools',
     description: 'Read the current Pi configured tool registry and active names. Separate callable identity from shell inventory and installed files. This does not probe tool health or authorize actions.',

@@ -5,6 +5,35 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Compatible runtime activation and recovery — 2026-10-25
+
+Parent commit: `3bed3f5d2534afa013fb3dd21a3283351b211cd6`.
+
+Extend existing exact source staging with explicit qualified runtime exchange,
+retained predecessor, journal, rollback and interrupted-exchange recovery.
+The stable lifetime lease rejects active consumers; incomplete activation blocks
+ordinary entry. A coherent exchange stays pending consumer acceptance until the
+stable doctor and actual managed Pi `/agent-health` verify the candidate's
+manifest, model, configured tools and memory discovery. No inference is required.
+Unknown or damaged history stays pending. A stage used by runtime exchange cannot
+be withdrawn because its admission receipt remains part of rollback identity.
+
+Linux core controls passed14 tests with one platform skip; Windows passed its
+four applicable tests with11 explicit Linux skips. Nine native full-profile
+checks exercised actual Framework and memory helpers, apply, normal consumer
+acceptance, exact rollback with new user data preserved, next staging, and an
+interruption after real Framework replacement followed by retained-controller
+recovery. All three owned hubs stopped; borrowed dependencies were unchanged and
+provider HTTP remained zero. Five maintenance-history cases passed on Windows.
+
+Native verification exposed two transport prerequisites: Pi's noninteractive
+output guard reroutes ordinary stdout writes, and inherited open stdin postpones
+print-mode dispatch. Health uses one direct machine-readable descriptor write;
+the bounded consumer runner uses DEVNULL stdin and retains timeout output.
+This is compatible runtime-only support. Dependency, fixed entry/controller,
+configuration-protocol and personalized-template migrations remain held. Existing
+private deployments and a new host still require their own adoption evidence.
+
 ## Native discovery for rare project tools — 2026-10-25
 
 Parent commit: `68bc4b2ff8bd13e40e7b403ed039b55f69f70c55`.
