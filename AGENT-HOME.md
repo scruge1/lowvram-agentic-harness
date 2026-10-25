@@ -99,6 +99,51 @@ state are ignored. Configure the owner's chosen private remote deliberately.
 The installed source-control skill provides reviewed source milestones through
 the existing supervised workflow. It does not attribute arbitrary shell edits.
 
+## Read bounded board replies
+
+Successful show, list, create, move, comment, decomposition and hierarchy replies
+use a bounded model view, at most12KiB of UTF-8 JSON. The original complete
+backend reply remains in host `details`. Routing, source matching, idempotence,
+completion witnesses and Framework decisions still use complete controller
+data. Existing task bodies, comments and board history are not rewritten.
+
+`kanban_show`, `kanban_list` and `kanban_hierarchy` accept a nested `view` object.
+Those display options are removed before backend request validation. Use returned
+offsets and `raw_reply_sha256` to request more data:
+
+| Need | View options |
+|---|---|
+| More task body | `body_offset` |
+| Earlier comment IDs | `before_id` |
+| One comment's complete body | `comment_id`, then `offset` |
+| Any own top-level task field | `task_field`, then `offset`; pages contain its serialized JSON |
+| More fetched list entries | `items_offset`, optionally `items_limit` up to20 |
+| More returned hierarchy nodes | `hierarchy_offset` |
+| More dependency or containment IDs | `relation_offset` |
+| Guard against changing source | `expected_reply_sha256` from the previous raw reply hash |
+
+Offsets are Unicode codepoints for text and indexes for collections. A changed
+reply hash produces an explicit stale-cursor result. Restart paging against the
+new hash. List paging covers the backend's fetched limit, at most100 cards;
+it is not unlimited board pagination. Hierarchy paging does not clear the
+backend's depth/truncation limit. Prerequisite edges and decomposition containment
+remain distinct. Mutation acknowledgements omit old history. A latest observed
+comment ID is not proof that this call created it during concurrent writes.
+
+The12KiB cap applies to supported model views. Other actions, complete host
+details and the existing1MiB adapter transport limit remain unchanged. This
+does not establish whole-context token savings, faster model inference or a
+bound on tool-definition schemas. The installer includes the projector's
+`.mjs` source and hash in its runtime snapshot.
+
+Qualification passed21 pure projection cases,20 actual native reply/controller
+checks and the existing35 Pi/Hermes/Framework/context checks. In one isolated
+synthetic card case, matched decoded tool content fell from105,410 to7,599bytes
+(92.79%). Matched provider tool-message envelopes fell from106,886 to8,076bytes
+(92.44%). These use the actual installed SDK/provider serializers, with no
+inference. Full host details stayed unchanged. This measures one tool reply,
+not complete requests, token counts or end-to-end latency.
+
 ## Save reviewed project source
 
 Read the installed `source-control` skill before a source milestone. It uses
@@ -284,6 +329,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Root outcome, hierarchy, triage leaf specification and cancellation | Current backend exported | Source-bound retained-work tests; no general root acceptance claim |
 | Framework read-only decisions over the native board | Actual Framework/Pi/Hermes/context composition passed35 checks with a generated target binding | Normal model-driven use and root-outcome acceptance; no duplicate dispatcher/database |
 | Quiet intake and compact live state | Intake source exported | Final-provider coverage; separate private task/comment refresh behavior remains unexported |
+| Bounded Kanban model replies and explicit paging |21 pure cases,20 native reply/controller checks and35 existing composition checks passed; full host details retained | New-host adoption; backend transport and tool-definition size are separate |
 | Hierarchical project instructions and bounded checkpoint delivery | Current context gate exported;17 native groups,35 composition checks and30-tool startup passed | Model-driven use; no final-provider attestation |
 | Read-loop containment and evidence-bound recovery | Read-loop079 and exact failure-read/recovery gates exported | Full native model-path adoption; matching recovery evidence/receipt only clears its own latch |
 | Quiet session/task waits and receipt-driven one-time wakeups | Task-waits138 source exported | Watcher/race/pause/cancel/reload checks; interactive wakeup pilot still open upstream |
