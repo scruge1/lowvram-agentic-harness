@@ -94,6 +94,7 @@ class AgentHomeTests(unittest.TestCase):
         settings = json.loads((self.root / "agent/settings.json").read_text())
         self.assertTrue(any(path.endswith("pi-kanban.ts") for path in settings["extensions"]))
         mcp = json.loads((self.root / "agent/mcp.json").read_text())["mcpServers"]["mempalace"]
+        self.assertEqual(mcp["exposure"], "deferred")
         self.assertEqual(mcp["env"]["MEMPALACE_CONFIG_DIR"], str(self.root / "state/mempalace-config"))
         self.assertEqual(mcp["args"][-3:], ["--home", str(self.root), "mcp"])
 

@@ -258,6 +258,25 @@ Validated recall starts with an empty claim registry and abstains. Raw memory
 hits do not become facts. Reviewed safe summaries must bind exact current
 source bytes, state and source identity. Shared promotion remains separate.
 
+Fresh homes use deferred MCP exposure. First call native `tool_search` with
+`{"query":"mcp__mempalace__mempalace_search","limit":1}`. Then call the
+canonical memory tool only if the returned loaded name is
+`mcp__mempalace__mempalace_search`. Search ranks candidates; a query is not an
+exact-name guarantee. Refine discovery if it returns another tool. Discovery loads its
+schema for the next model request; it does not query memory or satisfy memory
+readiness. Pi retains discovered tools on the session branch. Use `/mcp` to
+inspect connection and exposure; use `/reload` after editing MCP configuration
+outside the session. Source support does not establish qualification of a new
+exposure setting or its memory/intake path on the selected host.
+
+Current-source native qualification passed30 checks with an offline-generated
+home and unchanged installed dependencies. Matched provider tool-schema JSON
+changed61,683 ->26,241bytes (57.46% less) before memory discovery. All47 memory
+tools remain registered; required workflow/context tools stay active. Actual
+recall, semantic error refusal, reload and reconnect passed. A search JSON error
+without MCP `isError` no longer satisfies recall readiness. This is a synthetic
+native shadow test, not a fresh package install or a model-driven new-host task.
+
 Pi1.4 includes native MCP reconnect/shutdown behavior. The historical custom
 bridge is not copied on top of that native bridge. Native health, idle exit,
 restart and exact memory readback still require acceptance on the chosen host.
@@ -334,8 +353,9 @@ private runtime source and active session identifiers stay outside this repo.
 | Read-loop containment and evidence-bound recovery | Read-loop079 and exact failure-read/recovery gates exported | Full native model-path adoption; matching recovery evidence/receipt only clears its own latch |
 | Quiet session/task waits and receipt-driven one-time wakeups | Task-waits138 source exported | Watcher/race/pause/cancel/reload checks; interactive wakeup pilot still open upstream |
 | Local-provider bounded native compaction | Public native API and exact target selectors exported | Native API tests passed with synthetic stream; real summary quality remains model-specific |
-| Action failure dominates verifier success | Existing source needs newer ledger parity | Actual full host-action and model-facing result checks |
+| Action failure dominates verifier success |25 native controls passed: nonzero action stays failed despite predicate-valid output; controller/helper/tool agree | New-host adoption; separate private ledger tools are not installed |
 | MCP lifecycle and health | Native Pi1.4 connected47 tools; owned hub startup/idempotence/shutdown and connected recall passed | Long-idle reconnect and new-host lifecycle checks |
+| Deferred MCP schemas and canonical recall readiness |30 current-source native checks; actual recall, error refusal, reload/reconnect; matched initial schema bytes57.46% lower | New-host/model-driven adoption; no whole-request token or latency claim |
 | Validated memory retrieval, exact chunks and promotion | Empty safe registry abstention and synthetic native capture/mining/exact readback passed | Reviewed promotion, new-host freshness and private-history acceptance |
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
 | Source milestones, scoped commits and remote verification | Reviewed CLI/skill,21 real-Git controls and22 native supervised-workflow checks passed | New-host adoption; automatic all-session attribution remains open |

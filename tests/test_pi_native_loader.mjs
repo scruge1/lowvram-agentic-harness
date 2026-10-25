@@ -239,8 +239,8 @@ async function discover(includeContext = true) {
   await tool('project_knowledge_query', { terms: 'fixture' });
   // Explicit memory fixture, without starting MCP processes or a model.
   await session.extensionRunner.emitToolResult({ type: 'tool_result', toolCallId: 'fixture-memory',
-    toolName: 'mcp__mempalace__mempalace_search', input: {}, content: [],
-    details: { ok: true, fixture: true }, isError: false });
+    toolName: 'validated_memory_query', input: {}, content: [],
+    details: { schema: 'validated-memory-query/v1', results: [], reason: 'no_current_provenanced_result', fixture: true }, isError: false });
   await tool('read', { path: skill });
   if (includeContext) await loadContext();
 }

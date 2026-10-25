@@ -100,11 +100,19 @@ const invoke = async(name,input) => {
   await fire('tool_result',{toolName:name,toolCallId:'call-'+name,input,...response});
   return response;
 };
+// Pi1.4 retains the native MCP CallToolResult in structuredContent. MemPalace
+// serializes its search envelope as one JSON text block inside that result.
+const nativeSearchText = text => {
+  const content = [{type:'text',text}];
+  return {toolName:'mcp__mempalace__mempalace_search',content,
+    details:{server:'mempalace',tool:'mempalace_search'},structuredContent:{content}};
+};
+const nativeSearch = value => nativeSearchText(JSON.stringify(value));
 const discover = async(memory='native') => {
   await fire('tool_result',{toolName:'agent_capabilities',details:{ok:true,snapshot:{}}});
   await fire('tool_result',{toolName:'system_tool_query',details:{ok:true,results:[]}});
-  if(memory==='native') await fire('tool_result',{toolName:'mcp__mempalace__mempalace_search'});
-  else await fire('tool_result',{toolName:'validated_memory_query',details:{schema:'validated-memory-query/v1',results:[],reason:memory==='sensitive'?'sensitive_query':'no_current_provenanced_result'}});
+  if(memory==='native') await fire('tool_result',nativeSearch({query:'fixture',filters:{},total_before_filter:0,results:[]}));
+  else if(memory!=='none') await fire('tool_result',{toolName:'validated_memory_query',details:{schema:'validated-memory-query/v1',results:[],reason:memory==='sensitive'?'sensitive_query':'no_current_provenanced_result'}});
   await fire('tool_result',{toolName:'project_knowledge_query',details:{ok:true}});
 };
 const admit = () => invoke('project_admit',{project_root:'/project'});
@@ -112,6 +120,31 @@ const execute = () => fire('tool_call',{toolName:'workflow_step'});
 assert.equal((await execute()).block,true);
 await admit(); await invoke('kanban_create',{title:'Owner-authorized task'}); await discover();
 assert.equal(await execute(),undefined); // No adviser call or consultation-created card.
+const emptySearch = nativeSearch({query:'fixture',filters:{},total_before_filter:0,results:[]});
+const memoryCases = [
+  ['semantic error without isError',nativeSearch({error:'wing contains invalid path characters'}),false],
+  ['error envelope with results array',nativeSearch({error:'Search error: synthetic failure',results:[]}),false],
+  ['malformed native JSON',nativeSearchText('{"results": ['),false],
+  ['unknown payload',nativeSearch({query:'fixture',count:0}),false],
+  ['null payload',nativeSearch(null),false],
+  ['array payload',nativeSearch([]),false],
+  ['outer MCP error',{...emptySearch,isError:true},false],
+  ['raw MCP error',{...emptySearch,structuredContent:{...emptySearch.structuredContent,isError:true}},false],
+  ['successful empty search',emptySearch,true],
+  ['document text containing error',nativeSearch({query:'fixture',results:[
+    {id:'drawer-1',content:'Stored code example: {"error":"synthetic reported error"}'}]}),true],
+  ['full raw result survives model-view limit',{...emptySearch,content:[{type:'text',text:'[limited model-facing output]'}]},true],
+  ['native text fallback without structured result',{...emptySearch,structuredContent:undefined},true],
+];
+for (const [label,event,accepted] of memoryCases) {
+  await fire('session_start'); await discover('none');
+  assert.equal((await execute()).block,true,label+': missing memory still holds admission');
+  await fire('tool_result',event);
+  const result = await execute();
+  if(accepted) assert.equal(result,undefined,label+': observed search should satisfy readiness');
+  else assert.equal(result?.block,true,label+': failed/unknown search must leave readiness closed');
+}
+console.log('canonical memory guard cases passed: '+memoryCases.length);
 await fire('session_start'); await discover('sensitive'); assert.equal((await execute()).block,true);
 await discover('validated'); assert.equal(await execute(),undefined); // An empty reviewed registry is a valid observed abstention.
 await fire('input',{source:'interactive',text:'Continue this task'});
@@ -148,6 +181,7 @@ console.log('selection contract passed');
             env=env, capture_output=True, text=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("canonical memory guard cases passed: 12", result.stdout)
         self.assertIn("selection contract passed", result.stdout)
 
     def test_export_has_no_private_host_binding(self):
