@@ -5,6 +5,31 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Opt-in single-command local CPU candidate — 2026-10-25
+
+Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
+
+Add `install.sh --local-cpu` around the existing pinned runtime bootstrap,
+model provision/start/capture and owned-service factory APIs. Keep endpoint
+attachment as the default. Show exact model/native artifact identities, sizes,
+licenses and CPU settings before confirmation. The shell's pre-Python display
+pins are checked against the canonical JSON; managed Python owns the actual
+plan and checks at least20GiB available RAM/free disk before model transfer.
+Refuse incompatible overrides before bootstrap. Preserve failed handoff/setup
+receipts and require explicit recovery instead of replaying uncertain effects.
+The earlier two-thread32K/4K CPU attempt failed the 600-second report task during
+input prefill. Select eight CPU/batch threads as the next candidate, keeping
+the same32K/4K budget and20GiB resource floor; it needs same-workload acceptance.
+Require eight available affinity/logical CPUs before model transfer, preferring
+the process affinity mask. This is capacity evidence, not exclusive reservation.
+
+Offline fixtures test pure plans, canonical display pins, early refusals,
+resource checks, existing-home preservation, ordered API composition and retained
+failure phases. High-cost downloads, native service and package calls are mocked
+in those fixtures. They do not qualify a new full installation, useful agent
+task quality, model speed or general hardware fit. The CPU profile remains a
+text-only candidate; GPU and full/observer setup are outside this route.
+
 ## Observer credentials and independent keyword recall — 2026-10-25
 
 Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
