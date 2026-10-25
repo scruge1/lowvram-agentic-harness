@@ -24,7 +24,7 @@ The wizard asks for a new agent-home directory, shows its download/storage plan,
 then asks for the local OpenAI-compatible endpoint and exact model ID. It creates
 a dedicated home. Existing agent profiles,
 memory databases, services and project directories are not migrated by setup.
-Setup checks all 14 required templates before creating the home. Its Git-ignore
+Setup checks all required templates before creating the home. Its Git-ignore
 template is installed as `.gitignore`.
 Choose storage with room for package environments, memory and embedding caches.
 The bootstrap requires at least8GiB free before runtime provisioning; this is
@@ -601,6 +601,36 @@ Upstream references: [Pi configuration](https://github.com/earendil-works/pi/blo
 [Claude-mem](https://github.com/thedotmack/claude-mem/tree/v13.29.0),
 [Agent Framework](https://pypi.org/project/agent-framework-core/1.21.0/),
 [Harness2](https://github.com/google-research/harness2/tree/1cfe254e8d25b15f37048c3730134686abe60335).
+
+## Prepare the first checked report
+
+Use the installed helper after package setup:
+
+```bash
+python /data/my-agent/runtime/harness/first_project.py prepare \
+  --home /data/my-agent --name hardware-report
+```
+
+It creates a new project through the existing Git/board path and captures
+measured inventory plus configured model metadata. Missing observations stay
+unknown. It writes `FIRST-PROJECT.md`, `hardware-facts.json` and a pinned
+`first-project.json`. Retain the returned original `manifest_sha256` and exact
+`check_argv`; use that argv as the read-only `workflow_step` verifier. The checker
+reads relative to the project cwd, so an empty-directory negative control fails.
+Do not recompute a replacement pin after inputs change.
+
+Open the prepared project with the managed agent and request its report. The
+checker requires exact facts and units, unchanged inputs and250–400 Unicode word
+tokens. Semantic interpretation still needs review. A passed checker does not
+establish model fit, service ownership, GPU selection or whether a later tuner
+was executed. Preparation makes no model request and starts no services.
+
+The first real report pilot produced a source-bound artifact, but exceeded its
+requested word limit and needed scope corrections. This maintained pattern
+checks those constraints during the task. Its Linux system/managed-Python tests
+passed11 controls each; Windows passed10 with one symlink skip. Board transport
+and package admission were explicit test fixtures; normal target preparation
+and a model-produced report through this exact pattern remain separate evidence.
 
 ## Advanced owned inference candidate
 

@@ -35,6 +35,7 @@ REQUIRED_TEMPLATES = (
     "AGENTS.md", "CLAUDE.md", "gitignore.template", "agent/AGENTS.md",
     "agent/APPEND_SYSTEM.md", "agent/prompts/personalize.md",
     "agent/skills/supervised-tasks/SKILL.md", "agent/skills/source-control/SKILL.md", "context/startup-index.md",
+    "agent/skills/supervised-tasks/references/first-hardware-report.md",
     "agent/skills/reuse-first-engineering/SKILL.md",
     "agent/skills/reuse-first-engineering/references/reuse-and-comparison.md",
     "context/profile.md", "context/current.md", "context/lessons.md",

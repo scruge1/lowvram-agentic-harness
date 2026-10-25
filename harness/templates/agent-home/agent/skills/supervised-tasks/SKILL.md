@@ -13,6 +13,11 @@ outputs. The host runs the same verifier in an empty negative-control directory
 before the positive check. Use an absolute verifier script path. A literal echo
 or a verifier that ignores the output does not establish task correctness.
 
+For the prepared first hardware report, read
+[first-hardware-report.md](references/first-hardware-report.md). Reuse its fixed
+checker and the original preparation hash. It checks facts, units, length and
+unchanged inputs; keep interpretation under separate semantic review.
+
 No automatic replay follows failure. Read the complete saved failure and state
 the changed assumption, new evidence, expected observation and stop condition.
 The Linux process owner cleans up owned descendants; it is not an OS sandbox.
