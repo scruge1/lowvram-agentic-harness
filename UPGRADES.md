@@ -5,6 +5,51 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Add an explicit fresh owned full-bundle candidate - 2026-10-25
+
+Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.
+
+The finite shell, native bootstrap, model-service setup and factory previously
+refused the full package profile on the owned authenticated local-model route.
+Permit explicit `--local-cpu --profile full` through the same one-command flow;
+keep the default agent profile, existing resource floors, permanent runtimes,
+package pins, service admission, stop/install/same-port restart and no-replay
+recovery unchanged. The full plan lists all nine packages and labels Harness2
+and DeepSeek as optional experimental laboratories.
+
+Require the same reviewed observer/factory/handoff/lease source closure before
+model transfer or pre-home stop/creation. Reuse the foreground observer, actual
+worker credential and shared-lease checks, exclusive package patching and
+child-only nonce resolution. Doctor validates the local native-provider and
+secret-free observer settings without starting capture or resolving a key.
+Windows owned-full creation refuses explicitly. This adds no new profile,
+credential store, router or observer mode.
+
+Existing Pi input, tool-result and settled-turn hooks can capture; session
+shutdown only waits for queued work. The foreground worker remains a shared
+reader until explicit memory stop. Stale service credentials require explicit
+worker stop/start. Source checks do not imply that install, health or empty
+drain establish authenticated generation or useful recall.
+
+Focused source checks cover the finite entrypoints, no-effect shell plans,
+real scaffold/nonsecret configuration, changed observer source, source-held
+pre-home stop, service admission and existing nonce/foreground ownership
+controls. A frozen actual prior provider definition proves that the existing
+narrow core-source updater refuses this later home change. The updater is not
+relaxed, even for existing `agent` homes. Complete fresh full-nine installation,
+normal start, authenticated capture, service-key rotation and useful recall
+still require a separately reviewed new-home native caller. No old full-home,
+private store, model quality or whole-system parity claim follows here.
+
+The initial focused Linux source packet passed 106 checks in 70.696 seconds.
+After the final doctor/provider validation and compatibility fixture, three
+narrow checks passed in 6.580 seconds. Ruff 0.16.10 and all seven canonical
+`--selftest` commands passed. Windows metadata controls included explicit
+unsupported-full refusal; a new Unicode fixture's default-encoding mistake was
+corrected to UTF-8, and its exact case plus the new compatibility control passed.
+These fixtures isolate packages/services or use owned temporary lifecycle
+controls. They do not establish complete native full-bundle acceptance.
+
 ## Mine cached research with the selected local model - 2026-10-25
 
 Parent commit: `f0803125054c86ac29d19b1a7f9431b6aeec41ee`.

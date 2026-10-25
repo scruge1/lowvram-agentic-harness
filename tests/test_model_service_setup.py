@@ -10,6 +10,7 @@ import copy
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -52,12 +53,75 @@ class OwnedFactoryTests(unittest.TestCase):
         self.assertNotIn(self.binding["environment_variable"], home.environment(self.target))
         self.assertEqual(config["model_capability_acceptance"], "not_probed")
 
-    def test_contradictory_provider_or_route_and_full_profile_refuse_before_creation(self):
+    def test_contradictory_provider_route_or_inspection_profile_refuse_before_creation(self):
         for changes in ({"model": "different"}, {"base_url": "http://127.0.0.1:49992/v1"}, {"context_window": 65536},
-                        {"local_provider": dict(self.provider, apiKey="literal-secret")}, {"profile": "full"}):
+                        {"local_provider": dict(self.provider, apiKey="literal-secret")}, {"profile": "core"}):
             with self.subTest(changes=list(changes)), self.assertRaises(home.HomeError):
                 self.scaffold(**changes)
             self.assertFalse(self.target.exists())
+
+    @mock.patch.object(home.platform, "system", return_value="Linux")
+    def test_full_scaffold_keeps_nonsecret_settings_and_installs_existing_hooks_only(self, _platform):
+        from harness import claude_memory
+        config = self.scaffold(profile="full")
+        self.assertEqual(tuple(config["selected_packages"]), home.PROFILES["full"])
+        self.assertEqual(config["installed"], {})
+        settings = json.loads((self.target / "agent/settings.json").read_text(encoding="utf-8"))
+        self.assertIn(str(self.target / "runtime/adapters/pi/claude-memory.ts"), settings["extensions"])
+        with mock.patch.object(model_service_handoff, "launch_environment") as resolver:
+            _, required = claude_memory.settings(self.target, config)
+            self.assertEqual(required["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], "local")
+            baseline = home.doctor(self.target)
+            self.assertFalse(any("owned observer source/settings" in e for e in baseline["failures"]))
+            path = self.target / "memory/claude-mem/settings.json"
+            original = path.read_bytes()
+            changed = json.loads(path.read_text(encoding="utf-8"))
+            changed["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"] = "a" * 64
+            try:
+                path.write_text(json.dumps(changed), encoding="utf-8")
+                report = home.doctor(self.target)
+                self.assertTrue(any("out of persisted settings" in e for e in report["failures"]))
+                self.assertNotIn("a" * 64, json.dumps(report))
+            finally:
+                path.write_bytes(original)
+            path = self.target / "agent/models.json"
+            original = path.read_bytes()
+            changed = json.loads(original)
+            changed["providers"]["local"]["apiKey"] = "b" * 64
+            try:
+                path.write_text(json.dumps(changed), encoding="utf-8")
+                report = home.doctor(self.target)
+                self.assertTrue(any("exact captured native environment-key" in e for e in report["failures"]))
+                self.assertNotIn("b" * 64, json.dumps(report))
+            finally:
+                path.write_bytes(original)
+        resolver.assert_not_called()
+        self.assertFalse((self.target / "memory/claude-mem/worker.pid").exists())
+        self.assertIn("nonce rotation", " ".join(report["pending_acceptance"]))
+
+    @mock.patch.object(home.platform, "system", return_value="Linux")
+    def test_full_rejects_each_changed_observer_source_before_home_creation(self, _platform):
+        source = self.base / "reviewed-source"
+        for name in home.OWNED_FULL_SOURCES:
+            file = source / name
+            file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(home.ROOT / name, file)
+        home.owned_full_sources(source)
+        for name in home.OWNED_FULL_SOURCES:
+            file = source / name
+            original = file.read_bytes()
+            try:
+                file.write_bytes(original + b"\nUNREVIEWED\n")
+                with self.subTest(source=name), self.assertRaisesRegex(home.HomeError, "reviewed observer sources"):
+                    self.scaffold(profile="full", source=source)
+                self.assertFalse(self.target.exists())
+            finally:
+                file.write_bytes(original)
+
+    def test_owned_full_non_linux_refuses_before_home_creation(self):
+        with mock.patch.object(home.platform, "system", return_value="Windows"), self.assertRaisesRegex(home.HomeError, "requires Linux"):
+            self.scaffold(profile="full")
+        self.assertFalse(self.target.exists())
 
     def test_protocol_budget_refuses_before_factory_writes(self):
         binding = dict(self.binding, context=4096, max_output=128)
@@ -208,7 +272,7 @@ class SetupTests(OwnedFactoryTests):
         self.assertFalse(operation["automatic_replay"])
         self.assertEqual(operation["installed_service"]["lease_scope"], "home_shared")
 
-    def test_under_capacity_and_full_profile_do_not_stop_or_create(self):
+    def test_under_capacity_and_stale_full_sources_do_not_stop_or_create(self):
         for changes in ({"context": 4096, "max_output": 32}, {"max_output": 32}, {"max_output": 20000}):
             selected = dict(self.binding, **changes)
             with self.pipeline() as (stopped, started), self.assertRaises(home.HomeError):
@@ -216,9 +280,20 @@ class SetupTests(OwnedFactoryTests):
             stopped.assert_not_called()
             started.assert_not_called()
             self.assertFalse(self.target.exists())
-        with self.pipeline() as (stopped, _), self.assertRaisesRegex(home.HomeError, "full/observer"):
+        with self.pipeline() as (stopped, _), mock.patch.object(home, "owned_full_sources", side_effect=home.HomeError("stale observer source")), \
+                self.assertRaisesRegex(home.HomeError, "stale observer source"):
             setup.create(self.target, selection={"binding": self.binding, "provider": self.provider}, profile="full")
         stopped.assert_not_called()
+
+    def test_full_factory_uses_existing_admission_and_keeps_experimental_scope(self):
+        def installed(target, config):
+            self.assertEqual(config["profile"], "full")
+            self.assertEqual(set(config["selected_packages"]), set(home.PINS))
+            self.assertFalse((target / "memory/claude-mem/worker.pid").exists())
+        with self.pipeline(install=installed):
+            result = setup.create(self.target, selection={"binding": self.binding, "provider": self.provider}, profile="full")
+        self.assertEqual(self.events, ["stop", "install", "start"])
+        self.assertEqual(result["model_capability_acceptance"], "not_probed")
 
     def test_captured_pid_nonce_state_race_refuses_exact_stop(self):
         self.state["pid"] = 12346

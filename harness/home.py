@@ -57,6 +57,14 @@ PROFILES = {
     "agent": ("pi", "hermes", "mempalace", "framework", "research"),
     "full": tuple(PINS),
 }
+# Owned full creation must ship the same observer/lease implementation as the
+# executing factory. This is a refreshable source closure, not installed-package
+# or capture acceptance, and it does not admit older full homes for migration.
+OWNED_FULL_SOURCES = (
+    "harness/home.py", "harness/claude_memory.py", "harness/claude_memory_patch.py",
+    "harness/claude-memory-patch.json", "harness/model_service_handoff.py",
+    "harness/home_entry.py", "harness/home_lifecycle.py", "adapters/pi/claude-memory.ts",
+)
 NPM_NAMES = {"pi": "@earendil-works/pi-coding-agent", "claude-mem": "claude-mem", "deepseek": "@deepseek-ai/dsh", "bun": "bun"}
 DIST_NAMES = {"hermes": "hermes-agent", "mempalace": "mempalace", "framework": "agent-framework-core", "harness2": "harness2"}
 GIT_SOURCES = {
@@ -243,11 +251,25 @@ def environment(home, project_root=None):
     return value
 
 
-def owned_service_provider(home, binding, *, profile, base_url, model, context_window, max_output, model_profile, provider=None):
+def owned_full_sources(source):
+    """Refuse a stale observer bridge before any owned factory effects."""
+    source = Path(source).resolve(strict=True)
+    for relative in OWNED_FULL_SOURCES:
+        expected, selected = ROOT / relative, source / relative
+        if (not selected.is_file() or selected.is_symlink() or selected.resolve() != selected
+                or digest(selected) != digest(expected)):
+            raise HomeError("Owned full installation requires this factory's reviewed observer sources: " + relative)
+
+
+def owned_service_provider(home, binding, *, profile, base_url, model, context_window, max_output, model_profile, provider=None, source=ROOT):
     """Validate explicit owned attachment, without reading a nonce or service."""
     from harness import model_service_handoff, model_profiles
-    if profile not in {"agent", "pi"}:
-        raise HomeError("Owned model authentication is qualified only for agent/pi; full/observer routing is not qualified.")
+    if profile not in {"agent", "pi", "full"}:
+        raise HomeError("Owned model setup supports only agent, pi or the explicit full candidate.")
+    if profile == "full":
+        if platform.system() != "Linux":
+            raise HomeError("Owned full setup requires Linux foreground worker and home-lease ownership.")
+        owned_full_sources(source)
     if type(context_window) is not int or type(max_output) is not int or context_window < 32768 or max_output < 4096:
         raise HomeError("Owned full-agent setup requires at least32768 context and4096 output; a protocol-only service is insufficient.")
     if max_output > context_window // 2:
@@ -297,7 +319,7 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
     if owned_model_service is not None:
         provider = owned_service_provider(home, owned_model_service, profile=profile, base_url=base_url, model=model,
                                           context_window=context_window, max_output=max_output, model_profile=model_profile,
-                                          provider=local_provider)
+                                          provider=local_provider, source=source)
     elif local_provider is not None:
         raise HomeError("A provider override requires an explicit owned model-service binding.")
     node_binding = None
@@ -784,6 +806,20 @@ def doctor(home):
             problem = check_package(home, key, config["installed"][key])
             if problem:
                 failures.append(problem)
+    if config["profile"] == "full" and "owned_model_service" in config:
+        try:
+            provider = json.loads((home / "agent/models.json").read_text(encoding="utf-8")).get("providers", {}).get("local")
+            if not isinstance(provider, dict):
+                raise HomeError("Owned full local provider configuration is missing.")
+            owned_service_provider(home, config["owned_model_service"], profile="full", base_url=config["base_url"],
+                                   model=config["model"], context_window=config["context_window"], max_output=config["max_output"],
+                                   model_profile=config["model_profile"], provider=provider, source=runtime)
+            from harness import claude_memory
+            claude_memory.settings(home, config)
+        except (OSError, ValueError) as error:
+            failures.append("owned observer source/settings binding failed: " + str(error))
+        pending.extend(["owned observer authenticated capture, nonce rotation and useful recall on this host",
+                        "Harness2 and DeepSeek are optional experimental laboratories, not accepted agent dispatch"])
     if config["profile"] != "core" and "framework" in config["installed"]:
         binding = home / "state/framework-binding.json"
         if not binding.is_file() or digest(binding) != config.get("framework_binding_sha256"):
@@ -865,7 +901,7 @@ def _launch(home, args, project_root=None, inherited=(), *, continue_recent=Fals
                 raise HomeError("Owned model provider configuration is missing.")
             owned_service_provider(home, config["owned_model_service"], profile=config["profile"], base_url=config["base_url"],
                                    model=config["model"], context_window=config["context_window"], max_output=config["max_output"],
-                                   model_profile=config["model_profile"], provider=provider)
+                                   model_profile=config["model_profile"], provider=provider, source=home / "runtime")
             child_env = model_service_handoff.launch_environment(home, config["owned_model_service"]).apply(child_env)
         if inherited:
             child_env[home_entry.FD_ENV] = str(inherited[0])

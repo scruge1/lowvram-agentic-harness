@@ -39,22 +39,22 @@ done
 ((!runtimes_only || !resume_install)) || die 'Choose runtime-only setup or installer resume, not both'
 if ((local_cpu)); then
   ((!runtimes_only && !resume_install)) || die '--local-cpu cannot mix runtime-only or resume modes'
-  seen_profile=0 seen_name=0
+  seen_profile=0 seen_name=0 profile=agent
   for ((i=0; i<${#arguments[@]}; i++)); do
     case "${arguments[i]}" in
       --profile|--profile=*)
         ((!seen_profile)) || die 'Supply --profile once'; seen_profile=1
         if [[ "${arguments[i]}" == --profile ]]; then
-          ((i+=1)); ((i<${#arguments[@]})) || die '--profile needs agent or pi'; profile=${arguments[i]}
+          ((i+=1)); ((i<${#arguments[@]})) || die '--profile needs agent, pi or full'; profile=${arguments[i]}
         else profile=${arguments[i]#*=}; fi
-        [[ "$profile" == agent || "$profile" == pi ]] || die '--local-cpu supports only agent or pi' ;;
+        [[ "$profile" == agent || "$profile" == pi || "$profile" == full ]] || die '--local-cpu supports only agent, pi or full' ;;
       --name|--name=*)
         ((!seen_name)) || die 'Supply --name once'; seen_name=1
         if [[ "${arguments[i]}" == --name ]]; then
           ((i+=1)); ((i<${#arguments[@]})) || die '--name needs its value'; owner_name=${arguments[i]}
         else owner_name=${arguments[i]#*=}; fi
         [[ -n "$owner_name" && "$owner_name" != --* && "$owner_name" != *$'\n'* && "$owner_name" != *$'\r'* ]] || die 'Use a nonempty one-line owner name' ;;
-      *) die '--local-cpu accepts only --profile agent|pi and --name; omit endpoint/model/budget/offline/resume overrides' ;;
+      *) die '--local-cpu accepts only --profile agent|pi|full and --name; omit endpoint/model/budget/offline/resume overrides' ;;
     esac
   done
 fi
@@ -115,8 +115,20 @@ The service remains running after successful setup; explicit stop/status are ava
 The prior two-thread32K/4K report attempt failed the 600-second task at input
 prefill. This eight-thread candidate needs same-workload qualification; it has no
 accepted agent task quality, speed, general fit or GPU support. No cloud fallback.
-Agent/pi profiles only.
+Selected profile: $profile; agent remains the default.
 CPU_PLAN
+  if [[ "$profile" == full ]]; then
+    cat <<'FULL_PLAN'
+FULL BUNDLE CANDIDATE: Pi, Hermes, MemPalace, Agent Framework, Harness2, Bun,
+Claude-mem, DeepSeek and research. Existing exact package pins are retained.
+Claude-mem captures ordinary Pi input, tool results and agent-settled events.
+Its foreground worker retains a shared home lease until explicit memory stop.
+Harness2 and DeepSeek remain optional experimental labs, not accepted dispatch.
+Complete owned full installation, authenticated capture, nonce rotation and
+useful recall still need separate native qualification; install success alone
+does not establish them. Package/browser download totals remain unresolved.
+FULL_PLAN
+  fi
 else
   echo 'No model weights/server are downloaded or started. Existing local-model attachment remains required.'
 fi
