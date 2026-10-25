@@ -190,6 +190,24 @@ class RoutingTests(unittest.TestCase):
                                           "selection": self.selection, **override})
             self.assertEqual(search.call_count, 1)
 
+    def test_fetch_accepts_explicit_120_second_budget_and_preserves_60_second_default(self):
+        with patch("harness.research_fetch.fetch", return_value={"ok": False, "status": "timeout"}) as fetch:
+            for timeout in (None, 120):
+                request = {"action": "fetch", "url": "https://example.org/", "selection": self.selection}
+                if timeout is not None:
+                    request["timeout"] = timeout
+                self.runtime.execute(request)
+                fetch.assert_called_with("https://example.org/", timeout=60 if timeout is None else 120,
+                                         allow_browser=True, allow_archive=False)
+
+    def test_action_budget_limits_refuse_before_loading_network_clients(self):
+        with patch("harness.research_runtime.importlib.import_module", side_effect=AssertionError("No network client load")):
+            for action, timeout in (("fetch", 121), ("search", 61), ("render", 61), ("read", 61),
+                                    ("fetch", True), ("fetch", float("nan")), ("fetch", float("inf"))):
+                with self.subTest(action=action, timeout=timeout):
+                    with self.assertRaisesRegex(rr.ResearchError, "timeout must be"):
+                        self.runtime.execute({"action": action, "timeout": timeout, "selection": self.selection})
+
     def test_selected_identity_drift_and_unadmitted_selection_refused(self):
         for selection in (None, {**self.selection, "boardAdmissionFailed": True},
                           {**self.selection, "project": {**self.selection["project"], "projectId": "wrong"}}):

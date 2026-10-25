@@ -5,6 +5,48 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Budget the expanded offline unit suite — 2026-10-25
+
+Parent commit: `474020ade49cb735327d2f3554d2544dd774b4ad`.
+
+The full Linux unit suite exhausted its existing 240-second release budget
+after the controller migration journey joined the package. Its retained timeout
+tail showed no assertion failure and ended during an existing runtime-update
+case. The added controller checks measured 59 seconds on Linux and 110 seconds
+on Windows. Set the complete unit-suite budget to 300 seconds on Linux and
+480 seconds on Windows. Keep the 15-minute CI job cap, three-second settlement,
+retained-child ownership, bounded output and all product deadlines unchanged.
+The original timeout remains failed evidence; this change does not claim a
+successful full gate before its exact composite rerun.
+
+## Reserve browser work within the caller's fetch budget — 2026-10-25
+
+Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.
+
+An actual joined-source Pi-tool fetch received a successful but empty static
+HTML page after26.339 seconds. The60-second total budget and30-second native
+settlement reserve left only about3.66 seconds to render; rendering timed out.
+Keep that failed request. Reserve at least10 seconds of browser work and a
+small handoff allowance before static candidates and retries consume the
+productive phase. Require the minimum work budget before starting Chromium.
+Archive candidates do not need that reserve. Static timeouts do not authorize
+browser requests without validated, successful HTML.
+
+Expose the existing core fetch limit of120 seconds through the research helper
+and Pi tool as an explicit caller choice. Keep the60-second fetch default,
+search/render limits, absolute deadline, worst settlement reserve and host
+outer timer. Keep all actual attempts and budget allocation in cached evidence.
+A larger caller budget does not promise successful acquisition or complete
+rendered-page coverage.
+
+Forty-two focused Linux checks passed. Windows ran the same checks with one
+declared native-symlink skip; all other checks passed. Regressions retain a slow
+static shell and failed attempts, preserve time for browser work plus full
+settlement, refuse starved and late browser results, and enforce action-specific
+helper limits before loading network clients. Ruff0.16.10 and all seven offline
+self-tests passed. These are source tests, not a successful native rerun. The
+original DDG20-second timeout remains a separate failed observation.
+
 ## Add an explicit reviewed controller CLI migration - 2026-10-25
 
 Parent commit: `08b7d89065801227d58a02e8be2fa3bef781ff2c`.

@@ -25,9 +25,10 @@ SELFTESTS = (
 
 TAIL_BYTES = 80000
 SETTLEMENT_SECONDS = 3
-# The added real-Git suite measured68s on Windows. Keep the complete expanded
-# unit suite bounded without reducing coverage or changing runtime deadlines.
-UNIT_TEST_TIMEOUT = 360 if os.name == "nt" else 240
+# The controller journey adds measured 59s Linux/110s Windows to the suite.
+# The prior 240s Linux gate exhausted its budget; its tail showed no assertion failure.
+# Keep runtime deadlines, output bounds and child settlement unchanged.
+UNIT_TEST_TIMEOUT = 480 if os.name == "nt" else 300
 # Preserve ownership when an exact child does not settle. Never infer that its
 # descendants stopped, and do not let a Popen context manager wait indefinitely.
 UNSETTLED_CHILDREN = []
