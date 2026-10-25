@@ -279,8 +279,13 @@ hash. Do not replay apply or edit the sentinel. Rollback preserves personalized
 files, sessions and new user data and restores the exact predecessor source and
 bindings.
 
-This route has isolated source/transaction tests. Actual installed controller
-migration and rollback need their own native qualification before adoption.
+The reviewed controller source at `d00415fe4974bdf4d6480dc10cfbea161f6343aa`
+passed an isolated installed-home migration, stable doctor, redacted research
+status, normal managed Pi health and rollback check without model generation.
+Rollback restored the exact predecessor and preserved personalized bytes plus
+a file created after activation. The owned model service and memory hub stopped,
+and exclusive home leases passed. This qualifies that controller source; the
+later research-budget changes and new hosts require separate native evidence.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
@@ -413,14 +418,20 @@ arXiv HTML/abstract representations are labelled separately. Thin, successful,
 unchallenged HTML can use the clean browser automatically. `allow_archive=true`
 permits an eligible public archive fallback; it defaults to false. Authentication,
 challenge and policy denials are retained. These fallbacks do not bypass them.
-Search defaults to30 seconds, fetch to60 and direct render to40. The fetch budget
-reserves native browser settlement time. These are individual network-operation
-budgets, not an agent-session deadline. Partial source scope and actual selected
-URL remain visible in initial and cached results.
+Search defaults to30 seconds, fetch to60 and direct render to40. Fetch accepts an
+explicit `timeout` up to120 seconds; search and direct render accept up to60.
+The default budgets stay unchanged. Fetch reserves30 seconds for native browser
+settlement and at least10 seconds for browser work when the total budget permits
+it. Static candidates and retries share the remaining phase. A smaller static
+budget can time out before readable HTML arrives; that does not authorize a
+browser request. Results retain the budget allocation and actual attempts.
+These are individual network-operation budgets, not an agent-session deadline.
+Partial source scope and actual selected URL remain visible in cached results.
 
 ```json
 {"action":"search","query":"Python unittest documentation","max_results":3}
 {"action":"fetch","url":"https://docs.python.org/3/library/unittest.html"}
+{"action":"fetch","url":"https://example.org/public-javascript-page","timeout":120}
 {"action":"read","artifact_id":"sha256:RETURNED_64_HEX_DIGEST","view":"text","offset":0}
 ```
 
@@ -441,6 +452,12 @@ original DDG no-results failure remains unexplained; a later diagnostic returned
 HTTP200/three hits. Native installed search, static fetch and complete cached
 recovery passed. A normal Pi-tool browser check returned3,022 characters in4.126s
 with partial-resource status and the unchanged40-second default.
+
+A later joined-source check recovered84,191 characters from static extraction
+and cached pages. Its DDG request timed out at20 seconds. A JavaScript fallback
+failed after the preceding static request consumed most browser work time.
+The phase allocation and explicit caller budget address that measured limit;
+they do not establish successful acquisition from that site or full suite parity.
 
 Browser network requests pass through the reviewed public HTTP route, including
 DNS/redirect checks and bounded streaming. Native routing preserves CSP/CORS;

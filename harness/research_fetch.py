@@ -25,6 +25,8 @@ SOURCE_LINEAGE = {
     "limits": "Adaptation to guarded public transports; not whole private-script or live-use parity",
 }
 BROWSER_SETTLEMENT_RESERVE = 30.0
+BROWSER_MINIMUM_WORK = 10.0
+BROWSER_HANDOFF_RESERVE = 0.25
 MAX_RETRY_DELAY = 8.0
 ATTEMPTS_PER_CANDIDATE = 3
 THIN_HTML_CHARACTERS = 400
@@ -111,13 +113,24 @@ def fetch(url, *, timeout=30, max_bytes=2_097_152, max_chars=20_000, max_redirec
     fetcher = fetcher or web.fetch
     started = clock()
     deadline = started + timeout
+    # Keep all static candidates/retries within one phase. Otherwise a slow
+    # successful shell can leave only a few seconds to start Chromium.
+    browser_reserved = allow_browser and timeout > (
+        BROWSER_SETTLEMENT_RESERVE + BROWSER_MINIMUM_WORK + BROWSER_HANDOFF_RESERVE + 0.1)
+    static_deadline = (deadline - BROWSER_SETTLEMENT_RESERVE - BROWSER_MINIMUM_WORK
+                       - BROWSER_HANDOFF_RESERVE) if browser_reserved else deadline
     result = {"schema": "research-fetch/v1", "ok": False, "status": "exhausted",
               "requested_url": url, "reason": "No candidate supplied readable text",
               "attempts": [], "selected_attempt": None, "selected_url": None,
               "selected_kind": None, "selected_native": None, "response": None,
               "document": None, "text": "", "content_scope": "none",
               "requested_source_complete": False, "elapsed_seconds": 0.0,
-              "deadline_seconds": timeout, "fallbacks": {"archive": allow_archive, "browser": allow_browser}}
+              "deadline_seconds": timeout, "fallbacks": {"archive": allow_archive, "browser": allow_browser},
+              "budget": {"browser_reserved": browser_reserved,
+                         "static_phase_seconds": static_deadline - started,
+                         "browser_minimum_work_seconds": BROWSER_MINIMUM_WORK,
+                         "browser_handoff_reserve_seconds": BROWSER_HANDOFF_RESERVE,
+                         "browser_settlement_reserve_seconds": BROWSER_SETTLEMENT_RESERVE}}
 
     def finish(status=None, reason=None):
         result["elapsed_seconds"] = max(0.0, clock() - started)
@@ -178,10 +191,13 @@ def fetch(url, *, timeout=30, max_bytes=2_097_152, max_chars=20_000, max_redirec
             return {"ok": False, "status": state, "error_type": type(error).__name__}
 
     for candidate in plans:
+        # Archive candidates never invoke Chromium and need no browser reserve.
+        candidate_deadline = deadline if candidate["kind"] == "archive" else static_deadline
         for attempt in range(ATTEMPTS_PER_CANDIDATE):
-            remaining = deadline - clock()
+            remaining = candidate_deadline - clock()
             if remaining < 0.1:
-                return finish("timeout", "Total retrieval budget exhausted")
+                return finish("timeout", "Static retrieval budget exhausted; browser work and settlement remain reserved"
+                              if browser_reserved and candidate["kind"] != "archive" else "Total retrieval budget exhausted")
             available = MAX_EVIDENCE_BYTES - MARKER_HEADROOM - len(_wire(result))
             if available < 8192:
                 return finish("evidence_limit", "No bounded capacity remains for another native attempt")
@@ -205,7 +221,7 @@ def fetch(url, *, timeout=30, max_bytes=2_097_152, max_chars=20_000, max_redirec
                 delay = _retry_delay(packet, attempt, wall_time)
                 if attempt + 1 >= ATTEMPTS_PER_CANDIDATE:
                     return finish(packet.get("status", "exhausted"), "Transient retries exhausted; no quota or outage bypass")
-                if delay is None or not math.isfinite(delay) or delay > MAX_RETRY_DELAY or delay + 0.1 >= deadline - clock():
+                if delay is None or not math.isfinite(delay) or delay > MAX_RETRY_DELAY or delay + 0.1 >= candidate_deadline - clock():
                     return finish(packet.get("status", "timeout"), "Retry deferred; server delay or remaining budget prevents a bounded retry")
                 result["attempts"][-1]["retry_delay_seconds"] = delay
                 sleeper(delay)
@@ -217,8 +233,8 @@ def fetch(url, *, timeout=30, max_bytes=2_097_152, max_chars=20_000, max_redirec
                     and isinstance(code, int) and 200 <= code < 300 and not artifact.get("raw_truncated")
                     and packet.get("status") in {"empty_extraction", "ok", "partial"}):
                 remaining = deadline - clock() - BROWSER_SETTLEMENT_RESERVE
-                if remaining < 2:
-                    result["attempts"][-1]["browser_hold"] = "Insufficient remaining budget for render and native settlement"
+                if remaining < BROWSER_MINIMUM_WORK:
+                    result["attempts"][-1]["browser_hold"] = "Insufficient remaining budget for minimum render work and native settlement"
                 else:
                     if renderer is None:
                         from .web_browser import render
