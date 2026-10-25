@@ -5,6 +5,40 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Create managed projects through the existing home factory - 2026-10-25
+
+Parent commit: `147748b8a1e6ab6b5fde5525b02e280e6ee25e70`.
+
+Model-driven `project_admit` initialization created ICM but did not perform the
+managed CLI's Git and instruction setup. Add a name-only `project_create` tool
+that delegates to the existing `home.project`, then validates and selects its
+identity through the existing adapter. Keep external/default adoption unchanged.
+The controller and its core AST stay byte-identical; no new project backend,
+package, model, configuration or authority arguments are introduced.
+
+Bind the helper to the installed home/runtime manifest. Refuse traversal,
+redirected parents, collisions and Git path overrides before Git operations.
+Refuse retained state namespaces before new-project Git creation. The existing
+backend also refuses a missing identity with occupied state before its own
+root/identity initialization; CLI and explicit initialization cannot silently
+attach old ready work. Existing-identity adoption keeps its normal checks.
+Clear the old project/task selection before creation and on failure. New-project
+selection resets discovery and selects no task. Reuse the existing home lease,
+process guard and owner pipe for a90-second creation budget/105-second tool
+deadline. Preserve partial directories with explicit inspect/adopt guidance;
+never silently delete, retry or reinitialize them.
+
+Real Git/factory source controls and the complete coordinator module passed on
+Linux and Windows within their recorded platform limits. Thirty-three actual
+Pi1.4/Hermes checks passed in a disposable Pi-profile home with four verified
+borrowed dependencies and normal post-install binding/doctor checks.
+They exercised independent Git/boards, extra-field and escape refusal, an actual
+board initialization failure, external adoption and cancellation during a live
+Git operation. The existing guard held the home lease until cleanup and then
+released it. Provider HTTP/model calls were zero; the memory hub stayed stopped.
+This is native tool/host qualification, not a claim that a model chose the right
+tool or that an existing user home has adopted the source.
+
 ## Budget the expanded offline unit suite — 2026-10-25
 
 Parent commit: `474020ade49cb735327d2f3554d2544dd774b4ad`.
