@@ -6,6 +6,7 @@ home-owned environments. Package installation never grants task authority.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import ipaddress
 import json
@@ -724,13 +725,13 @@ def doctor(home):
             "authority": "none", "running": "not_observed"}
 
 
-def launch(home, args, project_root=None):
+def launch(home, args, project_root=None, *, continue_recent=False):
     from harness import home_entry
     with home_entry.consumer(home) as inherited:
-        return _launch(home, args, project_root, inherited)
+        return _launch(home, args, project_root, inherited, continue_recent=continue_recent)
 
 
-def _launch(home, args, project_root=None, inherited=()):
+def _launch(home, args, project_root=None, inherited=(), *, continue_recent=False):
     home, config = load(home)
     args = managed_launch.pi_arguments(args, config["model"])
     selected = managed_launch.select_project(home, project_root)
@@ -742,20 +743,32 @@ def _launch(home, args, project_root=None, inherited=()):
     if not node or not cli.is_file():
         raise HomeError("Pi is not installed in this home.")
     cwd = selected or home
-    if selected is not None:
-        board(home, {"action": "project_admit", "project_root": str(cwd)})
-    palace(home, "start")
-    mode = args[args.index("--mode") + 1] if "--mode" in args else "text"
-    print(json.dumps({"managed_agent": {"home": str(home), "project": str(selected) if selected else None,
-                                       "profile": config["profile"], "model": "local/" + config["model"], "mode": mode}}), file=sys.stderr)
-    # Explicit provider/model and fresh isolated profile prevent ambient defaults.
-    from harness import home_entry
-    child_env = environment(home, cwd)
-    if inherited:
-        child_env[home_entry.FD_ENV] = str(inherited[0])
-    options = {"pass_fds": inherited} if os.name != "nt" else {}
-    return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *args],
-                           cwd=cwd, env=child_env, **options)
+    admission = board(home, {"action": "project_admit", "project_root": str(cwd)})
+    from harness import home_entry, session_resume
+    with contextlib.ExitStack() as stack:
+        session = None
+        if sys.platform == "linux":
+            session = stack.enter_context(session_resume.acquire(
+                home, cwd, continue_recent=continue_recent, node=node, pi_package=cli.parent.parent,
+                project_identity=admission.get("result", {}).get("identity")))
+        elif continue_recent:
+            raise session_resume.SessionResumeError("Managed continuation requires qualified Linux session ownership")
+        # Validate all user arguments before adding our native selection. Prefix
+        # it so a literal '--' or positional prompt cannot hide the binding.
+        native_args = [*(session.pi_args if session else ()), *args]
+        palace(home, "start")
+        mode = args[args.index("--mode") + 1] if "--mode" in args else "text"
+        print(json.dumps({"managed_agent": {"home": str(home), "project": str(selected) if selected else None,
+                                           "profile": config["profile"], "model": "local/" + config["model"], "mode": mode,
+                                           "session": "continued" if continue_recent else "fresh",
+                                           "session_id": session.selection["id"] if session and session.selection else None}}), file=sys.stderr)
+        child_env = environment(home, cwd)
+        if inherited:
+            child_env[home_entry.FD_ENV] = str(inherited[0])
+        descriptors = tuple(dict.fromkeys((*inherited, *(session.pass_fds if session else ()))))
+        options = {"pass_fds": descriptors} if os.name != "nt" else {}
+        return subprocess.call([node, str(cli), "--provider", "local", "--model", config["model"], *native_args],
+                               cwd=cwd, env=child_env, **options)
 
 
 def launch_status(home, project_root=None):
@@ -772,8 +785,11 @@ def launch_status(home, project_root=None):
             "node": node, "pi_cli": str(cli), "pi_cli_present": cli.is_file(),
             "agent_dir": str(home / "agent"), "session_dir": str(managed_launch.session_directory(home, selected or home)),
             "failures": report["failures"], "pending_acceptance": report["pending_acceptance"],
-            "project_validation": "required at launch" if selected else "home landing; no cwd adoption",
-            "resume": "unsupported until selected-project session ownership is qualified"}
+            "project_validation": "read-only admission required at launch; no cwd adoption",
+            "resume": "explicit managed --continue or start --continue; same-home/project native history only" if sys.platform == "linux"
+                      else "unavailable on this platform; Linux session ownership is required",
+            "session_ownership": "exclusive bucket lease for fresh and continued launches; live owners refuse" if sys.platform == "linux"
+                                 else "not qualified on this platform"}
 
 
 def palace(home, operation):
@@ -808,6 +824,7 @@ def project(home, name):
 
 
 def main(argv=None, *, bound_home=None):
+    from harness import session_resume
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -831,6 +848,7 @@ def main(argv=None, *, bound_home=None):
     resume.add_argument("--managed-node", type=Path, help="Confirm the existing exact managed Node binding; never rebind it")
     start = commands.add_parser("start")
     start.add_argument("--project", type=Path)
+    start.add_argument("--continue", action="store_true", dest="continue_recent", help="Continue the recent native session in this exact home/project")
     start.add_argument("pi_args", nargs=argparse.REMAINDER)
     managed = commands.add_parser("managed", help="Home-bound command entry; selectors precede Pi arguments")
     managed.add_argument("arguments", nargs=argparse.REMAINDER)
@@ -903,14 +921,14 @@ def main(argv=None, *, bound_home=None):
             return 1 if result["failures"] else 0
         if args.command == "start":
             pi_args = args.pi_args[1:] if args.pi_args[:1] == ["--"] else args.pi_args
-            return launch(args.home, pi_args, args.project)
+            return launch(args.home, pi_args, args.project, continue_recent=args.continue_recent)
         if args.command == "managed":
             arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
-            project_root, inspect, pi_args = managed_launch.managed_arguments(args.home, arguments)
+            project_root, inspect, continue_recent, pi_args = managed_launch.managed_arguments(args.home, arguments)
             if inspect:
                 print(json.dumps(launch_status(args.home, project_root), indent=2))
                 return 0
-            return launch(args.home, pi_args, project_root)
+            return launch(args.home, pi_args, project_root, continue_recent=continue_recent)
         if args.command == "command":
             home, _config = load(args.home)
             if args.operation != "install" and args.default_pi:
@@ -935,6 +953,10 @@ def main(argv=None, *, bound_home=None):
             result = invoke(args.home, args.operation, event=args.query)
             print(json.dumps(result, indent=2))
             return 1 if result.get("status") == "stop_unconfirmed" else 0
+    except session_resume.SessionResumeError as error:
+        code = "no_previous_session" if isinstance(error, session_resume.NoPreviousSession) else "session_busy" if isinstance(error, session_resume.SessionBusyError) else "session_scope_refused"
+        print(json.dumps({"status": "refused", "code": code, "error": str(error), "authority": "none"}), file=sys.stderr)
+        return 1
     except (HomeError, OSError, ValueError, subprocess.SubprocessError) as error:
         print(json.dumps({"status": "failed", "error": str(error), "authority": "none"}), file=sys.stderr)
         return 1

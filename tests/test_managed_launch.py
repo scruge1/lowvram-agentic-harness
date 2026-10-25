@@ -12,10 +12,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
-from harness import home, managed_launch
+from harness import home, managed_launch, session_resume
 
 
 @contextlib.contextmanager
@@ -70,9 +71,10 @@ class ManagedLaunchTests(unittest.TestCase):
                                     cwd=self.random, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 1, result.stdout)
             self.assertIn("bound", result.stderr)
-        selected, status, arguments = managed_launch.managed_arguments(self.agent, ["--home", str(self.agent), "--status"])
+        selected, status, continued, arguments = managed_launch.managed_arguments(self.agent, ["--home", str(self.agent), "--status"])
         self.assertIsNone(selected)
         self.assertTrue(status)
+        self.assertFalse(continued)
         self.assertEqual(arguments, [])
 
     def test_explicit_registration_collision_and_reversal_preserve_existing_pi(self):
@@ -150,6 +152,17 @@ class ManagedLaunchTests(unittest.TestCase):
         self.assertEqual({name: env.get(name) for name in before}, before)
         self.assertTrue(Path(env["PI_CODING_AGENT_SESSION_DIR"]).is_relative_to(self.agent / "agent/sessions"))
 
+    def test_continue_is_a_managed_selector_and_never_a_raw_pi_override(self):
+        self.assertEqual(managed_launch.managed_arguments(self.agent, ["--continue", "--offline", "--print", "hello"]),
+                         (None, False, True, ["--offline", "--print", "hello"]))
+        for values in (["--continue", "--continue"], ["--continue=yes"], ["--status", "--continue"]):
+            with self.assertRaises(managed_launch.LaunchError):
+                managed_launch.managed_arguments(self.agent, values)
+        _, _, continued, values = managed_launch.managed_arguments(self.agent, ["--offline", "--continue"])
+        self.assertFalse(continued)
+        with self.assertRaises(managed_launch.LaunchError):
+            managed_launch.pi_arguments(values, "configured-model")
+
     def test_existing_project_selection_is_validated_without_adopting_random_cwd(self):
         project = self.base / "Admitted project"
         (project / ".icm").mkdir(parents=True)
@@ -180,6 +193,7 @@ class ManagedLaunchTests(unittest.TestCase):
         before = {name: os.environ.get(name) for name in ("HOME", "USERPROFILE")}
         with working_directory(self.random), mock.patch.object(home, "board") as board, \
              mock.patch.object(home, "palace") as palace, mock.patch.dict(os.environ, {"MANAGED_LAUNCH_PROBE": str(probe)}), \
+             mock.patch.object(session_resume, "acquire", return_value=contextlib.nullcontext(SimpleNamespace(pi_args=(), pass_fds=(), selection=None))), \
              contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(home.launch(self.agent, ["--mode", "json"], project), 0)
         result = json.loads(probe.read_text(encoding="utf-8"))

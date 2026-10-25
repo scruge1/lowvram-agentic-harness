@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const options = {};
 for (let i = 2; i < process.argv.length; i += 2) {
@@ -52,7 +53,7 @@ async function run(argv, { cwd = fixture, env = baseEnv, guarded = true, timeout
 const provision = path.join(fixture, 'provision.py');
 fs.writeFileSync(provision, `import copy,hashlib,importlib.metadata,json,os,sys\nfrom pathlib import Path\nsource,donor,home,base_url,model,name=map(str,sys.argv[1:])\nsource=Path(source);donor=Path(donor);home=Path(home)\nsys.path.insert(0,str(source))\nfrom harness import home as module\nconfig=module.scaffold(home,source=source,profile='pi',base_url=base_url,model=model,name=name,offline=True)\nfor key in ['hermes','mempalace','framework']:\n os.symlink(donor/'envs'/key,home/'envs'/key,target_is_directory=True)\nos.symlink(donor/'packages/pi',home/'packages/pi',target_is_directory=True)\noriginal=json.loads((donor/'home.json').read_text());aliases=[]\nfor key in module.PROFILES['pi']:\n record={'requested':module.PINS[key],'observed':original['installed'][key]['observed'],'artifacts':module.package_artifacts(home,key),'npm_name':original['installed'][key].get('npm_name'),'running':'not_started','acceptance':'borrowed_exact_dependency_fixture'}\n for item in record['artifacts']:\n  p=Path(item['path'])\n  if not p.is_relative_to(home):\n   if not p.is_relative_to(donor):raise ValueError('Dependency metadata outside both explicit fixture homes: '+str(p))\n   alias=home/p.relative_to(donor)\n   assert alias.is_file() and os.path.samefile(alias,p)\n   aliases.append({'observed':str(p),'selected_home_alias':str(alias),'sha256':item['sha256']})\n   item['path']=str(alias)\n config['installed'][key]=record\n assert module.check_package(home,key,record) is None\nmodule.save_status(home,config)\n# The normal post-install phase may run only after every dependency is verified.\n# Refuse an unexpected package installation rather than changing any software.\nobserved=[];original_run=module.run\ndef checked_run(argv,**kwargs):\n words=[str(x) for x in argv]\n if 'install' in words and any(x in words for x in ['pip','npm','npm.cmd']):raise RuntimeError('Package installation forbidden in borrowed-dependency qualification')\n observed.append(words)\n return original_run(argv,**kwargs)\nmodule.run=checked_run\nmodule.install_packages(home,config)\nreport=module.doctor(home)\nassert report['failures']==[],report\n(home/'state/borrowed-dependency-qualification.json').write_text(json.dumps({'donor':str(donor),'aliases':aliases,'post_install_commands':observed,'doctor':report},indent=2)+'\\n')\nprint(json.dumps({'home':str(home),'doctor':report,'aliases':aliases,'post_install_commands':observed}))\n`);
 const observer = path.join(fixture, 'binding-observer.ts');
-fs.writeFileSync(observer, `import * as fs from 'node:fs';\nexport default function(pi:any){\n pi.registerCommand('qualification-binding',{description:'Read-only owned fixture binding observation; no model or work dispatch.',handler:async(args:string,ctx:any)=>{\n  const deadline=Date.now()+25000;\n  while(!pi.getAllTools().some((t:any)=>t.name==='mcp__mempalace__mempalace_search') && Date.now()<deadline)await new Promise(r=>setTimeout(r,20));\n  const names=['HOME','AGENT_HOME','PI_CODING_AGENT_DIR','PI_CODING_AGENT_SESSION_DIR','PI_PROJECT_STATE_BASE','HERMES_HOME','MEMPALACE_PALACE_PATH','MEMPALACE_CONFIG_DIR','PI_VALIDATED_MEMORY_REGISTRY','PI_MEMORY_RUNTIME_WRAPPER'];\n  const report={cwd:ctx.cwd,model:ctx.model,system_prompt:ctx.getSystemPrompt(),session_file:ctx.sessionManager.getSessionFile(),session_dir:ctx.sessionManager.getSessionDir(),session_header:ctx.sessionManager.getHeader(),active_tools:pi.getActiveTools(),registered_tools:pi.getAllTools().map((t:any)=>t.name),environment:Object.fromEntries(names.map(n=>[n,process.env[n]??null])),args};\n  fs.writeFileSync(process.env.NATIVE_BINDING_REPORT!,JSON.stringify(report,null,2)+'\\n');\n }});\n}\n`);
+fs.writeFileSync(observer, `import * as fs from 'node:fs';\nexport default function(pi:any){\n pi.registerCommand('qualification-binding',{description:'Read-only owned fixture binding observation; no model or work dispatch.',handler:async(args:string,ctx:any)=>{\n  const deadline=Date.now()+25000;\n  while(!pi.getAllTools().some((t:any)=>t.name==='mcp__mempalace__mempalace_search') && Date.now()<deadline)await new Promise(r=>setTimeout(r,20));\n  const names=['HOME','AGENT_HOME','PI_CODING_AGENT_DIR','PI_CODING_AGENT_SESSION_DIR','PI_PROJECT_STATE_BASE','HERMES_HOME','MEMPALACE_PALACE_PATH','MEMPALACE_CONFIG_DIR','PI_VALIDATED_MEMORY_REGISTRY','PI_MEMORY_RUNTIME_WRAPPER'];\n  const report={cwd:ctx.cwd,model:ctx.model,system_prompt:ctx.getSystemPrompt(),session_id:ctx.sessionManager.getSessionId(),session_file:ctx.sessionManager.getSessionFile(),session_dir:ctx.sessionManager.getSessionDir(),session_header:ctx.sessionManager.getHeader(),active_tools:pi.getActiveTools(),registered_tools:pi.getAllTools().map((t:any)=>t.name),environment:Object.fromEntries(names.map(n=>[n,process.env[n]??null])),args};\n  fs.writeFileSync(process.env.NATIVE_BINDING_REPORT!,JSON.stringify(report,null,2)+'\\n');\n while(process.env.NATIVE_BINDING_RELEASE&&!fs.existsSync(process.env.NATIVE_BINDING_RELEASE))await new Promise(r=>setTimeout(r,20));\n }});\n}\n`);
 const pythonHelper = path.join(fixture, 'fixture-helper.py');
 fs.writeFileSync(pythonHelper, `import json,sys\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1])\nfrom harness import home as h\nhome=Path(sys.argv[2]);operation=sys.argv[3]\nif operation=='hub':result=h.palace(home,sys.argv[4])\nelif operation=='project':\n root=Path(sys.argv[4]);root.mkdir();(root/'AGENTS.md').write_text('# Owned native launch project\\n\\nKeep this exact admitted root and its source-bound outcome.\\n')\n result=h.board(home,{'action':'project_admit','project_root':str(root),'initialize':True,'native_authority':'Owner authorized a disposable managed-launch fixture','target':'Exact native launch binding','why':'Verify project selection without model work'})\nelif operation=='doctor':result=h.doctor(home)\nelse:raise ValueError(operation)\nprint(json.dumps(result))\n`);
 async function helper(home, operation, ...args) {
@@ -102,6 +103,10 @@ try {
   const b = await ownHome('Home B', 'fixture-model-b', 'NativeOwnerB');
   checks.push('two-source-scaffolds-with-byte-verified-borrowed-dependencies-and-real-doctor');
   const unrelated = path.join(fixture, 'unrelated cwd'); fs.mkdirSync(unrelated);
+  const empty = await run([a.command, '--continue', '--offline', '--print', '/qualification-binding'], { cwd: unrelated });
+  assert.equal(empty.code, 1, empty.stderr);
+  assert.ok(empty.stderr.split('\n').some(line => { try { return JSON.parse(line).code === 'no_previous_session'; } catch { return false; } }));
+  assert.equal(requests.length, 0); checks.push('explicit-continue-empty-history-is-typed-refusal-without-model-http');
   const project = path.join(fixture, 'Project β with spaces'); await helper(a.home, 'project', project);
   const nested = path.join(project, 'nested'); fs.mkdirSync(nested);
   await invoke(a, a.home); await invoke(a, unrelated); await invoke(a, nested, [], project);
@@ -113,13 +118,54 @@ try {
   assert.notEqual(bindings[0].native_session_dir, bindings[2].native_session_dir);
   assert.notEqual(bindings[0].native_session_dir, bindings[4].native_session_dir);
   checks.push('native-session-directories-separate-project-and-home-identities');
+  const sessions = await import(pathToFileURL(path.join(piPackage, 'dist/core/session-manager.js')));
+  async function seed(info, cwd) {
+    await new Promise(resolve => setTimeout(resolve, 25));
+    const bucket = sessions.getDefaultSessionDir(cwd, path.join(info.home, 'agent'));
+    const manager = sessions.SessionManager.create(cwd, bucket);
+    manager.appendMessage({ role: 'user', content: 'Owned synthetic continuation fixture. No work or model response requested.', timestamp: Date.now() });
+    manager.appendMessage({ role: 'assistant', content: [{ type: 'text', text: 'Synthetic fixture metadata complete; no inference performed.' }],
+      api: 'openai-completions', provider: 'local', model: info.model,
+      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      stopReason: 'stop', timestamp: Date.now() });
+    const identity = JSON.parse(fs.readFileSync(path.join(cwd, '.icm/project.json')));
+    manager.appendCustomEntry('pi-kanban-selection/v1', { project: { root: cwd, projectId: identity.project_id, boardId: identity.board_id }, task: null, boardAdmissionFailed: false });
+    const selected = manager.getSessionFile(); assert.ok(fs.existsSync(selected));
+    return { selected, id: manager.getSessionId(), before: fs.readFileSync(selected),
+      others: Object.fromEntries(fs.readdirSync(bucket).filter(name => name.endsWith('.jsonl')).map(name => {
+        const file = path.join(bucket, name); return [file, fs.readFileSync(file)];
+      })) };
+  }
+  for (const cwd of [a.home, project]) {
+    const saved = await seed(a, cwd);
+    const continued = await invoke(a, unrelated, ['--continue', ...(cwd === a.home ? [] : ['--project', cwd])], cwd);
+    assert.equal(continued.session_file, saved.selected);
+    assert.equal(continued.session_id, saved.id);
+    assert.ok(fs.readFileSync(saved.selected).subarray(0, saved.before.length).equals(saved.before), 'Cold continuation changed an original history prefix');
+    for (const [file, bytes] of Object.entries(saved.others)) if (file !== saved.selected) assert.ok(fs.readFileSync(file).equals(bytes));
+  }
+  checks.push('actual-managed-cold-continue-home-and-project-native-session-id', 'native-history-prefix-and-other-session-bytes-preserved');
+  const holdReport = path.join(fixture, `binding-${bindingNumber + 1}.json`), release = path.join(fixture, 'release-owned-continuation');
+  let holdFailure;
+  const held = invoke(a, unrelated, ['--continue'], a.home, { NATIVE_BINDING_RELEASE: release }).catch(error => { holdFailure = error; });
+  try {
+    const deadline = Date.now() + 60000;
+    while (!fs.existsSync(holdReport) && !holdFailure && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+    if (holdFailure) throw holdFailure;
+    assert.ok(fs.existsSync(holdReport), 'The normal continued CLI did not reach its command handler');
+    const refused = await run([a.command, '--continue', '--offline', '--print', '/qualification-binding'], { cwd: unrelated });
+    assert.equal(refused.code, 1, refused.stderr);
+    assert.ok(refused.stderr.split('\n').some(line => { try { return JSON.parse(line).code === 'session_busy'; } catch { return false; } }));
+  } finally { fs.writeFileSync(release, 'release\n'); await held; }
+  if (holdFailure) throw holdFailure;
+  checks.push('actual-live-managed-writer-refuses-second-continuation-before-node');
   for (const [name, args] of [
     ['different-home-selector', ['--home', b.home, '--status']],
     ['unknown-project', ['--project', unrelated, '--status']],
     ['provider-override', ['--provider', 'other', '--offline', '--print', '/qualification-binding']],
     ['model-override', ['--model', b.model, '--offline', '--print', '/qualification-binding']],
     ['profile-disable', ['--no-extensions', '--offline', '--print', '/qualification-binding']],
-    ['resume', ['--continue', '--offline', '--print', '/qualification-binding']],
+    ['raw-pi-continue', ['--', '--continue', '--offline', '--print', '/qualification-binding']],
     ['session-override', ['--session-dir', unrelated, '--offline', '--print', '/qualification-binding']],
     ['unqualified-rpc', ['--mode', 'rpc']],
   ]) {
@@ -163,7 +209,7 @@ try {
     observer_sha256: hash(observer), borrowed_donor: donor, donor_hashes_before: beforeDonor, donor_hashes_after: donorHashes(),
     provider_http: requests.length, provider_requests: requests, model_calls: 0, package_installs: 0, commits: 0, pushes: 0,
     elapsed_ms: Date.now() - started,
-    limits: 'Actual normal managed command, exact installed Pi CLI and native command handler. Two owned profile-pi homes borrow byte-verified dependencies; normal post-install/doctor/memory/board helpers run without mocks or installs. One test-only command observer is added to owned settings. Project launches load the selected home instruction router and global posture plus project instructions; referred personalization files are not assumed eagerly injected. This is binding qualification, not fresh package installation, generative model quality, worker execution, Windows native runtime or resume acceptance. RPC/session resume remain refused. Real private/donor palace was not queried; only new empty owned palaces used. No shared Pi/model reload or donor configuration changes.' };
+    limits: 'Actual normal managed command, exact installed Pi CLI and native command handler. Two owned profile-pi homes borrow byte-verified dependencies; normal post-install/doctor/memory/board helpers run without mocks or installs. One test-only command observer is added to owned settings. Cold continuation uses explicit synthetic native SDK history and checks native session ID, original prefixes and live writer refusal. Project launches load their native context. This is binding/continuation qualification, not fresh package installation, generative model quality, worker execution or Windows ownership. Raw session overrides and RPC remain refused. Real private/donor palace was not queried; only new empty owned palaces used. No shared Pi/model reload or donor configuration changes.' };
   writeJson(path.join(fixture, 'commands.json'), commands); writeJson(path.join(fixture, 'receipt.json'), receipt);
   console.log(JSON.stringify(receipt, null, 2)); process.exitCode = failures.length ? 1 : 0;
 }

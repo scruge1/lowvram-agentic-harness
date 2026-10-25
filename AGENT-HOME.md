@@ -211,15 +211,38 @@ commands. PATH and shell startup files are not edited. Inspect `type -a pi` or
 
 Managed selectors precede Pi arguments. A matching `--home` can confirm the
 binding; a different home, model or provider requires selecting another home.
-Text/JSON modes are supported. RPC, global resume and session overrides are
-explicitly refused pending qualification of their model/owner boundaries.
+Text/JSON modes are supported. On Linux, use the managed continuation selector:
+
+```bash
+/chosen/agent-home/bin/harness-agent --continue --project /path/to/admitted-project
+python /chosen/agent-home/agent-home.py start --continue --project example
+```
+
+The selector precedes Pi arguments. It uses Pi1.4's native recent-session lookup
+inside this exact home/project bucket. An empty bucket returns
+`no_previous_session`; a live writer returns `session_busy`. The launcher never
+silently starts fresh for either refusal. Fresh and continued launches retain
+an exclusive bucket lease through the actual Node lifetime, alongside the home
+lease. Saved history does not grant current task authority; context and execution
+gates still run. Current version3 newline-terminated history is supported;
+legacy, malformed, redirected or wrong-project history is preserved and refused.
+
+RPC, global session pickers and raw Pi `--session`, `--resume` or `--continue`
+overrides remain refused. This is cooperative Linux ownership with read-only
+checks for recognized unmanaged CLI owners. Hidden independent SDK writers are
+outside that contract. Windows/macOS keep core inspection without this lease.
 Windows command registration requires an ASCII Python interpreter path;
 Unicode home and bin paths are tested. Existing homes need an explicit runtime
 update before using the new command; this release does not migrate them.
 
 Nineteen actual Linux CLI checks passed with an observer in an isolated profile
 and unchanged borrowed dependencies. These establish native prompt routing,
-tools, memory and cwd/session bindings; real model use and resume are separate.
+tools, memory and cwd/session bindings. A later23-check native test also passed
+actual managed cold continuation for home and project sessions, prefix/history
+conservation, empty-history refusal and a live-writer collision. It used two
+isolated pi-profile homes and exact borrowed dependencies without package
+installation, provider HTTP or model calls. Real model continuation remains
+separate acceptance.
 
 ## What the home contains
 
@@ -664,7 +687,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Validated memory retrieval, exact chunks and promotion | Empty safe registry abstention and synthetic native capture/mining/exact readback passed | Reviewed promotion, new-host freshness and private-history acceptance |
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
 | Source milestones, scoped commits and remote verification | Reviewed CLI/skill,21 real-Git controls and22 native supervised-workflow checks passed | New-host adoption; automatic all-session attribution remains open |
-| Terminal/project navigation and live-owner resume checks | Not exported | Fresh/known-live-owner collision and native resume controls |
+| Terminal/project navigation and live-owner resume checks | Native same-home/project continuation, bucket leases and23actual managed CLI checks passed | Real model continuation and new-host adoption; raw pickers/RPC remain held |
 | Maintenance/update/rollback | Source staging and compatible runtime exchange, native doctor/Pi health, rollback and interrupted-exchange recovery passed | New-host adoption; dependency, entry-protocol and template migrations remain held |
 
 Do not mark the whole installer accepted until every selected requirement has
