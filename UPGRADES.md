@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Name the remaining discovery calls in blocked execution — 2026-10-25
+
+Parent commit: `eefb72a818a29b16174fa2960d1f64e694451bbc`.
+
+A retained one-hour model continuation repeatedly attempted execution after
+observing capabilities but before querying system tools, memory and project
+knowledge. The generic blocker repeated completed and missing work together.
+List only the exact missing successful calls, name their argument schemas and
+explain that tool discovery does not execute the discovered tool. Completed
+observations remain recorded until normal selection/reload invalidates them.
+All eligibility rules and successful-result checks remain unchanged.
+
+Seven focused checks passed, including the complete extension in the native
+TypeScript VM. The regression observes each prerequisite incrementally, checks
+that completed calls disappear from the blocker, verifies all gates still hold
+until the last success, and verifies readmission resets discovery. Existing
+canonical memory error/empty-result controls remain intact. This verifies host
+feedback and authority retention, not a successful model report.
+
 ## Protect fresh Windows files with token default owners — 2026-10-25
 
 Parent commit: `98076e32e7244981e2dd0052d7e832716cb3a4fc`.
