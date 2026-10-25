@@ -1,6 +1,7 @@
-"""Prepare one hardware report through the existing project path; check it read-only.
+"""Prepare, run or check one report through the existing managed project path.
 
-No model request, service discovery, tuning or model selection is performed.
+Preparation and checking make no model request. Run explicitly starts the normal
+configured agent; it does not select models or change their configuration.
 Passing the fixed factual checks still requires separate semantic review.
 """
 from __future__ import annotations
@@ -13,6 +14,8 @@ import json
 import math
 from pathlib import Path
 import re
+import shlex
+import subprocess
 import sys
 
 if __package__ in (None, ""):
@@ -219,21 +222,91 @@ def check(root, expected_sha256):
     return result
 
 
+def run(home, name, *, mode="json"):
+    """Prepare once, launch once, then check against the retained original pin.
+
+    The normal agent owns its model requests and workflow receipts. This parent
+    retains the home lease until the independent file check finishes. Failures
+    preserve the prepared project and never cause an automatic second launch.
+    """
+    from harness import home as agent_home
+    from harness import home_entry, managed_launch
+
+    if mode not in {"text", "json"}:
+        raise FirstProjectError("Use native text or json output mode.")
+    home = Path(home).expanduser().resolve(strict=True)
+    result = {"schema": "first-project-run/v1", "status": "failed", "home": str(home),
+              "stage": "prepare", "semantic_review": "required", "authority": "fixed_predicates_only",
+              "model_requests": "not_counted_by_wrapper", "automatic_replay": False}
+    with home_entry.consumer(home):
+        binding = managed_launch.inspect_command(home, home / "bin")
+        command = next(item for item in binding["commands"] if item["name"] == "harness-agent")
+        if not command["owned_unchanged"]:
+            raise FirstProjectError("The installed home/bin/harness-agent command is missing or changed.")
+        prepared = prepare(home, name)
+        project = Path(prepared["project_root"])
+        original_pin = prepared["manifest_sha256"]
+        original_check_argv = tuple(prepared["check_argv"])
+        reopen = [command["path"], "--project", str(project)]
+        if sys.platform == "linux":
+            reopen.append("--continue")
+        result.update(project_root=str(project), manifest_sha256=original_pin,
+                      check_argv=list(original_check_argv), reopen_argv=reopen,
+                      reopen_command=subprocess.list2cmdline(reopen) if sys.platform == "win32" else shlex.join(reopen),
+                      continuation="same_project_explicit" if sys.platform == "linux" else "unavailable_on_this_platform")
+        prompt = (
+            "Complete this owner's prepared first hardware-report task in the current project. "
+            "Read FIRST-PROJECT.md and hardware-facts.json completely, and follow the installed "
+            "supervised-tasks skill and normal project/context/intake gates. Create hardware-report.md "
+            "through the existing supervised workflow. Use this EXACT original verifier argv as "
+            "workflow_step.verify; do not recompute its pin or replace its checker.\n"
+            "Original manifest SHA-256: " + original_pin + "\n"
+            "Original check_argv JSON: " + json.dumps(list(original_check_argv), ensure_ascii=False) + "\n"
+            "Keep FIRST-PROJECT.md, hardware-facts.json and first-project.json unchanged. "
+            "Do not change model/server/GPU settings, run tuning, download models or commit. "
+            "A checker pass requires separate semantic review. Stop after this single task; "
+            "do not retry or create another project automatically."
+        )
+        result["stage"] = "launch"
+        try:
+            result["launch_exit_code"] = agent_home.launch(
+                home, ["--offline", "--mode", mode, "--print", "--", prompt], project_root=project)
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            result["launch_error"] = str(error)
+            result["launch_exit_code"] = None
+        # Reuse the loaded fixed checker, never a child-supplied success flag or
+        # a new hash computed from possibly modified inputs. Even child failure
+        # gets an independent readback, while retaining its non-success outcome.
+        result["stage"] = "checked"
+        result["check"] = check(project, original_pin)
+        if result["launch_exit_code"] == 0 and result["check"]["passed"]:
+            result["status"] = "predicates_passed"
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     commands = parser.add_subparsers(dest="command", required=True)
     create = commands.add_parser("prepare", help="Create one new normal hardware-report project; no model call.")
     create.add_argument("--home", required=True, type=Path)
     create.add_argument("--name", required=True)
+    execute = commands.add_parser("run", help="Prepare a new project, run the normal agent once, then check it. Native output streams before the final host JSON report.")
+    execute.add_argument("--home", required=True, type=Path)
+    execute.add_argument("--name", required=True)
+    execute.add_argument("--mode", choices=("json", "text"), default="json", help="Native Pi stream format; --offline and --print are fixed. This still invokes the configured model.")
     verify = commands.add_parser("check", help="Read fixed files in cwd; return 1 if missing or invalid.")
     verify.add_argument("--expected-sha256", required=True)
     args = parser.parse_args(argv)
     try:
-        report = prepare(args.home, args.name) if args.command == "prepare" else check(Path.cwd(), args.expected_sha256)
+        if args.command == "run":
+            report = run(args.home, args.name, mode=args.mode)
+        else:
+            report = prepare(args.home, args.name) if args.command == "prepare" else check(Path.cwd(), args.expected_sha256)
     except (OSError, ValueError) as error:
-        report = {"schema": SCHEMA, "status": "failed", "error": str(error), "model_requests": 0}
+        report = {"schema": SCHEMA, "status": "failed", "error": str(error),
+                  "model_requests": "not_counted_by_wrapper" if args.command == "run" else 0}
     print(json.dumps(report, indent=2))
-    return 0 if report.get("status") == "prepared" or report.get("passed") is True else 1
+    return 0 if report.get("status") in {"prepared", "predicates_passed"} or report.get("passed") is True else 1
 
 
 if __name__ == "__main__":

@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Run and check the first report through managed launch — 2026-10-25
+
+Parent commit: `1c17b3ef141eda1facec10b8eb65f2cf8dc16bb7`.
+
+Add `first_project.py run --home HOME --name NEW` around the existing prepare,
+managed launch and fixed checker. Hold the existing home consumer lease through
+the operation. Put the exact original manifest hash and check argv in the model
+request, then check with the retained original pin after child settlement.
+Keep child failure dominant, retain partial files and refuse an occupied project
+instead of automatically replaying effects. Print the actual installed command
+path for explicit same-project reopening. Native output streams before the final
+host report; configured model/server settings stay unchanged.
+
+Focused tests use real Git/project files, the original checker and command
+registration with an explicitly mocked agent launch. They cover passed and
+missing reports, nonzero and exception exits, original-contract drift, occupied
+projects, output modes and unrelated cwd. Linux also checks the actual home lease
+through child execution and final readback. These are model-free fixtures, not
+a successful real-model report, normal workflow receipt or semantic acceptance.
+The parent reports only fixed predicates and keeps separate semantic review.
+
 ## Supervised intake instruction order — 2026-10-25
 
 Parent commit: `328d16c6b3f2d71d094cabdd4f92db73756a491a`.
