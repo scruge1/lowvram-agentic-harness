@@ -64,12 +64,12 @@ def managed_arguments(home, arguments):
     selectors = {}
     while values:
         option, separator, inline = values[0].partition("=")
-        if option not in {"--home", "--project", "--status"}:
+        if option not in {"--home", "--project", "--status", "--continue"}:
             break
         values.pop(0)
         require(option not in selectors, "Specify " + option + " only once")
-        if option == "--status":
-            require(not separator, "--status takes no value")
+        if option in {"--status", "--continue"}:
+            require(not separator, option + " takes no value")
             selectors[option] = True
         else:
             require(separator or values, option + " requires a value")
@@ -79,7 +79,8 @@ def managed_arguments(home, arguments):
     if values[:1] == ["--"]:
         values = values[1:]
     require(not selectors.get("--status") or not values, "--status does not run Pi arguments")
-    return selectors.get("--project"), bool(selectors.get("--status")), values
+    require(not (selectors.get("--status") and selectors.get("--continue")), "--status does not select history")
+    return selectors.get("--project"), bool(selectors.get("--status")), bool(selectors.get("--continue")), values
 
 
 def pi_arguments(arguments, model):
@@ -99,7 +100,7 @@ def pi_arguments(arguments, model):
             break
         option, separator, inline = token.partition("=")
         require(option not in session_flags,
-                "Managed resume/session overrides are not qualified; start a fresh session in this home/project")
+                "Raw session overrides are refused; use the managed --continue selector before Pi arguments")
         if option in {"--provider", "--model"}:
             require(option not in seen, "Specify " + option + " only once")
             seen.add(option)

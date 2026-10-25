@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Scoped native session continuation — 2026-10-25
+
+Parent commit: `1002d7a77d1f9ff00b6b654c8bf4a82308aaff89`.
+
+Add explicit managed `--continue` and `start --continue`. Reuse Pi1.4's native
+session directory, lookup and current-version history without another session
+store or picker. All managed fresh/continued Linux launches retain the same
+bucket's exclusive lease plus the home shared lease through Node exit. Internal
+session selection precedes literal end-of-options and prompt arguments. Native
+raw session/provider/model escape flags remain refused. Empty, busy, legacy,
+damaged and wrong-scope history refuses without a silent fresh session.
+
+Twenty-nine native helper controls, eight Linux launch-integration cases and
+ten managed-command tests passed. Twenty-three actual normal managed-command
+checks then passed in187.732 seconds using two isolated pi-profile homes and
+four exact accepted dependencies. Native session-ID readback, original history
+prefix/other-history conservation, home/project cold continuation, live-writer
+refusal and raw-selector refusal passed. Both owned hubs stopped, donor bindings
+were unchanged, and provider HTTP/model calls/package installation stayed zero.
+Windows passed its ten applicable command tests; ownership remains Linux-only.
+
+This is a cooperative writer contract with conservative read-only checks for
+recognized unmanaged CLI owners. Hidden independent SDK writers are not locked.
+Current newline-terminated version3 history is accepted without migration;
+legacy conversion and global pickers remain held. Synthetic native history does
+not establish useful model continuation, which needs its own actual task result.
+
 ## Owned native inference provisioning and lifecycle candidate — 2026-10-25
 
 Parent commit: `538a019472510272d869c83f3b351dee8a174b7d`.
