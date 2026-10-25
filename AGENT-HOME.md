@@ -635,6 +635,42 @@ isolated pi-profile home used four exact accepted dependency prefixes. Its hub
 stopped and watched donor files stayed unchanged, with zero model/provider HTTP.
 A model-produced report through this exact pattern remains separate evidence.
 
+## Explicit owned-service installation handoff
+
+For an already reviewed CPU service started before its new home exists, capture
+the nonsecret selection and pass it to the existing home factory:
+
+```bash
+python -m harness.model_service_handoff --home /data/my-agent > selection.json
+python -m harness.model_service_setup --home /data/my-agent \
+  --selection selection.json --source /path/to/lowvram-agentic-harness \
+  --python312 /data/my-agent-runtimes/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12 \
+  --managed-node /data/my-agent-runtimes/node-v22.23.2-linux-x64/bin/node
+```
+
+Use the Python and Node paths returned by this home's reviewed runtime bootstrap.
+This advanced route chooses no model and downloads no model weights. It requires
+the explicit provisioned service and at least32768 context/4096 output tokens;
+the smaller protocol-only smoke profile is rejected before stopping or creating
+anything. Agent and Pi profiles are supported; observer/full and GPU setup remain
+held. These prerequisites do not establish model quality or hardware fit.
+
+The factory verifies the selected process lifetime before stopping it, retains
+the existing service admission lock while creating/installing/checking the home,
+then restarts on the same port under the installed home's lifecycle read lease.
+An unexpected competing service is preserved and incompatible readback refuses.
+Pi uses its native `$NAME` API-key provider. Only the final Pi child receives the
+current runtime nonce. The secret is absent from models.json, setup selections
+and command arguments; do not print a child environment or private api-key file.
+
+Setup state remains in the permanent runtime sibling's
+`state/model-service/setup.json`. Failed or interrupted setup is not replayed.
+Inspect that record and service state, use the existing `doctor`/`resume-install`
+for a partial home, then review an explicit same-port restart. The retained
+failure does not authorize rebind, rollback, another model or shared-service work.
+Source sequencing and ownership checks are separate from actual native factory
+acceptance and a useful model-produced first project.
+
 ## Advanced owned inference candidate
 
 `harness.model_service` provisions exact upstream llama.cpp and GGUF artifacts

@@ -5,6 +5,31 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Owned-service factory handoff — 2026-10-25
+
+Parent commit: `1c17b3ef141eda1facec10b8eb65f2cf8dc16bb7`.
+
+Connect an explicitly selected pre-home CPU service to the existing installer.
+Validate the home, source, endpoint, model, transport and minimum32K/4K budget
+before effects. Compare the exact selected lifetime under the existing mutation
+lock; retain the service admission lock through scaffold, package installation
+and doctor. Restart on the same port after the installed home guard is ready.
+Require the native child to hold that home's kernel READ lease. Do not adopt a
+pre-home child merely because its home directory appeared.
+
+Persist only the nonsecret route and native Pi `$NAME` provider. Inject the
+current nonce into the final Pi child environment after checking that provider.
+Package-install environments remain independent while serving is stopped.
+Failures retain setup evidence and refuse automatic replay. Full/observer and
+GPU setup are not qualified by this change.
+
+Nineteen Linux factory controls and six final Windows provider/launch controls
+passed; twenty-six earlier affected Windows home/command controls passed.
+Fifteen separate native handoff controls cover kernel child leases and lifetime
+races. A native Pi serializer check exercised environment keys without HTTP or
+generation. These source/fixture checks do not establish fresh native full
+factory operation, hardware fit or useful first-project model quality.
+
 ## Supervised intake instruction order — 2026-10-25
 
 Parent commit: `328d16c6b3f2d71d094cabdd4f92db73756a491a`.

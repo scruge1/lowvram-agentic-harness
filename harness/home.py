@@ -35,9 +35,9 @@ REQUIRED_TEMPLATES = (
     "AGENTS.md", "CLAUDE.md", "gitignore.template", "agent/AGENTS.md",
     "agent/APPEND_SYSTEM.md", "agent/prompts/personalize.md",
     "agent/skills/supervised-tasks/SKILL.md", "agent/skills/source-control/SKILL.md", "context/startup-index.md",
-    "agent/skills/supervised-tasks/references/first-hardware-report.md",
     "agent/skills/reuse-first-engineering/SKILL.md",
     "agent/skills/reuse-first-engineering/references/reuse-and-comparison.md",
+    "agent/skills/supervised-tasks/references/first-hardware-report.md",
     "context/profile.md", "context/current.md", "context/lessons.md",
 )
 PINS = {
@@ -231,8 +231,36 @@ def environment(home, project_root=None):
     return value
 
 
+def owned_service_provider(home, binding, *, profile, base_url, model, context_window, max_output, model_profile, provider=None):
+    """Validate explicit owned attachment, without reading a nonce or service."""
+    from harness import model_service_handoff, model_profiles
+    if profile not in {"agent", "pi"}:
+        raise HomeError("Owned model authentication is qualified only for agent/pi; full/observer routing is not qualified.")
+    if type(context_window) is not int or type(max_output) is not int or context_window < 32768 or max_output < 4096:
+        raise HomeError("Owned full-agent setup requires at least32768 context and4096 output; a protocol-only service is insufficient.")
+    if max_output > context_window // 2:
+        raise HomeError("Owned output limit must preserve the existing factory's input-context budget.")
+    try:
+        route = model_service_handoff._binding(binding)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise HomeError("Invalid explicit owned model-service binding.") from error
+    clean = {"schema": model_service_handoff.SCHEMA, **route, "environment_variable": binding["environment_variable"]}
+    if binding != clean:
+        raise HomeError("Owned model binding contains unsupported fields.")
+    expected = {"home": str(Path(home).expanduser().resolve(strict=False)), "base_url": base_url, "model_id": model,
+                "context": context_window, "max_output": max_output, "transport_profile": model_profile}
+    if any(route.get(key) != value for key, value in expected.items()):
+        raise HomeError("Supplied factory inputs differ from the explicit owned serving selection.")
+    selected = {"baseUrl": base_url, "api": "openai-completions", "apiKey": "$" + binding["environment_variable"],
+                "models": [model_profiles.model_definition(model, context_window, max_output, model_profile)]}
+    if provider is not None and provider != selected:
+        raise HomeError("Owned provider must use the exact captured native environment-key definition.")
+    return selected
+
+
 def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner", offline=False,
-             context_window=32768, max_output=4096, model_profile="generic-local", managed_node=None):
+             context_window=32768, max_output=4096, model_profile="generic-local", managed_node=None,
+             owned_model_service=None, local_provider=None):
     home = home.expanduser().resolve(strict=False)
     source = source.resolve(strict=True)
     if home.is_symlink() or home.resolve() in {Path.home().resolve(), Path(home.anchor)}:
@@ -253,6 +281,13 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         selected_model = model_definition(model, context_window, max_output, model_profile)
     except ValueError as error:
         raise HomeError(str(error)) from error
+    provider = {"baseUrl": base_url, "api": "openai-completions", "apiKey": "local", "models": [selected_model]}
+    if owned_model_service is not None:
+        provider = owned_service_provider(home, owned_model_service, profile=profile, base_url=base_url, model=model,
+                                          context_window=context_window, max_output=max_output, model_profile=model_profile,
+                                          provider=local_provider)
+    elif local_provider is not None:
+        raise HomeError("A provider override requires an explicit owned model-service binding.")
     node_binding = None
     if managed_node is not None:
         from harness import node_runtime
@@ -320,6 +355,8 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         configuration["research_requirements"] = list(REQUIREMENTS)
     if node_binding is not None:
         configuration["managed_node"] = node_binding
+    if owned_model_service is not None:
+        configuration["owned_model_service"] = json.loads(json.dumps(owned_model_service))
     write_json(home / "state/bounded-compaction.json", {
         "schema": "pi-bounded-compaction/v1",
         "models": [{"provider": "local", "id": model, "base_url": base_url}],
@@ -374,10 +411,7 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         "compaction": {"enabled": True, "reserveTokens": max_output,
                        "keepRecentTokens": min(4096, context_window // 4)},
     })
-    write_json(home / "agent/models.json", {"providers": {"local": {
-        "baseUrl": base_url, "api": "openai-completions", "apiKey": "local",
-        "models": [selected_model],
-    }}})
+    write_json(home / "agent/models.json", {"providers": {"local": provider}})
     memory_python = executable(home / "envs/mempalace")
     memory_wrapper = runtime / "harness/memory_runtime.py"
     memory_command = home_entry.guarded_command(home, [str(memory_python), "-B", str(memory_wrapper), "--home", str(home), "mcp"],
@@ -764,6 +798,15 @@ def _launch(home, args, project_root=None, inherited=(), *, continue_recent=Fals
                                            "session": "continued" if continue_recent else "fresh",
                                            "session_id": session.selection["id"] if session and session.selection else None}}), file=sys.stderr)
         child_env = environment(home, cwd)
+        if "owned_model_service" in config:
+            from harness import model_service_handoff
+            provider = json.loads((home / "agent/models.json").read_text(encoding="utf-8")).get("providers", {}).get("local")
+            if not isinstance(provider, dict):
+                raise HomeError("Owned model provider configuration is missing.")
+            owned_service_provider(home, config["owned_model_service"], profile=config["profile"], base_url=config["base_url"],
+                                   model=config["model"], context_window=config["context_window"], max_output=config["max_output"],
+                                   model_profile=config["model_profile"], provider=provider)
+            child_env = model_service_handoff.launch_environment(home, config["owned_model_service"]).apply(child_env)
         if inherited:
             child_env[home_entry.FD_ENV] = str(inherited[0])
         descriptors = tuple(dict.fromkeys((*inherited, *(session.pass_fds if session else ()))))
