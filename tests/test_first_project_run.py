@@ -78,6 +78,11 @@ class FirstProjectRunTests(unittest.TestCase):
         project = Path(result["project_root"])
         self.assertTrue((project / ".git").is_dir())
         prompt = launch.call_args.args[1][-1]
+        admission = json.loads(prompt.split("project_admit with EXACTLY this JSON: ", 1)[1].split("\n", 1)[0])
+        self.assertEqual(admission, {"project_root": str(project)})
+        self.assertIn("host has already created", prompt)
+        self.assertIn("do not supply native_authority", prompt)
+        self.assertIn("not a project identity hash", prompt)
         self.assertIn("Original manifest SHA-256: " + result["manifest_sha256"], prompt)
         encoded = prompt.split("Original check_argv JSON: ", 1)[1].split("\n", 1)[0]
         self.assertEqual(json.loads(encoded), result["check_argv"])

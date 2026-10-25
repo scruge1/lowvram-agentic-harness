@@ -256,10 +256,17 @@ def run(home, name, *, mode="json"):
                       continuation="same_project_explicit" if sys.platform == "linux" else "unavailable_on_this_platform")
         prompt = (
             "Complete this owner's prepared first hardware-report task in the current project. "
+            "The host has already created this project's identity, Git and board. "
+            "First select that existing identity using project_admit with EXACTLY this JSON: "
+            + json.dumps({"project_root": str(project)}, ensure_ascii=False) + "\n"
+            "Do not initialize, recover or replace its identity, and do not supply native_authority. "
+            "The owner's display name is not a replacement project authority. "
+            "If this read-only admission fails, retain its error and stop this attempt. "
             "Read FIRST-PROJECT.md and hardware-facts.json completely, and follow the installed "
             "supervised-tasks skill and normal project/context/intake gates. Create hardware-report.md "
             "through the existing supervised workflow. Use this EXACT original verifier argv as "
             "workflow_step.verify; do not recompute its pin or replace its checker.\n"
+            "The following manifest pin binds the report inputs and checker only; it is not a project identity hash.\n"
             "Original manifest SHA-256: " + original_pin + "\n"
             "Original check_argv JSON: " + json.dumps(list(original_check_argv), ensure_ascii=False) + "\n"
             "Keep FIRST-PROJECT.md, hardware-facts.json and first-project.json unchanged. "

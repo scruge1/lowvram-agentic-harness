@@ -59,6 +59,46 @@ or service action was used. Normal managed-command dispatch, actual environment
 forwarding, bounded-child handoff and cascade adoption require their own joined
 integration checks. Local permissions are not isolation from same-user code.
 
+## Declare supervised action and verification budgets — 2026-10-25
+
+Parent commit: `9e5309b588cceab455ee3080a90ee21a18a1d143`.
+
+Expose `action_timeout_seconds` and `check_timeout_seconds` instead of fixed
+short action/outer timers. Choose budgets for the actual work; these are per-call
+limits, not project/session limits. Related substeps can remain one action.
+Preserve defaults585/45: worker=A+15, each verifier=C+15, outer=worker+2*verifier+60
+gives the original780-second per-call deadline. The existing86400-second core
+command ceiling admits declared values1..86385, including hour-scale work.
+Reject invalid values and hidden timeout aliases before writes or process start.
+Record the derived budgets in plans and host results. Keep the fixed deadline,
+owner pipe, PIDFD cleanup, negative control and no automatic replay.
+
+Ten focused Windows and Linux checks passed, including actual core validation
+of default/hour/maximum specifications, early invalid-input refusal and the
+complete TypeScript tool surface with timer/abort/owner-pipe checks. Existing
+negative-control and recovery checks, pinned Ruff0.16.10 and seven offline
+selftests passed. No test waited hours or established long-horizon model quality;
+installed-source adoption and end-to-end task results remain separate.
+
+## Select the prepared first-project identity — 2026-10-25
+
+Parent commit: `e91cce4affb8d79cb9c681fc524e11a8c893c87b`.
+
+A real model smoke test tried to initialize an already prepared project using
+the owner display name as its authority. Admission correctly refused; subsequent
+context and intake calls could not proceed. Keep that failure. Supply the exact
+read-only `project_admit` arguments in the first-project prompt, state that the
+host already created Git/identity/board, and distinguish the report input pin
+from a project identity hash. No gate, identity or authority rule is relaxed.
+
+Twenty focused Windows checks ran with two platform skips. Exact original
+verifier/manifest binding, failed-child retention, artifact drift and the new
+admission instruction passed. These checks establish the host prompt contract,
+not model obedience or a completed report. Ten-minute qualification exhaustion
+does not establish model quality failure or a session duration limit; normal
+managed Pi has no such fixed deadline. Hour-scale work retains explicit action,
+resource, ownership and verification boundaries.
+
 ## Opt-in single-command local CPU candidate — 2026-10-25
 
 Parent commit: `3e1ccbb8eee8a5c50945aefb3844656e1d20f1dd`.
