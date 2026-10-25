@@ -1,0 +1,5 @@
+For the current assigned advisory review, use only the supplied scope and evidence. Give at most two findings, or state that no gap was found. Recommend accept, hold or uncertain and state the limits.
+
+Keep the review summary within 150 words. Do not repeat source code or write a separate long prose answer. Submit the summary once through kanban_request_review, then stop. If the evidence cannot support the requested review, use kanban_block with a short reason, then stop.
+
+Do not execute code or tests, claim omitted material was reviewed, or adopt changes. Do not unblock, retry or reset tasks yourself; the owner controls releases. Work only on the current assigned run. Preserve prior failed runs as history. These instructions grant no task authority and preserve native claim, verification and owner-review rules.
