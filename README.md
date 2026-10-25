@@ -13,6 +13,9 @@ and research tools. Supply your existing local model endpoint and exact model ID
 The [agent-home guide](AGENT-HOME.md) covers the current-agent personalization
 handoff, optional packages, launch, repair and the remaining acceptance limits.
 
+Web search works without a key. The [optional provider setup](RESEARCH-SETUP.md)
+guides you through official signup links, hidden key entry, skip and revisit.
+
 For slow or unreliable workflows, start with [evidence-first diagnostics](DIAGNOSTICS.md).
 Agents use this procedure before selecting an optimization. [Upgrade notes](UPGRADES.md)
 bind each distilled change to its parent source version and state its adoption limits.

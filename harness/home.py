@@ -69,6 +69,13 @@ class HomeError(ValueError):
     """A setup prerequisite or owned-home check failed."""
 
 
+class CommandParser(argparse.ArgumentParser):
+    def error(self, message):
+        # A mistaken --api-key argument must not be copied to terminal logs.
+        self.print_usage(sys.stderr)
+        self.exit(2, "Invalid command arguments. Use --help for accepted commands and options.\n")
+
+
 def digest(file):
     return hashlib.sha256(file.read_bytes()).hexdigest()
 
@@ -869,7 +876,7 @@ def project(home, name):
 
 def main(argv=None, *, bound_home=None):
     from harness import session_resume
-    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    parser = CommandParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("--home", type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
     install = commands.add_parser("install")
@@ -916,6 +923,9 @@ def main(argv=None, *, bound_home=None):
     memory.add_argument("--query")
     palace_command = commands.add_parser("palace", help="Manage this home's native MemPalace single-writer hub")
     palace_command.add_argument("operation", choices=("start", "stop", "status"))
+    research = commands.add_parser("research", help="Set up optional web retrieval in your terminal or inspect redacted status")
+    research.add_argument("operation", choices=("setup", "status", "skip", "revisit", "remove"))
+    research.add_argument("--provider", help="Optional provider name from the research setup catalog")
     args = parser.parse_args(argv)
     try:
         if bound_home is not None and (args.home is None or args.home.expanduser().resolve() != Path(bound_home).resolve()):
@@ -989,6 +999,14 @@ def main(argv=None, *, bound_home=None):
         if args.command == "project":
             print(json.dumps(project(args.home, args.name), indent=2))
             return 0
+        if args.command == "research":
+            from harness import home_entry, research_setup
+            home, _config = load(args.home)
+            arguments = ["--home", str(home), args.operation]
+            if args.provider:
+                arguments.extend(["--provider", args.provider])
+            with home_entry.consumer(home):
+                return research_setup.main(arguments)
         if args.command == "palace":
             print(json.dumps(palace(args.home, args.operation), indent=2))
             return 0

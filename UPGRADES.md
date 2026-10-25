@@ -5,6 +5,76 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Protect fresh Windows files with token default owners — 2026-10-25
+
+Parent commit: `98076e32e7244981e2dd0052d7e832716cb3a4fc`.
+
+Windows can assign a token's default group owner to newly created objects.
+During new research-file protection only, accept that exact token default owner
+and normalize ownership to the actual user while installing the private DACL.
+Keep existing-file reads strict: other owners and other allowed principals are
+still rejected. No privilege, process-token or unrelated-file changes are made.
+See [Microsoft's object-owner rules](https://learn.microsoft.com/windows/win32/secauthz/owner-of-a-new-object).
+
+The original Windows CI owner failure is retained. Forty-three focused local
+Windows checks ran with four declared skips and all remaining checks passed;
+the elevated CI context requires its own exact-head rerun. Linux ownership
+handling is unchanged.
+
+## Join configured search, bounded retrieval and the managed home — 2026-10-25
+
+Parent commit: `c87e6cd91fc6e44947769eacbdf97f1138766b24` (joined source history, descended from
+`4f9465dfbcd8883842dceaac18393f6391415803`; the integration merge retains PR34).
+
+Connect the sole provider resolver and human-terminal setup to the installed
+home command. Pass only the trusted home to configured search; model requests
+cannot select another home, submit a key or approve retention rights. Suppress
+argument values in launcher parser errors so a mistaken secret flag is not
+echoed. Keep DDG-only legacy calls and keyless default configuration.
+
+Adapt scholarly candidate and retry intent from the existing miner through
+guarded HTTP/browser tools. Preserve complete native attempts within a24MiB
+cumulative evidence budget; disclose withheld evidence instead of accepting it.
+Keep abstracts, archived snapshots and browser windows explicitly partial, with
+selected URL/scope retained through cached reads. Fetch defaults to60 seconds
+with a30-second browser settlement reserve; search30/render40 stay separate
+operation limits. Archive fallback is explicit. No authentication/challenge
+bypass, private browser service, mining/convergence or whole-suite parity claim.
+
+Joined synthetic checks cover installed CLI key suppression, wrong-home/key/
+rights request refusal and automatic render-to-cache scope preservation. Source
+config/cascade/fetch and native transport fixtures passed within their recorded
+Windows/Linux limits. They do not establish live keyed-provider access, current
+account rights or real model research quality. The compatible updater protects
+home.py; existing-controller migration is still separate from fresh setup.
+
+## Human-terminal optional search setup — 2026-10-25
+
+Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
+
+Use one provider catalog and home-bound settings/authentication interface for
+SearXNG, Exa, Brave, Tavily and keyless DuckDuckGo. Absent settings use only
+DuckDuckGo. Ambient credentials cannot activate an unconfigured provider;
+explicit skip wins. Keep local keys separate from Pi model authentication.
+Expose only presence/state in status, not credentials or a claim of online
+testing. Trusted helpers receive a secret holder with a redacted representation.
+
+Accept keys only through hidden direct-terminal input; abort on getpass echo
+fallback and avoid echoing accidental key arguments in parser errors. Support
+skip, revisit and local removal. Check home identity, owner permissions, file
+redirection, competing setup locks and concurrent drift before atomic writes.
+Brave stays held unless storage rights explicitly cover research artifacts and
+native session history. Official signup/plan guidance is dated and refreshable.
+
+Fourteen focused synthetic Linux tests passed. Windows ran the same fourteen:
+thirteen passed and one native-symlink control was skipped because link creation
+was unavailable. Native Windows owner/DACL handling, POSIX permissions and
+competing locks were exercised. Pinned Ruff0.16.10 and all seven existing offline
+selftests passed. No real credentials, account, provider, model, browser, package
+or service action was used. Normal managed-command dispatch, actual environment
+forwarding, bounded-child handoff and cascade adoption require their own joined
+integration checks. Local permissions are not isolation from same-user code.
+
 ## Declare supervised action and verification budgets — 2026-10-25
 
 Parent commit: `9e5309b588cceab455ee3080a90ee21a18a1d143`.
@@ -69,6 +139,25 @@ failure phases. High-cost downloads, native service and package calls are mocked
 in those fixtures. They do not qualify a new full installation, useful agent
 task quality, model speed or general hardware fit. The CPU profile remains a
 text-only candidate; GPU and full/observer setup are outside this route.
+## Configured provider fallback and coverage — 2026-10-25
+
+Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
+
+Adapt the canonical search policy into the existing bounded research worker.
+Explicit home configuration selects providers through the sole settings/key
+resolver; calls without a home retain DDG-only behavior. Preserve missing-key,
+skip, storage-rights hold, rate-limit/cooldown, relevance, request-budget and
+coverage outcomes. First-success mode makes no corroboration claim. Credentials
+cross only private worker stdin; fixed keyed endpoints cannot redirect them.
+Tavily requests basic search without generated answers or automatic parameters.
+Reuse the config owner's protected directory and cap/recover per-home cooldowns.
+
+Focused synthetic controls cover the retained quota-failure/fallback and missing
+key/cooldown failure families, exact response bounds, late success, private result
+URLs, secret echoes and unchanged legacy calls. Native HTTPX MockTransport tests
+and an actual all-skipped child operation make no provider or model requests.
+These source checks do not qualify live account limits, mining, full browser
+fallback, complete research convergence or useful model-driven outcomes.
 
 ## Observer credentials and independent keyword recall — 2026-10-25
 

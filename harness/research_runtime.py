@@ -158,6 +158,8 @@ def text_view(record, view):
         return wire(without_bodies(payload.get("downloads", []))).decode(), "download_metadata"
     require(view == "text", "Unsupported cached evidence view")
     if action == "fetch":
+        if isinstance(payload.get("text"), str) and isinstance(payload.get("content_scope"), str):
+            return payload["text"], payload["content_scope"]
         return payload.get("response", {}).get("cleaned_text_full", "") if payload.get("response") else "", "full_extraction"
     if action == "render":
         return payload.get("document", {}).get("text", ""), "captured_browser_window"
@@ -178,6 +180,15 @@ def projection(record, artifact_id, *, view="text", offset=0, limit=8192, cached
     if record["action"] == "render":
         base.update(page_url=str(payload.get("page_url", ""))[:1500], capture_truncated=payload.get("document", {}).get("truncated", True),
                     capture_offset=payload.get("document", {}).get("offset", 0))
+    if record["action"] == "fetch" and "selected_kind" in payload:
+        base.update(requested_url=str(payload.get("requested_url") or "")[:1500],
+                    selected_url=str(payload.get("selected_url") or "")[:1500],
+                    selected_kind=payload.get("selected_kind"),
+                    requested_source_complete=payload.get("requested_source_complete") is True,
+                    attempt_count=len(payload.get("attempts", [])))
+        if payload.get("document"):
+            base.update(capture_truncated=payload["document"].get("truncated", True),
+                        capture_offset=payload["document"].get("offset", 0))
     remaining = limit
     while True:
         window = text[offset:offset + remaining].encode()[:remaining].decode("utf-8", errors="ignore")
@@ -263,7 +274,7 @@ class ResearchRuntime:
 
     def execute(self, request):
         allowed = {"action", "query", "url", "max_results", "timeout", "artifact_id", "view", "offset", "limit",
-                   "wait_selector", "click_selectors", "download_selector", "selection", "session_id"}
+                   "wait_selector", "click_selectors", "download_selector", "allow_archive", "selection", "session_id"}
         require(isinstance(request, dict) and not set(request) - allowed, "Unexpected research request fields")
         action = request.get("action")
         require(action in {"search", "fetch", "render", "read"}, "Unsupported research action")
@@ -276,14 +287,19 @@ class ResearchRuntime:
             return projection(record, request["artifact_id"], view=request.get("view", "text"),
                               offset=request.get("offset", 0), limit=request.get("limit", 8192), cached=True)
         store.quota(ARTIFACT_BYTES)
-        timeout = request.get("timeout", 40 if action == "render" else 30)
+        timeout = request.get("timeout", 40 if action == "render" else 60 if action == "fetch" else 30)
         require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research timeout must be 2 through 60 seconds")
         os.environ.update(self.env)  # This one-operation owned helper only.
         web = importlib.import_module("harness.web_research")
         if action == "search":
-            payload = web.search(request.get("query"), limit=request.get("max_results", 5), timeout=timeout)
+            # Provider choice and credentials come from the installed host home,
+            # never from model-supplied request fields or another project.
+            payload = web.search(request.get("query"), limit=request.get("max_results", 5), timeout=timeout,
+                                 home=self.home)
         elif action == "fetch":
-            payload = web.fetch(request.get("url"), timeout=timeout)
+            retrieval = importlib.import_module("harness.research_fetch")
+            payload = retrieval.fetch(request.get("url"), timeout=timeout, allow_browser=True,
+                                      allow_archive=request.get("allow_archive", False))
         else:
             browser = importlib.import_module("harness.web_browser")
             payload = browser.render(request.get("url"), timeout=timeout, offset=request.get("offset", 0),

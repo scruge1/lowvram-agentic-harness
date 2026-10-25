@@ -149,7 +149,46 @@ class RoutingTests(unittest.TestCase):
         self.assertTrue(cached["cached"])
         binding, identity, _ = self.runtime.selection({"selection": self.selection})
         saved = rr.ArtifactStore(identity["state_root"], binding).get(initial["artifact_id"])
-        self.assertEqual(saved["payload"], payload)
+        self.assertEqual(saved["payload"]["selected_native"], payload)
+        self.assertEqual(saved["payload"]["attempts"][0]["native"], payload)
+
+    def test_automatic_browser_fallback_retains_partial_source_scope_in_cached_read(self):
+        empty = {"ok": False, "status": "empty_extraction", "response": {
+            "content_type": "text/html", "status_code": 200, "raw_truncated": False,
+            "cleaned_text_full": "", "final_url": "https://example.org/dynamic"}}
+        rendered = {"ok": True, "status": "partial", "page_url": "https://example.org/dynamic",
+                    "document": {"text": "synthetic rendered evidence", "truncated": True, "offset": 0}}
+        with patch("harness.web_research.fetch", return_value=empty), \
+                patch("harness.web_browser.render", return_value=rendered) as browser:
+            initial = self.runtime.execute({"action": "fetch", "url": "https://example.org/dynamic",
+                                            "selection": self.selection})
+        self.assertEqual(browser.call_count, 1)
+        self.assertEqual(initial["content_scope"], "captured_browser_window")
+        self.assertEqual(initial["selected_url"], rendered["page_url"])
+        self.assertFalse(initial["requested_source_complete"])
+        self.assertTrue(initial["capture_truncated"])
+        cached = self.runtime.execute({"action": "read", "artifact_id": initial["artifact_id"],
+                                       "selection": self.selection})
+        self.assertEqual(cached["text"], rendered["document"]["text"])
+        self.assertEqual(cached["content_scope"], "captured_browser_window")
+        self.assertEqual(cached["source_status"], "partial")
+        self.assertFalse(cached["requested_source_complete"])
+
+    def test_search_uses_host_home_and_cannot_select_credentials_from_request(self):
+        payload = {"ok": True, "status": "ok", "provider": "duckduckgo", "results": []}
+        with patch("harness.web_research.search", return_value=payload) as search:
+            result = self.runtime.execute({"action": "search", "query": "portable example",
+                                           "selection": self.selection})
+            search.assert_called_once_with("portable example", limit=5, timeout=30, home=self.home)
+            binding, identity, _ = self.runtime.selection({"selection": self.selection})
+            saved = rr.ArtifactStore(identity["state_root"], binding).get(result["artifact_id"])
+            self.assertEqual(saved["payload"], payload)
+            for override in ({"home": "/other/home"}, {"provider": "brave"},
+                             {"api_key": "synthetic-secret"}, {"retention": "rights_confirmed"}):
+                with self.assertRaisesRegex(rr.ResearchError, "Unexpected research request"):
+                    self.runtime.execute({"action": "search", "query": "portable example",
+                                          "selection": self.selection, **override})
+            self.assertEqual(search.call_count, 1)
 
     def test_selected_identity_drift_and_unadmitted_selection_refused(self):
         for selection in (None, {**self.selection, "boardAdmissionFailed": True},
