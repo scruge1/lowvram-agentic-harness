@@ -42,22 +42,42 @@ class PiProjectWorkflowTests(unittest.TestCase):
         script = r'''
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
 import { EventEmitter } from 'node:events';
 import vm from 'node:vm';
 const requests = [], tasks = new Map([['task-1', { id:'task-1',status:'ready',parents:[] }],
   ['task-2', { id:'task-2',status:'ready',parents:[] }]]);
-let board = 'board-1';
-const spawn = () => {
+let board = 'board-1', createFailure = false, createMalformed = false, createPending = false, ownerCloses = 0;
+const creations = [];
+const spawn = (_python, argv = [], options = {}) => {
   const child = new EventEmitter();
   child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.stdin = new EventEmitter();
   child.kill = () => {};
+  const creation = argv.find(value => value.startsWith('--name='));
+  if (creation) {
+    const name = creation.slice('--name='.length);
+    creations.push({name,argv,options});
+    child.stdin.end = () => { ownerCloses += 1; };
+    if (!createPending) queueMicrotask(() => {
+      const root = createMalformed ? '/wrong-project' : join(process.env.AGENT_HOME,'projects',name);
+      const value = createFailure ? {schema:'pi-kanban-result/v1',ok:false,error:'Synthetic partial creation failure'}
+        : {schema:'pi-kanban-result/v1',ok:true,action:'project_create',result:{project_root:root,
+          identity:{project_id:'created-'+name,board_id:'board-'+name}},limits:['Fixture only']};
+      child.stdout.emit('data',Buffer.from(JSON.stringify(value))); child.emit('close',createFailure?2:0);
+    });
+    return child;
+  }
   child.stdin.end = raw => queueMicrotask(() => {
     const request = JSON.parse(raw); requests.push(request);
     let result = {};
-    if (request.action === 'project_admit') result = { project_root:request.project_root,
-      identity:{ project_id:'project-1',board_id:board } };
+    if (request.action === 'project_admit') {
+      const managed = request.project_root.startsWith(join(process.env.AGENT_HOME,'projects'));
+      const name = managed ? request.project_root.split(/[\\/]/).at(-1) : undefined;
+      result = { project_root:request.project_root,
+        identity:{ project_id:managed?'created-'+name:'project-1',board_id:managed?'board-'+name:board } };
+    }
     if (request.action === 'show') {
       const task = tasks.get(request.task_id);
       if (!task) { child.stdout.emit('data',Buffer.from(JSON.stringify({schema:'pi-kanban-result/v1',ok:false,error:'missing card'}))); child.emit('close',1); return; }
@@ -74,7 +94,7 @@ const type = new Proxy({}, {get:() => () => ({})});
 const { projectKanbanReply } = await import(process.env.PI_TEST_PROJECTOR);
 const dependencies = {
   typebox:{Type:type}, 'node:child_process':{spawn},
-  'node:crypto':{createHash}, 'node:fs':{readFileSync},
+  'node:crypto':{createHash}, 'node:fs':{readFileSync}, 'node:path':{join},
   '../intake/request-intake-138.ts': {registerRequestIntake() { /* Separate native intake qualification. */ }},
   '../context/project-context.ts': {registerProjectContext() { /* Separate native context qualification. */ }},
   './kanban-reply-projector.mjs': {projectKanbanReply}
@@ -187,6 +207,33 @@ board='board-1'; await admit(); await invoke('kanban_select',{task_id:'task-2'})
 await fire('session_start'); await discover(); assert.equal((await execute()).block,true);
 assert.equal(requests.filter(x=>x.action==='consultation_admit').length,0);
 console.log('selection contract passed');
+// Pure coordinator fixture: no Git/helper/Hermes deployment is claimed here.
+tasks.get('task-1').status='ready'; await admit(); await invoke('kanban_select',{task_id:'task-1'}); await discover();
+assert.equal(await execute(),undefined);
+assert.equal(await fire('tool_call',{toolName:'project_create',input:{name:'new-one'}}),undefined);
+assert.equal((await execute()).block,true,'creation starts with old selection held');
+const created = await invoke('project_create',{name:'new-one'});
+assert.equal(created.isError,undefined);
+let selected = branch.at(-1).data;
+assert.equal(selected.project.root,join(process.env.AGENT_HOME,'projects','new-one'));
+assert.equal(selected.task,null); assert.equal(selected.boardAdmissionFailed,false);
+assert.equal((await execute()).block,true,'creation never selects a ready task');
+tasks.set('new-task',{id:'new-task',status:'ready',parents:[]}); await invoke('kanban_select',{task_id:'new-task'});
+const missing = (await execute()).reason;
+for (const name of ['agent_capabilities','system_tool_query','validated_memory_query','project_knowledge_query']) assert.ok(missing.includes(name));
+createFailure=true; assert.equal((await invoke('project_create',{name:'partial'})).isError,true); createFailure=false;
+selected=branch.at(-1).data; assert.equal(selected.project,null);assert.equal(selected.task,null);assert.equal(selected.boardAdmissionFailed,true);
+const beforeExtra=creations.length;
+assert.equal((await invoke('project_create',{name:'extra',project_root:'/arbitrary'})).isError,true);
+assert.equal(creations.length,beforeExtra,'unknown args refuse before helper');
+createMalformed=true;assert.equal((await invoke('project_create',{name:'wrong-root'})).isError,true);createMalformed=false;
+createPending=true;
+const owner = new AbortController(), pending = tools.get('project_create').execute('cancelled',{name:'cancelled'},owner.signal);
+owner.abort();assert.equal((await pending).isError,true);createPending=false;
+assert.equal(creations.at(-1).options.env.PI_TASK_TIMEOUT,'90');assert.ok(ownerCloses>=4);
+await admit();assert.equal(branch.at(-1).data.project.root,'/project','external adoption remains available');
+assert.equal(requests.at(-1).initialize,undefined,'default adoption does not initialize');
+console.log('project creation coordinator cases passed');
 '''
         adapter = WORKFLOW / "pi_kanban.py"
         env = {
@@ -197,6 +244,21 @@ console.log('selection contract passed');
             "PI_TEST_EXTENSION": str(WORKFLOW / "pi-kanban.ts"),
             "PI_TEST_PROJECTOR": (WORKFLOW / "kanban-reply-projector.mjs").as_uri(),
         }
+        selected_root = os.environ.get("PROJECT_CREATE_TEST_ROOT")
+        if selected_root is None and os.name == "nt" and Path("E:/").is_dir():
+            selected_root = "E:/"
+        managed = tempfile.TemporaryDirectory(prefix="project-create-vm-", dir=selected_root)
+        self.addCleanup(managed.cleanup)
+        managed_home = Path(managed.name).resolve() / "home"
+        helper = managed_home / "runtime/adapters/pi/project-workflow/project_create.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# Explicit VM transport fixture only\n", encoding="utf-8")
+        manifest = managed_home / "runtime/runtime-manifest.json"
+        manifest.write_text(json.dumps({"files": [{"path": "adapters/pi/project-workflow/project_create.py",
+                                                 "sha256": hashlib.sha256(helper.read_bytes()).hexdigest()}]}), encoding="utf-8")
+        (managed_home / "home.json").write_text(json.dumps({"schema": "agent-home/v1", "home": str(managed_home),
+                                                          "runtime_manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest()}), encoding="utf-8")
+        env.update(AGENT_HOME=str(managed_home), AGENT_HOME_PYTHON=sys.executable)
         result = subprocess.run(
             [node, "--experimental-vm-modules", "--input-type=module", "-e", script],
             env=env, capture_output=True, text=True, timeout=30,
@@ -204,6 +266,7 @@ console.log('selection contract passed');
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("canonical memory guard cases passed: 12", result.stdout)
         self.assertIn("selection contract passed", result.stdout)
+        self.assertIn("project creation coordinator cases passed", result.stdout)
 
     def test_export_has_no_private_host_binding(self):
         forbidden = (r"/home/[^/\s]+", r"[A-Za-z]:\\Users\\[^\\\s]+",
