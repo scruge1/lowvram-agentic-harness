@@ -28,6 +28,9 @@ def selected_target(home, name):
             "Use a short project name: a letter or digit, then letters, digits, hyphens or underscores (80 maximum).")
     require(not any(key in os.environ for key in GIT_PATH_OVERRIDES),
             "Git path override environment is unsupported for managed project creation.")
+    state = home / "state/projects"
+    require(state.parent.is_dir() and not state.is_symlink() and state.resolve() == state
+            and (not state.exists() or state.is_dir()), "Managed project state must stay under its canonical home directory.")
     projects = home / "projects"
     require(projects.is_dir() and not projects.is_symlink() and projects.resolve() == projects,
             "The managed projects directory must be an existing canonical directory.")
@@ -67,6 +70,10 @@ def bindings():
 def create_project(home, name):
     """Delegate creation; preserve any partial directory if a prerequisite fails."""
     root = selected_target(home, name)
+    from project_identity import _project_id
+    state = home / "state/projects" / _project_id(root)
+    require(not state.exists() and not state.is_symlink(),
+            "Project state already exists. Preserve it; choose another new name or inspect/recover the original project before project_admit without initialize.")
     from harness import home as factory
     try:
         value = factory.project(home, name)

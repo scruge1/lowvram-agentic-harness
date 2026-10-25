@@ -1,10 +1,12 @@
 """Real Git/factory source controls; board calls below are explicit fixtures."""
+import ast
 import importlib.util
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -14,6 +16,7 @@ from harness import home as factory
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / "adapters/pi/project-workflow"
+sys.path.insert(0, str(WORKFLOW))
 
 
 def load(path, name):
@@ -127,6 +130,63 @@ class ProjectCreateTests(unittest.TestCase):
         (projects / "dangling").symlink_to(outside / "missing", target_is_directory=True)
         with self.assertRaisesRegex(ValueError, "already exists"):
             creator.selected_target(self.home, "dangling")
+
+    def test_retained_project_state_refuses_before_factory_or_git(self):
+        root = self.home / "projects/stale-state"
+        state = self.home / "state/projects" / identity._project_id(root)
+        state.mkdir(parents=True)
+        retained = state / "keep.txt"
+        retained.write_bytes(b"retained prior board state")
+        with mock.patch.object(factory, "project") as operation, self.assertRaisesRegex(ValueError, "Project state already exists"):
+            creator.create_project(self.home, "stale-state")
+        operation.assert_not_called()
+        self.assertFalse(root.exists())
+        self.assertEqual(retained.read_bytes(), b"retained prior board state")
+
+    def test_backend_initialization_refuses_retained_state_before_identity_or_root(self):
+        # Execute the existing pure pre-mutation backend functions, not a model
+        # of them. Real dependency-backed dispatch is covered by the native test.
+        tree = ast.parse((WORKFLOW / "pi_kanban.py").read_text(encoding="utf-8"))
+        body = [ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)]
+        body.extend(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name in {"require", "text", "validate_initialization"})
+        namespace = {"Path": Path, "STATE_BASE": self.home / "state/projects", "_project_id": identity._project_id,
+                     "load_identity": identity.load_identity, "AdapterError": ValueError}
+        exec(compile(ast.fix_missing_locations(ast.Module(body=body, type_ignores=[])), "backend-validation-source", "exec"), namespace)
+        root = self.home / "projects/backend-stale"
+        state = self.home / "state/projects" / identity._project_id(root)
+        state.mkdir(parents=True)
+        retained = state / "keep.txt"
+        retained.write_bytes(b"retained board state")
+        request = {"project_root": str(root), "target": "New project", "why": "Source regression fixture",
+                   "native_authority": "Explicit isolated source fixture"}
+        with self.assertRaisesRegex(ValueError, "without its identity"):
+            namespace["validate_initialization"](request)
+        self.assertFalse(root.exists())
+        self.assertEqual(retained.read_bytes(), b"retained board state")
+        # An established identity follows its existing authority checks and can
+        # be inspected/admitted without treating its own state as a collision.
+        root.mkdir()
+        document, _ = identity.initialize_identity(root, native_authority=request["native_authority"])
+        before = (root / ".icm/project.json").read_bytes()
+        namespace["validate_initialization"](request)
+        self.assertEqual((root / ".icm/project.json").read_bytes(), before)
+        self.assertEqual(document["project_id"], identity._project_id(root))
+        self.assertEqual(retained.read_bytes(), b"retained board state")
+
+    def test_redirected_state_refuses_before_factory_or_git(self):
+        state = self.home / "state/projects"
+        outside = self.base / "outside-state"
+        outside.mkdir()
+        try:
+            state.symlink_to(outside, target_is_directory=True)
+        except OSError:
+            self.skipTest("Directory symlink creation requires host support")
+        with mock.patch.object(factory, "project") as operation, self.assertRaisesRegex(ValueError, "canonical home"):
+            creator.create_project(self.home, "state-escape")
+        operation.assert_not_called()
+        self.assertEqual(list(outside.iterdir()), [])
+        self.assertFalse((self.home / "projects/state-escape").exists())
 
     def test_installed_binding_wrong_home_and_source_drift(self):
         file = self.home / "runtime" / creator.RELATIVE

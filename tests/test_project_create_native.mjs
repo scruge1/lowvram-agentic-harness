@@ -10,6 +10,7 @@ const options = {};
 for (let index = 2; index < process.argv.length; index += 2) options[process.argv[index].slice(2)] = process.argv[index + 1];
 for (const name of ['home', 'python', 'output']) assert.ok(options[name] && path.isAbsolute(options[name]), name);
 assert.equal(process.platform, 'linux');
+assert.notEqual(process.getuid(), 0, 'Use an ordinary owner for the permission-failure fixture');
 const home = fs.realpathSync(options.home), output = options.output, base = path.dirname(output);
 assert.ok(!fs.existsSync(output));
 const config = JSON.parse(fs.readFileSync(path.join(home, 'home.json')));
@@ -108,15 +109,34 @@ try {
   fs.renameSync(projects, retained); fs.symlinkSync(outside, projects, 'dir');
   try { check('redirected managed parent refuses', (await tool('project_create', { name: 'symlink-escape' }, true)).isError === true && fs.readdirSync(outside).length === 0); }
   finally { fs.unlinkSync(projects); fs.renameSync(retained, projects); }
-  const partial = path.join(home, 'projects/partial');
+  const stateBase = path.join(home, 'state/projects'), retainedState = path.join(home, 'state/projects-retained');
+  const outsideState = path.join(base, 'outside-state'); fs.mkdirSync(outsideState);
+  fs.renameSync(stateBase, retainedState); fs.symlinkSync(outsideState, stateBase, 'dir');
+  try { check('redirected state parent refuses before Git/board writes', (await tool('project_create', { name: 'state-escape' }, true)).isError === true && !fs.existsSync(path.join(home, 'projects/state-escape')) && fs.readdirSync(outsideState).length === 0); }
+  finally { fs.unlinkSync(stateBase); fs.renameSync(retainedState, stateBase); }
   const idCode = `import sys\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1]+'/runtime/adapters/pi/project-workflow')\nfrom project_identity import _project_id\nprint(_project_id(Path(sys.argv[2])))\n`;
-  const identifier = spawnSync(options.python, ['-B', '-c', idCode, home, partial], { encoding: 'utf8', timeout: 10000 });
-  assert.equal(identifier.status, 0, identifier.stderr);
-  fs.mkdirSync(path.join(home, 'state/projects', identifier.stdout.trim(), 'kanban.db'), { recursive: true });
-  const partialResult = await tool('project_create', { name: 'partial' }, true);
-  check('real board failure preserves partial Git/instructions and holds selection', partialResult.isError && fs.existsSync(path.join(partial, '.git')) && fs.existsSync(path.join(partial, 'AGENTS.md')) && selection().project === null);
-  check('partial cannot be recreated', (await tool('project_create', { name: 'partial' }, true)).isError === true);
-  check('incomplete native board cannot be cleanly adopted', (await tool('project_admit', { project_root: partial }, true)).isError === true);
+  const projectId = root => {
+    const observed = spawnSync(options.python, ['-B', '-c', idCode, home, root], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(observed.status, 0, observed.stderr); return observed.stdout.trim();
+  };
+  const stale = path.join(home, 'projects/stale-state'), staleState = path.join(home, 'state/projects', projectId(stale));
+  fs.mkdirSync(staleState); fs.writeFileSync(path.join(staleState, 'keep.txt'), 'retained old project state');
+  check('retained state namespace refuses before new Git and is preserved', (await tool('project_create', { name: 'stale-state' }, true)).isError === true && !fs.existsSync(stale) && fs.readFileSync(path.join(staleState, 'keep.txt'), 'utf8') === 'retained old project state');
+  const initialize = root => tool('project_admit', { project_root: root, initialize: true,
+    native_authority: 'Owned new-project regression fixture', target: 'Namespace preservation', why: 'Never attach retained state to a missing project identity' }, true);
+  check('backend initialization also refuses retained state before root/identity mutation', (await initialize(stale)).isError === true && !fs.existsSync(stale) && fs.readFileSync(path.join(staleState, 'keep.txt'), 'utf8') === 'retained old project state');
+  const dangling = path.join(home, 'projects/dangling-state'), danglingState = path.join(home, 'state/projects', projectId(dangling));
+  fs.symlinkSync(path.join(base, 'missing-state'), danglingState, 'dir');
+  check('dangling state namespace refuses before new Git', (await tool('project_create', { name: 'dangling-state' }, true)).isError === true && !fs.existsSync(dangling));
+  check('backend initialization refuses dangling state before root/identity mutation', (await initialize(dangling)).isError === true && !fs.existsSync(dangling));
+  const partial = path.join(home, 'projects/partial'), priorMode = fs.statSync(stateBase).mode & 0o777;
+  fs.chmodSync(stateBase, 0o500);
+  try {
+    const partialResult = await tool('project_create', { name: 'partial' }, true);
+    check('real board failure preserves partial Git/instructions and holds selection', partialResult.isError && fs.existsSync(path.join(partial, '.git')) && fs.existsSync(path.join(partial, 'AGENTS.md')) && selection().project === null);
+    check('partial cannot be recreated', (await tool('project_create', { name: 'partial' }, true)).isError === true);
+    check('incomplete native board cannot be cleanly adopted', (await tool('project_admit', { project_root: partial }, true)).isError === true);
+  } finally { fs.chmodSync(stateBase, priorMode); }
   const external = path.join(base, 'external'); fs.mkdirSync(external); fs.writeFileSync(path.join(external, 'AGENTS.md'), '# Existing external project\n');
   await tool('project_admit', { project_root: external, initialize: true, native_authority: 'Owned inert native fixture', target: 'Existing external adoption', why: 'Verify no implicit Git setup' });
   const externalIdentity = hash(fs.readFileSync(path.join(external, '.icm/project.json')));
@@ -149,6 +169,6 @@ finally {
   activeController?.abort();
   await session.dispose(); globalThis.fetch = previousFetch;
   fs.writeFileSync(output, JSON.stringify({ schema: 'native-project-create/v1', checks, failure, http,
-    removedEnvironmentNames, events, scope: 'Actual Pi public runner events/tool wrappers, existing factory/Git/Hermes, borrowed verified dependencies. No provider/model, no live home or palace, no normal-CLI inference claim.' }, null, 2));
+    removedEnvironmentNames, events, cancellation: 'Tool failure precedes eventual measured guard cleanup/EX release; no synchronous settlement claim.', scope: 'Actual Pi public runner events/tool wrappers, existing factory/Git/Hermes, borrowed verified dependencies. No provider/model, no live home or palace, no normal-CLI inference claim.' }, null, 2));
 }
 console.log(JSON.stringify({ checks: checks.length, providerHTTP: http.length, output }));
