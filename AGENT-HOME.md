@@ -353,7 +353,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Read-loop containment and evidence-bound recovery | Read-loop079 and exact failure-read/recovery gates exported | Full native model-path adoption; matching recovery evidence/receipt only clears its own latch |
 | Quiet session/task waits and receipt-driven one-time wakeups | Task-waits138 source exported | Watcher/race/pause/cancel/reload checks; interactive wakeup pilot still open upstream |
 | Local-provider bounded native compaction | Public native API and exact target selectors exported | Native API tests passed with synthetic stream; real summary quality remains model-specific |
-| Action failure dominates verifier success | Existing source needs newer ledger parity | Actual full host-action and model-facing result checks |
+| Action failure dominates verifier success |25 native controls passed: nonzero action stays failed despite predicate-valid output; controller/helper/tool agree | New-host adoption; separate private ledger tools are not installed |
 | MCP lifecycle and health | Native Pi1.4 connected47 tools; owned hub startup/idempotence/shutdown and connected recall passed | Long-idle reconnect and new-host lifecycle checks |
 | Deferred MCP schemas and canonical recall readiness |30 current-source native checks; actual recall, error refusal, reload/reconnect; matched initial schema bytes57.46% lower | New-host/model-driven adoption; no whole-request token or latency claim |
 | Validated memory retrieval, exact chunks and promotion | Empty safe registry abstention and synthetic native capture/mining/exact readback passed | Reviewed promotion, new-host freshness and private-history acceptance |

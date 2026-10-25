@@ -47,6 +47,18 @@ qualification. The shipping PR records complete platform gate outcomes.
 This qualifies the current native shadow path, not a new package installation,
 private-runtime adoption or an ordinary model-driven task on a new host.
 
+The existing public action-failure path was also qualified through actual Pi,
+Hermes, context and owned-process execution:25 checks passed. An action wrote
+predicate-valid output and exited7. The supervisor, helper and model-visible
+tool all reported failure; the workflow never ran its verifier. The identical
+predicate passed when run separately afterward. Ordinary success and failed
+predicate controls passed. Native intake held the next action with its actual
+failure-inspection reason. The separate everyday recovery latch is not claimed
+from that observation. The stale ledger-parity gap row was corrected without
+an execution-engine change; private ledger tools are not part of this install.
+These three synthetic fixtures used explicit validated-memory observations and
+no MCP, model, observer or live project. They do not prove memory integration.
+
 ## Bounded Kanban model replies — 2026-10-25
 
 Parent commit: `f9bd5ad2f0c825318f3ba7f8178d787c2641650e`.
