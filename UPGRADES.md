@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Local service discovery and explicit model transport — 2026-10-25
+
+Parent commit: `92c7bcab0c863d10571ee230af237102d655485c`.
+
+Reuse the existing hardware probe and local endpoint policy for a read-only
+pre-install inventory and bounded model-list discovery. Whole-request and
+whole-discovery deadlines cover slow responses. Requests omit ambient proxies
+and credentials, refuse redirects and bound the response and model count.
+Fourteen local HTTP/inventory checks and three model-profile checks passed.
+
+An explicit llama.cpp/Qwen profile reuses native Pi1.4 transport metadata.
+Six actual native serializer checks intercepted two final request bodies with
+zero network requests: thinking-off reaches the Qwen template, while model,
+context/output caps, task contents and tool defaults remain unchanged. Native
+reasoning models use the developer instruction role; the reviewed llama.cpp
+backend maps that role to system for this non-channel template.
+
+The first real report journey failed without its requested artifact. The
+corrected profile removed the observed thinking-only behavior, but the matched
+second journey also failed: a worker tried to read an input it had not created,
+the recovery guard held uncertain replay, and the 600-second deadline expired.
+Neither exit status nor component checks qualify model quality, hardware fit,
+fresh-machine model provisioning or the complete first-project journey.
+
 ## Home-bound managed commands — 2026-10-25
 
 Parent commit: `482357a623415eecbb1560b57f04451487ccdfdc`.

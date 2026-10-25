@@ -21,7 +21,7 @@ python -m harness.home install --python312 /path/to/python3.12
 The wizard asks for a new agent-home directory, local OpenAI-compatible endpoint
 and exact model ID. It creates a dedicated home. Existing agent profiles,
 memory databases, services and project directories are not migrated by setup.
-Setup checks all 12 required templates before creating the home. Its Git-ignore
+Setup checks all 14 required templates before creating the home. Its Git-ignore
 template is installed as `.gitignore`.
 Choose storage with room for package environments, memory and embedding caches.
 No agent model weights or GPU server are downloaded or started. Memory embeddings
@@ -60,6 +60,29 @@ Set `--context-window` and `--max-output` from the actual server configuration.
 Defaults8192/2048 are unprobed configuration limits, not detected capabilities.
 The installer sets native compaction reserves to fit the selected context.
 Image input stays disabled until the selected model/projector path is tested.
+
+Inspect the intended storage volume and discover existing local services before
+creating a home:
+
+```bash
+python -m harness.home onboard inspect --destination /data/my-agent
+python -m harness.home onboard discover
+python -m harness.home onboard discover --base-url http://127.0.0.1:8131/v1
+```
+
+Discovery makes bounded `GET /models` requests without credentials, redirects
+or environment proxies. It does not load or select a model. A local server can
+proxy remote inference; its listing does not establish local execution, memory
+fit or tool capability. Inventory retains the existing first-GPU probe scope.
+
+Select `install --model-profile llama-cpp-qwen` only for Qwen served by
+llama.cpp with its Qwen chat template. This uses Pi's native model metadata so
+the default thinking level `off` reaches `chat_template_kwargs.enable_thinking`.
+The default `generic-local` leaves backend-specific controls unset. Model names
+do not select a profile, and this profile is not qualified for Ollama. The native
+serializer was exercised without network traffic; a subsequent real local-model
+report task still failed to produce its artifact. Transport correctness does not
+establish model task acceptance.
 
 After a failed installation, inspect the private command logs and exact failure.
 Correct the cause, then use `agent-home.py resume-install --python312 <path>`.

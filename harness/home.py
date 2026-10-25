@@ -27,11 +27,15 @@ except ImportError:  # Retain direct-script bootstrap as well as python -m.
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
 SCHEMA = "agent-home/v1"
 REQUIRED_TEMPLATES = (
     "AGENTS.md", "CLAUDE.md", "gitignore.template", "agent/AGENTS.md",
     "agent/APPEND_SYSTEM.md", "agent/prompts/personalize.md",
     "agent/skills/supervised-tasks/SKILL.md", "agent/skills/source-control/SKILL.md", "context/startup-index.md",
+    "agent/skills/reuse-first-engineering/SKILL.md",
+    "agent/skills/reuse-first-engineering/references/reuse-and-comparison.md",
     "context/profile.md", "context/current.md", "context/lessons.md",
 )
 PINS = {
@@ -190,7 +194,7 @@ def environment(home, project_root=None):
 
 
 def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner", offline=False,
-             context_window=8192, max_output=2048):
+             context_window=8192, max_output=2048, model_profile="generic-local"):
     home = home.expanduser().resolve(strict=False)
     source = source.resolve(strict=True)
     if home.is_symlink() or home.resolve() in {Path.home().resolve(), Path(home.anchor)}:
@@ -206,6 +210,11 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         raise HomeError("Unknown installation profile.")
     if type(context_window) is not int or context_window < 4096 or type(max_output) is not int or not 128 <= max_output <= context_window // 2:
         raise HomeError("Supply a context window of at least4096 and an output limit between128 and half the context.")
+    from harness.model_profiles import model_definition
+    try:
+        selected_model = model_definition(model, context_window, max_output, model_profile)
+    except ValueError as error:
+        raise HomeError(str(error)) from error
     files = source_files(source)
     templates = source / "harness/templates/agent-home"
     missing = [name for name in REQUIRED_TEMPLATES if not (templates / name).is_file()]
@@ -243,7 +252,7 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
         memory_port = reservation.getsockname()[1]
     configuration = {
         "schema": SCHEMA, "home": str(home), "profile": profile,
-        "base_url": base_url, "model": model, "name": name,
+        "base_url": base_url, "model": model, "name": name, "model_profile": model_profile,
         "context_window": context_window, "max_output": max_output,
         "model_capability_acceptance": "not_probed",
         "selected_packages": {key: PINS[key] for key in PROFILES[profile]},
@@ -302,7 +311,7 @@ def scaffold(home, *, source=ROOT, profile="full", base_url, model, name="Owner"
     })
     write_json(home / "agent/models.json", {"providers": {"local": {
         "baseUrl": base_url, "api": "openai-completions", "apiKey": "local",
-        "models": [{"id": model, "input": ["text"], "contextWindow": context_window, "maxTokens": max_output}],
+        "models": [selected_model],
     }}})
     memory_python = executable(home / "envs/mempalace")
     memory_wrapper = runtime / "harness/memory_runtime.py"
@@ -669,6 +678,9 @@ def main(argv=None, *, bound_home=None):
     install.add_argument("--profile", choices=PROFILES, default="full")
     install.add_argument("--base-url")
     install.add_argument("--model")
+    from harness.model_profiles import PROFILES as MODEL_PROFILES
+    install.add_argument("--model-profile", choices=MODEL_PROFILES, default="generic-local",
+                         help="Native transport profile; select only for its actual serving backend")
     install.add_argument("--name", default="Owner")
     install.add_argument("--python312")
     install.add_argument("--context-window", type=int, default=8192, help="Actual server context limit; default8192 is an unprobed conservative configuration")
@@ -687,6 +699,14 @@ def main(argv=None, *, bound_home=None):
     command.add_argument("--bin-dir", required=True, type=Path)
     command.add_argument("--name", default="harness-agent")
     command.add_argument("--default-pi", action="store_true", help="Also register pi if the selected directory has no collision")
+    onboard = commands.add_parser("onboard", help="Inspect hardware or discover local model metadata before setup")
+    onboarding_commands = onboard.add_subparsers(dest="onboarding_operation", required=True)
+    inventory = onboarding_commands.add_parser("inspect", help="Read host/selected-volume facts without creating files")
+    inventory.add_argument("--destination", type=Path)
+    discover = onboarding_commands.add_parser("discover", help="GET local model listings; do not load or invoke models")
+    discover.add_argument("--base-url", action="append", dest="services")
+    discover.add_argument("--timeout", type=float, default=3.0)
+    discover.add_argument("--total-timeout", type=float, default=10.0)
     new = commands.add_parser("project")
     new.add_argument("name")
     memory = commands.add_parser("memory")
@@ -698,12 +718,28 @@ def main(argv=None, *, bound_home=None):
     try:
         if bound_home is not None and (args.home is None or args.home.expanduser().resolve() != Path(bound_home).resolve()):
             raise HomeError("This installed launcher is bound to a different agent home")
+        if args.command == "onboard":
+            from harness import onboarding
+            try:
+                if args.onboarding_operation == "inspect":
+                    destination = args.destination or args.home
+                    if destination is None:
+                        raise HomeError("Choose --destination for the installation volume inspection.")
+                    result = onboarding.inventory(destination)
+                else:
+                    result = onboarding.discover(services=args.services, timeout=args.timeout,
+                                                 total_timeout=args.total_timeout)
+            except ValueError as error:
+                raise HomeError(str(error)) from error
+            print(json.dumps(result, indent=2))
+            return 0
         if args.command == "install":
             home = args.home or Path(input("New agent-home directory: ").strip())
             url = args.base_url or input("Local OpenAI-compatible endpoint [http://127.0.0.1:8080/v1]: ").strip() or "http://127.0.0.1:8080/v1"
             model = args.model or input("Exact local model ID: ").strip()
             config = scaffold(home, source=args.source, profile=args.profile, base_url=url, model=model,
-                              name=args.name, offline=args.offline, context_window=args.context_window, max_output=args.max_output)
+                              name=args.name, offline=args.offline, context_window=args.context_window,
+                              max_output=args.max_output, model_profile=args.model_profile)
             home = Path(config["home"])
             if not args.offline:
                 install_packages(home, config, args.python312)
