@@ -3,6 +3,8 @@ import { Type } from 'typebox';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { registerRequestIntake } from '../intake/request-intake-138.ts';
+import { registerProjectContext } from '../context/project-context.ts';
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -78,6 +80,61 @@ export default function (pi: ExtensionAPI) {
   let memoryQueried = false;
   let knowledgeQueried = false;
 
+  // Navigation is persisted in the native branch. It is never execution permission.
+  const saveSelection = () => pi.appendEntry('pi-kanban-selection/v1', {
+    project: activeProject, task: activeTask, boardAdmissionFailed,
+  });
+  const resetDiscovery = () => {
+    capabilitiesObserved = false;
+    systemToolsQueried = false;
+    memoryQueried = false;
+    knowledgeQueried = false;
+    pendingConsultations.clear();
+  };
+  const restoreSelection = async (_event: any, ctx: any) => {
+    activeProject = null;
+    activeTask = null;
+    boardAdmissionFailed = false;
+    resetDiscovery();
+    const saved = [...ctx.sessionManager.getBranch()].reverse().find(
+      (entry: any) => entry.type === 'custom' && entry.customType === 'pi-kanban-selection/v1')?.data;
+    if (!saved?.project) return;
+    try {
+      const value = await callAdapter({ action: 'project_admit', project_root: saved.project.root });
+      const result = value.result as any;
+      if (result?.project_root !== saved.project.root
+          || result?.identity?.project_id !== saved.project.projectId
+          || result?.identity?.board_id !== saved.project.boardId) throw new Error('Saved project identity changed');
+      activeProject = { root: result.project_root, projectId: result.identity.project_id,
+        boardId: result.identity.board_id };
+      boardAdmissionFailed = saved.boardAdmissionFailed === true;
+      if (saved.task) {
+        const card = await callAdapter({ action: 'show', project_root: activeProject.root,
+          task_id: saved.task.cardId });
+        if ((card.result as any)?.task?.id !== saved.task.cardId) throw new Error('Saved task identity changed');
+        activeTask = { taskId: saved.task.cardId, cardId: saved.task.cardId };
+      }
+    } catch {
+      activeTask = null;
+      boardAdmissionFailed = true;
+      ctx.ui?.notify?.('Saved Kanban selection could not be validated. Admit the project and select its card again.', 'warning');
+    }
+  };
+  pi.on('session_start', restoreSelection);
+  pi.on('session_tree', restoreSelection);
+
+  registerProjectContext(pi, { project: () => activeProject });
+  registerRequestIntake(pi, {
+    project: () => activeProject,
+    task: () => activeTask?.cardId ?? null,
+    select: (id: string) => {
+      activeTask = { taskId: id, cardId: id };
+      saveSelection();
+    },
+    failed: () => boardAdmissionFailed,
+    call: callAdapter,
+  });
+
   const projectRequest = (request: Record<string, unknown>) => {
     if (!activeProject) throw new Error('Admit a project with project_admit before using its board');
     return { ...request, project_root: activeProject.root };
@@ -102,13 +159,16 @@ export default function (pi: ExtensionAPI) {
         const boardId = result?.identity?.board_id;
         const root = result?.project_root;
         if (typeof root !== 'string' || typeof projectId !== 'string' || typeof boardId !== 'string') throw new Error('project admission returned an incomplete identity');
+        const sameProject = activeProject?.root === root && activeProject?.projectId === projectId
+          && activeProject?.boardId === boardId;
         activeProject = { root, projectId, boardId };
-        activeTask = null;
+        if (!sameProject) activeTask = null;
         boardAdmissionFailed = false;
         capabilitiesObserved = false;
         systemToolsQueried = false;
         memoryQueried = false;
         knowledgeQueried = false;
+        saveSelection();
         return response(value);
       } catch (error) {
         activeProject = null;
@@ -118,8 +178,47 @@ export default function (pi: ExtensionAPI) {
         systemToolsQueried = false;
         memoryQueried = false;
         knowledgeQueried = false;
+        saveSelection();
         return failure(error);
       }
+    },
+  });
+
+  pi.registerTool({
+    name: 'project_recover', label: 'Inspect or recover project provenance',
+    description: 'Inspect an existing legacy project identity. Bind only a missing native authority with its exact prior identity hash. Preserve IDs, boards, pauses and evidence.',
+    parameters: Type.Object({ project_root: Type.String(),
+      expected_identity_sha256: Type.Optional(Type.String()),
+      native_authority: Type.Optional(Type.String()) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      try { return response(await callAdapter({ action: 'project_recover', ...params }, signal)); }
+      catch (error) { return failure(error); }
+    },
+  });
+
+  pi.registerTool({
+    name: 'kanban_hierarchy', label: 'Read retained task hierarchy',
+    description: 'Read decomposition containment and distinct native prerequisites. A ready card is not completed work or execution authority.',
+    parameters: Type.Object({ task_id: Type.String(),
+      depth: Type.Optional(Type.Integer({ minimum: 1, maximum: 12 })) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      try { return response(await callAdapter(projectRequest({ action: 'hierarchy', ...params }), signal)); }
+      catch (error) { return failure(error); }
+    },
+  });
+
+  pi.registerTool({
+    name: 'kanban_decompose', label: 'Decompose an unstarted task',
+    description: 'Use native Hermes fan-out on an unstarted triage root. Sibling indices express prerequisites; expandable children remain triage. Keep the original owner outcome.',
+    parameters: Type.Object({ task_id: Type.String(), children: Type.Array(Type.Object({
+      title: Type.String({ minLength: 1, maxLength: 200 }),
+      body: Type.Optional(Type.String({ maxLength: 8000 })),
+      parents: Type.Optional(Type.Array(Type.Integer({ minimum: 0, maximum: 11 }))),
+      expandable: Type.Optional(Type.Boolean()),
+    }, { additionalProperties: false }), { minItems: 1, maxItems: 12 }) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      try { return response(await callAdapter(projectRequest({ action: 'decompose', ...params }), signal)); }
+      catch (error) { return failure(error); }
     },
   });
 
@@ -199,6 +298,21 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'show', ...params }), signal)); } catch (error) { return failure(error); } },
   });
   pi.registerTool({
+    name: 'kanban_select', label: 'Select existing Kanban work',
+    description: 'Select an existing card on the admitted project board. Selection persists on the native session branch. It does not grant execution permission or require planning advice.',
+    parameters: Type.Object({ task_id: Type.String({ minLength: 1, maxLength: 128 }) }, { additionalProperties: false }),
+    async execute(_id, params, signal) {
+      try {
+        const project = activeProject;
+        const value = await callAdapter(projectRequest({ action: 'show', task_id: params.task_id }), signal);
+        if (activeProject !== project || (value.result as any)?.task?.id !== params.task_id) throw new Error('Project or task identity changed during selection');
+        activeTask = { taskId: params.task_id, cardId: params.task_id };
+        saveSelection();
+        return response(value);
+      } catch (error) { return failure(error); }
+    },
+  });
+  pi.registerTool({
     name: 'kanban_create', label: 'Create Kanban work',
     description: 'Create or idempotently recover one bounded host-local work card. A card never grants execution, evidence, proof, promotion, or submission authority.',
     parameters: Type.Object({
@@ -216,7 +330,7 @@ export default function (pi: ExtensionAPI) {
     description: 'Apply one valid Hermes state transition to a Pi Kanban card. Completion is workflow state only and has no SSOT authority.',
     parameters: Type.Object({
       task_id: Type.String(),
-      transition: Type.Union(['schedule', 'block', 'unblock', 'request_review', 'request_changes', 'reopen_review', 'complete', 'archive'].map(Type.Literal)),
+      transition: Type.Union(['specify', 'schedule', 'block', 'unblock', 'request_review', 'request_changes', 'reopen_review', 'complete', 'archive'].map(Type.Literal)),
       reason: Type.Optional(Type.String({ maxLength: 2000 })),
       summary: Type.Optional(Type.String({ maxLength: 4000 })),
     }, { additionalProperties: false }),
@@ -229,17 +343,9 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal) { try { return response(await callAdapter(projectRequest({ action: 'comment', ...params }), signal)); } catch (error) { return failure(error); } },
   });
 
-  pi.on('input', async (event: any) => {
-    if (event.source !== 'extension') {
-      activeTask = null;
-      activeProject = null;
-      boardAdmissionFailed = false;
-      capabilitiesObserved = false;
-      systemToolsQueried = false;
-      memoryQueried = false;
-      knowledgeQueried = false;
-      pendingConsultations.clear();
-    }
+  pi.on('input', async () => {
+    // New input does not silently switch projects or discard the selected work.
+    pendingConsultations.clear();
     return { action: 'continue' };
   });
 
@@ -259,7 +365,25 @@ export default function (pi: ExtensionAPI) {
     }
     if (!EXECUTION_TOOLS.has(event.toolName)) return;
     if (boardAdmissionFailed) return { block: true, reason: 'Kanban admission failed for this task. Preserve the failure and repair board admission before supervised execution.' };
-    if (!activeTask) return { block: true, reason: 'A session-bound Kanban card created from codex_plan_consult is required before supervised execution.' };
+    if (!activeProject || !activeTask) return { block: true, reason: 'Admit the project and select its existing Kanban card before supervised execution. Planning advice is optional.' };
+    if (!capabilitiesObserved || !systemToolsQueried || !memoryQueried || !knowledgeQueried) {
+      return { block: true, reason: 'Observe native capabilities and query relevant system tools, local memory and project knowledge before supervised execution.' };
+    }
+    const project = activeProject, task = activeTask;
+    try {
+      const shown = (await callAdapter(projectRequest({ action: 'show', task_id: task.cardId }))).result as any;
+      if (shown?.task?.id !== task.cardId || !['ready', 'running'].includes(shown.task.status)) {
+        return { block: true, reason: 'Selected card is not runnable. Select an authorized ready task.' };
+      }
+      if (!Array.isArray(shown.parents)) throw new Error('Missing prerequisite state');
+      for (const id of shown.parents) {
+        const prerequisite = (await callAdapter(projectRequest({ action: 'show', task_id: id }))).result as any;
+        if (prerequisite?.task?.id !== id || !['done', 'archived'].includes(prerequisite.task.status)) {
+          return { block: true, reason: 'Selected card has an unfinished prerequisite: ' + id };
+        }
+      }
+      if (activeProject !== project || activeTask !== task) throw new Error('Selection changed during admission');
+    } catch { return { block: true, reason: 'Cannot validate the selected card and its prerequisites. Inspect the project board before execution.' }; }
   });
 
   pi.on('tool_result', async (event: any, ctx: any) => {
@@ -286,8 +410,20 @@ export default function (pi: ExtensionAPI) {
       systemToolsQueried = true;
       return;
     }
-    if (event.toolName === 'mcp__mempalace__mempalace_search' && !event.isError) {
+    if ((event.toolName === 'mcp__mempalace__mempalace_search'
+        || event.toolName === 'validated_memory_query'
+          && event.details?.schema === 'validated-memory-query/v1'
+          && Array.isArray(event.details.results)
+          && event.details.reason !== 'sensitive_query') && !event.isError) {
       memoryQueried = true;
+      return;
+    }
+    if (event.toolName === 'kanban_create' && !event.isError && event.details?.ok === true) {
+      const cardId = event.details?.result?.task?.id;
+      if (activeProject && !activeTask && typeof cardId === 'string' && cardId) {
+        activeTask = { taskId: cardId, cardId };
+        saveSelection();
+      }
       return;
     }
     if (event.toolName === 'codex_plan_consult') {
@@ -312,9 +448,11 @@ export default function (pi: ExtensionAPI) {
         if (typeof cardId !== 'string' || !cardId) throw new Error('Kanban admission returned no task ID');
         activeTask = { taskId: pending.taskId, cardId };
         boardAdmissionFailed = false;
+        saveSelection();
       } catch {
         activeTask = null;
         boardAdmissionFailed = true;
+        saveSelection();
         return { isError: true, content: [{ type: 'text', text: 'Planning consultation completed, but mandatory Kanban admission failed. Stop before supervised execution.' }], details: { ok: false, kanban_admission: 'failed' } };
       }
       return;

@@ -55,8 +55,31 @@ def _inside(root: Path, value: Any, name: str) -> Path:
     return path
 
 
+def _receipt_task_root(root: Path, receipt_path: Path) -> Path:
+    _require(receipt_path.parent.parent.name == ".pi-workflow", "receipt path is outside a workflow step")
+    task_root = receipt_path.parent.parent.parent.resolve(strict=True)
+    try:
+        task_root.relative_to(root)
+    except ValueError as exc:
+        raise CloseoutError("receipt task root is outside the project root") from exc
+    return task_root
+
+
+def _inside_task_root(root: Path, task_root: Path, value: Any, name: str) -> Path:
+    supplied = Path(_text(value, name, 4096)).expanduser()
+    path = supplied if supplied.is_absolute() else task_root / supplied
+    path = path.resolve(strict=True)
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise CloseoutError(f"{name} is outside the project root") from exc
+    _require(path.is_file(), f"{name} must be a file")
+    return path
+
+
 def _load_receipt(root: Path, path_value: Any, expected_sha256: Any) -> tuple[Path, Mapping[str, Any], str]:
     path = _inside(root, path_value, "receipt_path")
+    task_root = _receipt_task_root(root, path)
     raw = path.read_bytes()
     digest = _sha256(raw)
     _require(_text(expected_sha256, "receipt_sha256", 64) == digest, "receipt hash differs")
@@ -73,7 +96,7 @@ def _load_receipt(root: Path, path_value: Any, expected_sha256: Any) -> tuple[Pa
     _require(isinstance(outputs, list) and outputs, "receipt has no outputs")
     for output in outputs:
         _require(isinstance(output, Mapping), "receipt output must be an object")
-        output_path = _inside(root, output.get("path"), "receipt output path")
+        output_path = _inside_task_root(root, task_root, output.get("path"), "receipt output path")
         data = output_path.read_bytes()
         _require(output.get("exists") is True, "receipt output is not marked present")
         _require(output.get("size") == len(data), "receipt output size differs")

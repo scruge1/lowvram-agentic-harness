@@ -13,11 +13,15 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
+from urllib.parse import urlsplit
+from urllib.request import url2pathname
 
 from hermes_cli import kanban_db as kb
 from hermes_cli import kanban_db_connect as kbc
+from hermes_cli import kanban_db_graph as graph
 
 from project_identity import initialize_identity, load_identity
 from project_closeout import compile_closeout
@@ -30,6 +34,7 @@ from project_skill_candidate import compile_candidate
 SCHEMA = "pi-kanban-result/v1"
 EXPECTED_HERMES_COMMIT = "866332bfb52c46e543143b2620a9aeee8bce9c77"
 EXPECTED_MODULE_HASHES = {
+    "kanban_db_graph": "b3aada2c8ec77fa0b4bcdcd6be084e2e91b9c9d57c68f7200b872232b94360ed",
     "kanban_db": "0b2003b32368b7de9e80db6796468e6e3daa492892949116b666041796587e2d",
     "kanban_db_connect": "96f4c0520858905250b10f33f00cb4613f55ede9646cb59bb7fe91cb93cc4b2c",
 }
@@ -41,6 +46,7 @@ IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 VISIBLE_STATUSES = {"triage", "todo", "ready", "running", "blocked", "review", "done", "archived"}
 CREATE_STATUSES = {"triage", "ready"}
 TRANSITIONS = {
+    "specify",
     "schedule",
     "block",
     "unblock",
@@ -88,9 +94,30 @@ def package_commit() -> str:
     direct = dist.read_text("direct_url.json")
     require(direct is not None, "Hermes direct-url identity is missing")
     value = json.loads(direct)
+    require(isinstance(value, Mapping), "Hermes direct-url identity must be an object")
     commit = value.get("vcs_info", {}).get("commit_id")
+    if commit is None and isinstance(value.get("dir_info"), Mapping):
+        source_url = urlsplit(value.get("url", ""))
+        require(source_url.scheme == "file" and source_url.netloc in {"", "localhost"}
+                and not source_url.query and not source_url.fragment,
+                "Hermes local installation source is not a local file URL")
+        requested_source = Path(url2pathname(source_url.path))
+        require(requested_source.is_absolute(), "Hermes local source path must be absolute")
+        source = requested_source.resolve(strict=True)
+        require(source.is_dir(), "Hermes local installation source is missing")
+        observed = subprocess.run(
+            ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        require(observed.returncode == 0, "Hermes local source Git identity is unavailable")
+        commit = observed.stdout.strip()
+        clean = subprocess.run(
+            ["git", "-C", str(source), "diff-index", "--quiet", "HEAD", "--"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        require(clean.returncode == 0, "Hermes local source has tracked changes")
     require(commit == EXPECTED_HERMES_COMMIT, "Hermes package revision drift")
-    for name, module in (("kanban_db", kb), ("kanban_db_connect", kbc)):
+    for name, module in (("kanban_db", kb), ("kanban_db_connect", kbc), ("kanban_db_graph", graph)):
         source = inspect.getsourcefile(module)
         require(source is not None, f"Hermes {name} source identity is missing")
         digest = hashlib.sha256(Path(source).read_bytes()).hexdigest()
@@ -137,6 +164,73 @@ def show(conn: sqlite3.Connection, task_id: str, tenant: str) -> dict[str, Any]:
             for item in kb.list_comments(conn, task_id)
         ],
     }
+
+
+def decomposition_children(conn: sqlite3.Connection, task_id: str) -> list[str]:
+    events = [event for event in kb.list_events(conn, task_id) if event.kind == "decomposed"]
+    require(len(events) <= 1, "ambiguous decomposition lineage")
+    return list((events[0].payload or {}).get("child_ids", [])) if events else []
+
+
+def hierarchy(conn: sqlite3.Connection, task_id: str, tenant: str, depth: int = 6) -> dict[str, Any]:
+    require(isinstance(depth, int) and not isinstance(depth, bool) and 1 <= depth <= 12,
+            "depth must be from 1 through 12")
+    remaining = 200
+    truncated = False
+
+    def visit(current: str, level: int, ancestors: set[str]) -> dict[str, Any]:
+        nonlocal remaining, truncated
+        require(current not in ancestors, "cycle in decomposition lineage")
+        task = show(conn, current, tenant)["task"]
+        remaining -= 1
+        children = decomposition_children(conn, current)
+        node = {key: task[key] for key in ("id", "title", "status")}
+        node["prerequisites"] = kb.parent_ids(conn, current)
+        node["child_ids"] = children
+        node["children"] = []
+        for child in children:
+            if level >= depth or remaining <= 0:
+                truncated = True
+                continue
+            node["children"].append(visit(child, level + 1, ancestors | {current}))
+        return node
+
+    tree = visit(task_id, 0, set())
+    return {"root": tree, "truncated": truncated, "nodes_returned": 200 - remaining,
+            "limits": "Containment comes from decomposition events; prerequisites are separate. Ready is not complete."}
+
+
+def decompose(conn: sqlite3.Connection, task_id: str, tenant: str, children: Any) -> dict[str, Any]:
+    root = show(conn, task_id, tenant)["task"]
+    require(root["status"] == "triage", "decomposition requires an unstarted triage card")
+    require(isinstance(children, list) and 1 <= len(children) <= 12, "supply from 1 through 12 child tasks")
+    clean = []
+    expandable = []
+    for index, child in enumerate(children):
+        exact(child, {"title"}, {"body", "parents", "expandable"})
+        parents = child.get("parents", [])
+        require(isinstance(parents, list) and all(type(item) is int for item in parents), "parents must be sibling indices")
+        can_expand = child.get("expandable", False)
+        require(type(can_expand) is bool, "expandable must be Boolean")
+        clean.append({"title": text(child["title"], "title", 200),
+                      "body": text(child.get("body", ""), "body", 8000, empty=True),
+                      "parents": parents, "assignee": None})
+        if can_expand:
+            expandable.append(index)
+    graph._validate_children_graph(clean)
+    # Native atomic fan-out records lineage and makes the root wait on all children.
+    # Keep new children parked until expandable roots have been marked for triage.
+    child_ids = graph.decompose_triage_task(conn, task_id, root_assignee=None,
+                                           children=clean, author=CREATOR, auto_promote=False)
+    require(child_ids is not None, "card was already decomposed or is no longer in triage")
+    with kb.write_txn(conn):
+        for index in expandable:
+            changed = conn.execute("UPDATE tasks SET status = 'triage' WHERE id = ? AND status = 'todo' AND claim_lock IS NULL",
+                                   (child_ids[index],)).rowcount
+            require(changed == 1, "new expandable card changed before triage selection")
+            kb._append_event(conn, child_ids[index], "pi_expansion_requested", {"root_id": task_id})
+    kb.recompute_ready(conn)
+    return hierarchy(conn, task_id, tenant)
 
 
 def workspace_status(root: Path, identity: Mapping[str, Any]) -> dict[str, Any]:
@@ -260,6 +354,27 @@ def project_context(project_root: Any, *, initialize: bool = False, native_autho
     return root, identity, state_root / "kanban.db", state_root / "supervisor.lock"
 
 
+def validate_initialization(request: Mapping[str, Any]) -> None:
+    """Validate input before project_context can create directories or identity."""
+    text(request.get("target"), "target", 1000)
+    text(request.get("why"), "why", 2000)
+    require(isinstance(request.get("system_setup", False), bool), "system_setup must be Boolean")
+    root_text = text(request.get("project_root"), "project_root", 4096)
+    root = Path(root_text).expanduser().resolve(strict=False)
+    supplied = request.get("native_authority")
+    if supplied is not None:
+        supplied = text(supplied, "native_authority", 4096)
+    if (root / ".icm/project.json").exists():
+        existing = load_identity(root).get("native_authority")
+        require(isinstance(existing, str) and bool(existing.strip()),
+                "Existing project identity has no native_authority. Preserve its project/board IDs; repair the missing provenance reference before initialization.")
+        require(supplied is None or supplied == existing,
+                "native_authority differs from the existing project identity; do not replace an established authority")
+    else:
+        require(bool(supplied),
+                "initialize=true requires native_authority: cite the user's request or the existing native project plan. This is a provenance reference, not Codex approval. No project files were created.")
+
+
 @contextlib.contextmanager
 def locked_board(database: Path, lock: Path):
     state_root = database.parent
@@ -296,12 +411,75 @@ def status(conn: sqlite3.Connection, tenant: str, database: Path, identity: Mapp
     }
 
 
+def recover_project(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Recover one legacy null pointer, not execution permission or admission."""
+    exact(request, {"action", "project_root"}, {"expected_identity_sha256", "native_authority"})
+    root, identity, _database, _lock = project_context(request["project_root"])
+    directory = root / ".icm"
+    target = directory / "project.json"
+    require(not directory.is_symlink() and not target.is_symlink(), "redirected identity recovery is forbidden")
+    before = target.read_bytes()
+    digest = hashlib.sha256(before).hexdigest()
+    expected = request.get("expected_identity_sha256")
+    authority = request.get("native_authority")
+    if expected is None and authority is None:
+        return {"mode": "inspection", "project_root": str(root), "identity": identity,
+                "identity_sha256": digest, "recovery_needed": identity.get("native_authority") is None,
+                "workspace": workspace_status(root, identity)}
+    require(isinstance(expected, str) and re.fullmatch(r"[0-9a-f]{64}", expected), "expected identity SHA256 is required")
+    authority = text(authority, "native_authority", 4096)
+    require(digest == expected, "identity changed; inspect again before recovery")
+    require(identity.get("native_authority") is None, "established native_authority cannot be replaced by recovery")
+    info = target.stat()
+    require(info.st_nlink == 1 and info.st_uid == os.geteuid(), "identity must be singly linked and owned by this user")
+    candidate = dict(identity, native_authority=authority)
+    import fcntl
+    descriptor = os.open(directory / ".project-recovery.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "r+b") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(target.read_bytes() == before and not target.is_symlink(), "identity changed before recovery")
+        backup = directory / ("project.json.before-recovery-" + expected)
+        if backup.exists():
+            require(not backup.is_symlink() and backup.read_bytes() == before, "recovery backup differs")
+        else:
+            with backup.open("xb") as stream:
+                os.chmod(backup, 0o600)
+                stream.write(before)
+                stream.flush()
+                os.fsync(stream.fileno())
+        fd, name = tempfile.mkstemp(prefix=".project-recovery-", dir=directory)
+        temporary = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+                os.fchmod(stream.fileno(), info.st_mode & 0o777)
+                json.dump(candidate, stream, indent=2, sort_keys=True)
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            require(target.read_bytes() == before and not target.is_symlink(), "identity changed before replacement")
+            os.replace(temporary, target)
+            require(load_identity(root) == candidate, "identity recovery readback differs")
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+    return {"mode": "recovered", "project_root": str(root), "identity": candidate,
+            "previous_sha256": expected, "identity_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+            "backup": str(backup), "next": "project_admit with initialize=true; then select existing work",
+            "limits": "Only missing provenance repaired. No board, selection, permission, worker or application change."}
+
+
 def execute(request: Mapping[str, Any]) -> dict[str, Any]:
-    exact(request, {"action", "project_root"}, {"initialize", "native_authority", "target", "why", "system_setup", "terms", "snapshot", "status", "limit", "task_id", "title", "body", "priority", "parents", "idempotency_key", "initial_status", "transition", "reason", "summary", "comment", "session_id", "card_id", "receipt_path", "receipt_sha256", "lessons", "request_id", "objective", "draft_plan", "name", "description", "closeout_path", "closeout_sha256", "triggers", "steps", "verification", "stop_conditions"})
+    if isinstance(request, Mapping) and request.get("action") == "project_recover":
+        result = recover_project(request)
+        return {"schema": SCHEMA, "ok": True, "action": "project_recover", "result": result,
+                "limits": ["Legacy identity recovery only; not project execution or approval."]}
+    exact(request, {"action", "project_root"}, {"initialize", "native_authority", "target", "why", "system_setup", "terms", "snapshot", "status", "limit", "task_id", "title", "body", "priority", "parents", "idempotency_key", "initial_status", "transition", "reason", "summary", "comment", "session_id", "card_id", "receipt_path", "receipt_sha256", "lessons", "request_id", "objective", "draft_plan", "name", "description", "closeout_path", "closeout_sha256", "drawer_snapshot_path", "triggers", "steps", "verification", "stop_conditions", "children", "depth"})
     action = identifier(request["action"], "action")
     initialize = request.get("initialize", False)
     require(isinstance(initialize, bool), "initialize must be Boolean")
     require(action == "project_admit" or not initialize, "initialize is valid only for project_admit")
+    if action == "project_admit" and initialize:
+        validate_initialization(request)
     root, identity, database, lock = project_context(
         request["project_root"],
         initialize=initialize,
@@ -411,6 +589,10 @@ def execute(request: Mapping[str, Any]) -> dict[str, Any]:
             result = {"tasks": [task_value(task) for task in tasks], "count": len(tasks)}
         elif action == "show":
             result = show(conn, identifier(request.get("task_id"), "task_id"), tenant)
+        elif action == "hierarchy":
+            result = hierarchy(conn, identifier(request.get("task_id"), "task_id"), tenant, request.get("depth", 6))
+        elif action == "decompose":
+            result = decompose(conn, identifier(request.get("task_id"), "task_id"), tenant, request.get("children"))
         elif action == "create":
             title = text(request.get("title"), "title", 200)
             body = text(request.get("body", ""), "body", 8000, empty=True)
@@ -455,7 +637,14 @@ def execute(request: Mapping[str, Any]) -> dict[str, Any]:
             require(transition in TRANSITIONS, "unsupported transition")
             reason = text(request.get("reason", ""), "reason", 2000, empty=True) or None
             summary = text(request.get("summary", ""), "summary", 4000, empty=True) or None
-            if transition == "schedule":
+            if transition == "specify":
+                require(bool(reason), "specify requires a reason identifying the reviewed leaf scope and completion evidence")
+                task = kb.get_task(conn, task_id)
+                require(task is not None and bool((task.body or "").strip()), "specify requires an existing nonempty task specification")
+                ok = kb.specify_triage_task(conn, task_id, author=CREATOR)
+                if ok:
+                    kb.add_comment(conn, task_id, CREATOR, "Leaf specification reviewed: " + reason)
+            elif transition == "schedule":
                 ok = kb.schedule_task(conn, task_id, reason=reason)
             elif transition == "block":
                 ok = kb.block_task(conn, task_id, reason=reason, kind="needs_input")

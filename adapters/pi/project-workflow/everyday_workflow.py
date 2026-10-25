@@ -60,6 +60,16 @@ def validate(request):
             raise ValueError('Outputs must be relative project artifacts')
         if not (root / relative).resolve().is_relative_to(root):
             raise ValueError('Output escaped target')
+    recovery = request.get('recovery')
+    if recovery is not None:
+        required = ('source_run_id', 'failure_class', 'changed_assumption',
+                    'new_evidence', 'expected_observation', 'stop_condition')
+        if not isinstance(recovery, dict) or any(not isinstance(recovery.get(key), str)
+                                                or not recovery[key].strip() for key in required):
+            raise ValueError('Recovery must bind the prior run and concrete diagnostic evidence')
+        if len(recovery['source_run_id']) != 32 or any(ch not in '0123456789abcdef'
+                                                       for ch in recovery['source_run_id']):
+            raise ValueError('Recovery source_run_id is invalid')
     return root
 
 
@@ -83,6 +93,7 @@ def prepare(request, runtime=None):
         'check.json': json.dumps(command(request['verify'], request.get('_check_timeout', 45))),
         'plan.json': json.dumps({'objective': request['objective'], 'target': str(root),
                                 'outputs': request['outputs'], 'retry': 'no automatic replay',
+                                'recovery': request.get('recovery'),
                                 'authority': 'supplied predicate only'}, indent=2),
     }
     for name, text in files.items():

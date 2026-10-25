@@ -1,6 +1,9 @@
 import hashlib
 import importlib.util
 import json
+import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -27,13 +30,131 @@ tool_knowledge = load("tool_knowledge")
 
 
 class PiProjectWorkflowTests(unittest.TestCase):
+    def test_native_selection_without_adviser_and_reload_refusals(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node is required for the Pi extension contract test")
+        version = subprocess.run([node, "--version"], capture_output=True, text=True, check=True).stdout.strip()
+        if tuple(int(part) for part in version.lstrip("v").split(".")[:2]) < (22, 13):
+            self.skipTest("Node 22.13+ is required to strip TypeScript for this contract test")
+        # Execute the complete extension, with explicit native-API/backend fixtures.
+        # This tests coordinator behavior; it does not qualify a live Pi/Hermes host.
+        script = r'''
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { stripTypeScriptTypes } from 'node:module';
+import { EventEmitter } from 'node:events';
+import vm from 'node:vm';
+const requests = [], tasks = new Map([['task-1', { id:'task-1',status:'ready',parents:[] }],
+  ['task-2', { id:'task-2',status:'ready',parents:[] }]]);
+let board = 'board-1';
+const spawn = () => {
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.stdin = new EventEmitter();
+  child.kill = () => {};
+  child.stdin.end = raw => queueMicrotask(() => {
+    const request = JSON.parse(raw); requests.push(request);
+    let result = {};
+    if (request.action === 'project_admit') result = { project_root:request.project_root,
+      identity:{ project_id:'project-1',board_id:board } };
+    if (request.action === 'show') {
+      const task = tasks.get(request.task_id);
+      if (!task) { child.stdout.emit('data',Buffer.from(JSON.stringify({schema:'pi-kanban-result/v1',ok:false,error:'missing card'}))); child.emit('close',1); return; }
+      result = { task:{id:task.id,status:task.status},parents:task.parents };
+    }
+    if (request.action === 'create') result = { task:{id:'task-1',status:'ready'} };
+    child.stdout.emit('data',Buffer.from(JSON.stringify({schema:'pi-kanban-result/v1',ok:true,result})));
+    child.emit('close',0);
+  });
+  return child;
+};
+const context = vm.createContext({ Buffer,process,setTimeout,clearTimeout,console });
+const type = new Proxy({}, {get:() => () => ({})});
+const dependencies = {
+  typebox:{Type:type}, 'node:child_process':{spawn},
+  'node:crypto':{createHash}, 'node:fs':{readFileSync},
+  '../intake/request-intake-138.ts': {registerRequestIntake() { /* Separate native intake qualification. */ }},
+  '../context/project-context.ts': {registerProjectContext() { /* Separate native context qualification. */ }}
+};
+const source = stripTypeScriptTypes(readFileSync(process.env.PI_TEST_EXTENSION,'utf8'));
+const module = new vm.SourceTextModule(source,{context});
+await module.link(specifier => {
+  const exports = dependencies[specifier]; assert.ok(exports,'Unexpected import '+specifier);
+  return new vm.SyntheticModule(Object.keys(exports),function(){for(const [key,value] of Object.entries(exports)) this.setExport(key,value);},{context});
+});
+await module.evaluate();
+const branch = [], hooks = new Map(), tools = new Map();
+const pi = {
+  on(name,handler) { if(!hooks.has(name))hooks.set(name,[]); hooks.get(name).push(handler); },
+  registerTool(tool){ tools.set(tool.name,tool); },
+  appendEntry(customType,data){ branch.push({type:'custom',customType,data:structuredClone(data)}); }
+};
+module.namespace.default(pi);
+const ctx = {sessionManager:{getBranch:()=>branch,getSessionId:()=> 'session-1'},ui:{notify(){}}};
+const fire = async(name,event={}) => {let result;for(const h of hooks.get(name)??[]) result = await h(event,ctx)??result;return result;};
+const invoke = async(name,input) => {
+  const response = await tools.get(name).execute('call-'+name,input,undefined);
+  await fire('tool_result',{toolName:name,toolCallId:'call-'+name,input,...response});
+  return response;
+};
+const discover = async(memory='native') => {
+  await fire('tool_result',{toolName:'agent_capabilities',details:{ok:true,snapshot:{}}});
+  await fire('tool_result',{toolName:'system_tool_query',details:{ok:true,results:[]}});
+  if(memory==='native') await fire('tool_result',{toolName:'mcp__mempalace__mempalace_search'});
+  else await fire('tool_result',{toolName:'validated_memory_query',details:{schema:'validated-memory-query/v1',results:[],reason:memory==='sensitive'?'sensitive_query':'no_current_provenanced_result'}});
+  await fire('tool_result',{toolName:'project_knowledge_query',details:{ok:true}});
+};
+const admit = () => invoke('project_admit',{project_root:'/project'});
+const execute = () => fire('tool_call',{toolName:'workflow_step'});
+assert.equal((await execute()).block,true);
+await admit(); await invoke('kanban_create',{title:'Owner-authorized task'}); await discover();
+assert.equal(await execute(),undefined); // No adviser call or consultation-created card.
+await fire('session_start'); await discover('sensitive'); assert.equal((await execute()).block,true);
+await discover('validated'); assert.equal(await execute(),undefined); // An empty reviewed registry is a valid observed abstention.
+await fire('input',{source:'interactive',text:'Continue this task'});
+assert.equal(await execute(),undefined); // A new input preserves navigation.
+await invoke('kanban_create',{title:'Another queued task'});
+assert.equal(branch.at(-1).data.task.cardId,'task-1'); // Creation does not replace selection.
+await invoke('kanban_select',{task_id:'task-2'});
+assert.equal(branch.at(-1).data.task.cardId,'task-2');
+await fire('session_start');
+assert.equal((await execute()).block,true); // Reload invalidates discovery readiness.
+await discover(); assert.equal(await execute(),undefined);
+tasks.get('task-2').status='done'; assert.equal((await execute()).block,true);
+tasks.get('task-2').status='ready'; tasks.get('task-2').parents=['task-1']; tasks.get('task-1').status='blocked';
+assert.equal((await execute()).block,true); // Stored prerequisites are checked live.
+tasks.get('task-1').status='done'; assert.equal(await execute(),undefined);
+board='different-board'; await fire('session_tree'); await discover();
+assert.equal((await execute()).block,true); // Stale board identity cannot restore permission.
+board='board-1'; await admit(); await invoke('kanban_select',{task_id:'task-2'}); tasks.delete('task-2');
+await fire('session_start'); await discover(); assert.equal((await execute()).block,true);
+assert.equal(requests.filter(x=>x.action==='consultation_admit').length,0);
+console.log('selection contract passed');
+'''
+        adapter = WORKFLOW / "pi_kanban.py"
+        env = {
+            **os.environ,
+            "PI_PROJECT_KANBAN_PYTHON": sys.executable,
+            "PI_PROJECT_KANBAN_ADAPTER": str(adapter),
+            "PI_PROJECT_KANBAN_ADAPTER_SHA256": hashlib.sha256(adapter.read_bytes()).hexdigest(),
+            "PI_TEST_EXTENSION": str(WORKFLOW / "pi-kanban.ts"),
+        }
+        result = subprocess.run(
+            [node, "--experimental-vm-modules", "--input-type=module", "-e", script],
+            env=env, capture_output=True, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("selection contract passed", result.stdout)
+
     def test_export_has_no_private_host_binding(self):
-        forbidden = ("/home/adam", "a33_s", "100.84.")
+        forbidden = (r"/home/[^/\s]+", r"[A-Za-z]:\\Users\\[^\\\s]+",
+                     r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b")
         for path in WORKFLOW.iterdir():
             if path.is_file():
                 text = path.read_text(encoding="utf-8")
                 for value in forbidden:
-                    self.assertNotIn(value, text, f"private binding in {path.name}")
+                    self.assertNotRegex(text, value, f"private binding in {path.name}")
 
     def test_workspace_initializer_is_source_pinned(self):
         initializer = WORKFLOW / "init_workspace.py"

@@ -12,7 +12,9 @@ export default function (pi: ExtensionAPI) {
   let nativeDiscoveryReady = false;
   const loadedSkills = new Map<string, string>();
   let pendingFailure: string | undefined;
-  const skillRoot = path.join(homedir(), '.pi/agent/skills');
+  let inspectedFailure: { runId: string; path: string; sha256: string } | undefined;
+  let recoveryInFlight: { toolCallId: string; sourceRunId: string } | undefined;
+  const skillRoot = path.join(process.env.PI_CODING_AGENT_DIR || path.join(homedir(), '.pi/agent'), 'skills');
   const skillPath = (name: string) => {
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(name)) throw new Error('Invalid skill name');
     const root = fs.realpathSync(skillRoot);
@@ -49,6 +51,17 @@ export default function (pi: ExtensionAPI) {
     parameters: Type.Object({ objective: Type.String(), cwd: Type.String(),
       action: Type.Array(Type.String()), verify: Type.Array(Type.String()),
       outputs: Type.Array(Type.String()),
+      recovery: Type.Optional(Type.Object({
+        source_run_id: Type.String({ pattern: '^[a-f0-9]{32}$' }),
+        failure_class: Type.Union([
+          'wrong_observation_primitive', 'invalid_input', 'process_failure',
+          'verification_failure', 'external_state', 'tool_interface', 'unknown',
+        ].map(Type.Literal)),
+        changed_assumption: Type.String({ minLength: 12, maxLength: 2000 }),
+        new_evidence: Type.String({ minLength: 12, maxLength: 4000 }),
+        expected_observation: Type.String({ minLength: 12, maxLength: 2000 }),
+        stop_condition: Type.String({ minLength: 12, maxLength: 2000 }),
+      }, { additionalProperties: false })),
       required_skills: Type.Optional(Type.Array(Type.String({ description: 'Installed skill names required for specialized work; read each SKILL.md fully first.' }))) }),
     async execute(_id: string, params: any, signal?: AbortSignal) {
       if (signal?.aborted) return { content: [{ type: 'text', text: 'Cancelled before execution.' }], details: { ok: false } };
@@ -82,12 +95,15 @@ export default function (pi: ExtensionAPI) {
     nativeDiscoveryReady = false;
     enableInspectionTools();
     return {
-    systemPrompt: event.systemPrompt + '\nEveryday work: answer questions and inspect with native read-only tools directly. For file-changing project work, use workflow_step: short goal, target directory, argv action, read-only argv check, declared outputs. The host manages records and hashes. Do not ask Adam to sign or manage task files. Work one useful operation at a time. Failed or uncertain actions are not replayed automatically; inspect evidence before proposing a correction. Existing physical-action, credential and privilege approvals still apply. Tasks needing browser/MCP tools or long-context workers retain their dedicated reviewed harness route; do not fake them with a shell substitute.'
+    systemPrompt: event.systemPrompt + '\nEveryday work: answer questions and inspect with native read-only tools directly. For file-changing project work, use workflow_step: short goal, target directory, argv action, read-only argv check, declared outputs. The host manages records and hashes. Do not ask the owner to sign or manage routine task files. Work one useful operation at a time. Failed or uncertain actions are not replayed automatically; inspect evidence before proposing a correction. Existing physical-action, credential and privilege approvals still apply. Tasks needing browser/MCP tools or long-context workers retain their dedicated reviewed harness route; do not fake them with a shell substitute.'
     };
   });
   pi.on('session_start', async () => {
     nativeDiscoveryReady = false;
     loadedSkills.clear();
+    pendingFailure = undefined;
+    inspectedFailure = undefined;
+    recoveryInFlight = undefined;
     enableInspectionTools();
   });
   pi.on('tool_result', async (event: any, ctx: any) => {
@@ -95,7 +111,19 @@ export default function (pi: ExtensionAPI) {
       const host = event.details?.host;
       if (host?.task_root && /^[a-f0-9]{32}$/.test(host.run_id ?? '')) {
         pendingFailure = path.join(host.task_root, '.enforcement/runs', host.run_id, 'final.json');
+        inspectedFailure = undefined;
+        recoveryInFlight = undefined;
       }
+    }
+    if (event.toolName === 'workflow_step' && !event.isError && event.details?.ok === true
+        && event.details?.host?.status === 'supplied_predicate_passed'
+        && /^[a-f0-9]{32}$/.test(event.details.host.run_id ?? '')
+        && recoveryInFlight?.toolCallId === event.toolCallId
+        && recoveryInFlight?.sourceRunId === inspectedFailure?.runId
+        && event.input?.recovery?.source_run_id === inspectedFailure?.runId) {
+      // Only the exact host-verified recovery resolves its inspected source failure.
+      inspectedFailure = undefined;
+      recoveryInFlight = undefined;
     }
     if (event.toolName === 'read' && !event.isError && !event.details?.truncation
         && event.input?.offset === undefined && event.input?.limit === undefined) {
@@ -104,7 +132,17 @@ export default function (pi: ExtensionAPI) {
         const bytes = fs.readFileSync(file);
         const complete = Array.isArray(event.content) && event.content.length === 1
           && event.content[0].type === 'text' && event.content[0].text === bytes.toString('utf8');
-        if (pendingFailure && complete && file === fs.realpathSync(pendingFailure)) pendingFailure = undefined;
+        if (pendingFailure && complete && file === fs.realpathSync(pendingFailure)) {
+          try {
+            const record = JSON.parse(bytes.toString('utf8'));
+            if (/^[a-f0-9]{32}$/.test(record.run_id ?? '')
+                && record.run_id === path.basename(path.dirname(file))) {
+              inspectedFailure = { runId: record.run_id, path: file,
+                sha256: createHash('sha256').update(bytes).digest('hex') };
+              pendingFailure = undefined;
+            }
+          } catch { /* Malformed failure bytes cannot release the inspection hold. */ }
+        }
         const root = fs.realpathSync(skillRoot);
         if (file.startsWith(root + path.sep) && path.basename(file) === 'SKILL.md') {
           const bytes = fs.readFileSync(file);
@@ -138,14 +176,35 @@ export default function (pi: ExtensionAPI) {
     if (pendingFailure && ['workflow_step', 'run_step', 'run_ledger'].includes(event.toolName)) {
       return { block: true, reason: 'Inspect the complete saved failure record before another workflow action: ' + pendingFailure + '. Preserve the failed attempt; a changed command is not automatic recovery.' };
     }
+    if (event.toolName === 'workflow_step' && inspectedFailure) {
+      try {
+        if (fs.realpathSync(inspectedFailure.path) !== inspectedFailure.path
+            || createHash('sha256').update(fs.readFileSync(inspectedFailure.path)).digest('hex') !== inspectedFailure.sha256)
+          throw new Error('Failure source changed');
+      } catch {
+        pendingFailure = inspectedFailure.path;
+        inspectedFailure = undefined;
+        recoveryInFlight = undefined;
+        return { block: true, reason: 'The inspected failure source changed or is unavailable. Inspect its complete current bytes before recovery.' };
+      }
+      const recovery = event.input?.recovery;
+      if (!recovery || recovery.source_run_id !== inspectedFailure.runId) {
+        return { block: true, reason: 'The prior failure was inspected, but recovery is not evidence-bound. Supply recovery.source_run_id for ' + inspectedFailure.runId + ' plus failure_class, changed_assumption, new_evidence, expected_observation and stop_condition.' };
+      }
+      const fields = ['changed_assumption', 'new_evidence', 'expected_observation', 'stop_condition'];
+      if (fields.some((name) => typeof recovery[name] !== 'string' || recovery[name].trim().length < 12)) {
+        return { block: true, reason: 'Recovery fields must state concrete evidence and a falsifiable stop condition. A changed command alone is not information gain.' };
+      }
+    }
     if (event.toolName === 'workflow_step' && !nativeDiscoveryReady) {
       return { block: true, reason: 'Call native agent_capabilities first. A successful native registry result is required; shell commands and remembered tools do not establish readiness.' };
     }
     if (event.toolName === 'workflow_step') {
       const missing = missingSkills(event.input);
       if (missing.length) return { block: true, reason: 'Read the complete installed SKILL.md for: ' + missing.join(', ') + '. Missing, partial or changed skill bytes do not satisfy workflow admission.' };
+      if (inspectedFailure) recoveryInFlight = { toolCallId: event.toolCallId, sourceRunId: inspectedFailure.runId };
     }
-    if (event.toolName === 'bash') {
+    if (['bash', 'powershell'].includes(event.toolName)) {
       return { block: true, reason: 'Use native read/ls/find/grep for inspection. For execution use workflow_step with declared file outputs, or the existing run_step/run_ledger action+verify route. A prior successful check does not admit an unrelated raw shell action.' };
     }
     if (['write', 'edit'].includes(event.toolName)) {

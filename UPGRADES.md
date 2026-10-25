@@ -5,6 +5,93 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Fresh agent-home bootstrap and current Pi coordination — 2026-10-25
+
+Parent commit: `bc49e9c9e6787df8a1871f317742ad5532238dd8`.
+
+Change: a standard-library wizard creates a dedicated private agent home,
+thin routed instructions, current-agent personalization prompt, exact runtime
+snapshot, isolated package plan and local-provider Pi configuration. The new
+project path initializes Git and the existing source-pinned Hermes board.
+Package state and native acceptance remain separate. Existing homes are never
+overwritten or migrated. Failed command output and partial setup are retained.
+
+The coordinator removes mandatory external planning consultation. Explicit card
+selection and native journal entries retain navigation with backend identity
+checks on restore. A fresh native capability/knowledge pass is still required.
+The reviewed Linux process owner and event normalizer are exported with
+unsupported-platform and invalid-timeout refusal before child creation.
+
+The current138 request-intake/retained-packet/receipt/read-loop closure is
+exported together. A target binding generator verifies Framework wheel RECORD
+bytes and binds the actual interpreter, helper and complete selected source
+inventory. The newer backend preserves the existing Hermes pin, adds graph
+module verification and accepts editable source only with actual Git revision
+and clean tracked-source proof. It never fabricates installer metadata.
+
+The source comparison covers September's substantial Pi export through current
+October25 maintained memories, checkpoints and the active parallel harness
+session's newer project-context source. AGENT-HOME.md retains the full
+gap map. Current-session capture, validated safe recall, exact recovery,
+bounded native compaction and local observer bindings are exported; native
+mining/model quality, existing-history migration and source milestones remain
+separate. A framework/lab package does not imply ordinary routing or model quality.
+Stock Claude-mem is not the private preservation fork or an accepted migration.
+
+The hierarchical context gate resolves the selected home, project and nested
+execution/output scope. A path mention, partial read or same-batch read does
+not satisfy it. The returned exact bytes must reach a later native context
+event. File drift, project changes and compaction invalidate prior coverage.
+This reuses the selected Pi version's actual loader and read-path behavior.
+
+The memory wrapper also binds Chroma's process-local MiniLM cache before
+MemPalace imports. `HF_HOME` alone does not redirect that default cache.
+The native writable MCP connection retains a palace write lease; a separate
+capture miner can then contend. The selected route uses MemPalace's existing
+loopback HTTP hub for both stdio MCP and CLI mining. Launch starts and verifies
+that home's exact owned hub. Explicit lifecycle commands preserve process
+identity and the existing single-writer lease. Native connected-memory
+acceptance passed24 checks with six exact chunks, an unchanged repeat, tamper
+refusal and restored readback. One MCP connection stayed open across write,
+capture mining and recall. Pi's normal MCP discovery connected47 tools. All
+content was synthetic; the CPU cache stayed in the chosen home. No generative
+model or GPU request was made.
+
+Validation: focused source tests exercise new-home CLI delivery, privacy/overwrite
+boundaries, source drift refusal, direct no-adviser coordination and native
+journal restore negatives. CPU-only Linux process tests cover timeout, owner
+loss, cancellation and unrelated-process preservation. Complete release and
+fresh dependency-install outcomes are recorded separately in the delivery PR.
+This is a development candidate, not a completed whole-system rollout.
+
+The exported process owner also closes a measured descriptor-depth failure.
+An actual failed package clone produced a deep process chain. The old recursive
+cleanup held one descriptor per level and exhausted its limit. The iterative
+walk now rechecks process lifetime/inode identity before each signal and keeps
+descriptor use bounded. A97-process synthetic chain under a64-descriptor limit,
+PID reuse refusal and partial inspection failure controls pass. This is owned
+process cleanup, not hostile-process isolation or proof about the original
+failed chain. Original setup failures remain retained outside the public tree.
+
+One release-test fixture also required a correction: an inherited-handle child
+could emit its interpreter startup warning after its parent exited. The fixture
+now waits for an explicit ready file before testing quiet held handles. Runtime
+snapshot-drift refusal and process deadlines are unchanged. The final Windows
+offline gate passed21checks after that correction.
+
+A clean source snapshot caught another packaging defect: the source template's
+literal `.gitignore` hid its own context templates. The source now uses
+`gitignore.template`, installed as `.gitignore`, and refuses an incomplete
+eleven-file template bundle before writing the new home. The corrected source
+passed both Linux and Windows offline release gates, each21checks/7self-tests,
+and the CI-pinned Ruff0.16.10 check.
+
+The final normal one-command Linux install also passed with all eight packages,
+no doctor failures and eight native extensions/30 tools. The hosted Windows
+runner exposed an8.3 TEMP alias in two test fixtures. They now resolve their
+temporary parent before comparing the canonical identity already recorded by
+the installer. Runtime identity and local-provider refusal checks stay intact.
+
 ## Bound release output collection after a timeout — 2026-10-10
 
 Parent commit: `6bd3a96672c7cd2f91f35d6c4afd9e6708d859f1`.
