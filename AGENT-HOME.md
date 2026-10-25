@@ -115,8 +115,37 @@ does not execute candidate code. Staging retains candidate and predecessor bytes
 under the home's update state, checks source/import/package bindings and refuses
 drift, unqualified dependencies and replay. Personalized context, credentials,
 sessions, boards, palaces and active runtime remain in place. Withdrawal retires
-staged bytes. Activation and rollback of an active runtime are still unavailable;
-do not copy staged files over the active runtime or call withdrawal a rollback.
+staged bytes. Withdrawal is not active-runtime rollback.
+
+Compatible runtime updates use `python -m harness.runtime_update --home HOME`.
+Run `plan --operation ID` after staging. Before `apply`, retain an explicit
+`agent-home-runtime-qualification/v1` JSON contract with scope
+`compatible-runtime-only`, `qualified: true`, `execution_authorized: true`, the
+plan's exact `home`, `operation`, `stage_receipt_sha256`, `candidate_sha256`, and
+an `evidence` list of absolute file paths and SHA256 values. The operator must
+actually review and qualify those bytes; creating this file is not verification.
+
+```bash
+python -m harness.runtime_update --home HOME apply --operation ID \
+  --expected-plan PLAN_SHA256 --qualification /path/to/qualification.json \
+  --qualification-sha256 CONTRACT_SHA256 --execute-qualified-runtime
+python -m harness.runtime_update --home HOME verify --operation ID \
+  --expected-journal JOURNAL_SHA256
+python -m harness.runtime_update --home HOME rollback --operation ID \
+  --expected-journal CURRENT_JOURNAL_SHA256
+```
+
+Explicitly stop the home's memory hub first with `agent-home.py palace stop`.
+The exclusive lifetime lease refuses active consumers. Apply exchanges only a
+compatible runtime and its exact bindings, retains the predecessor and journal,
+and ends pending consumer acceptance. Verify runs the stable doctor and normal
+managed Pi `/agent-health` command without inference. It accepts only the actual
+configured tools, model and memory discovery. An interrupted exchange blocks
+normal entry. Use `recover --operation ID --expected-journal CURRENT_SHA256` from
+the retained reviewed controller to restore that predecessor. Keep the journal
+and stage receipt; withdrawal refuses an operation used by runtime exchange.
+Personalized files, credentials, sessions, boards, packages and new user data
+survive rollback. Dependency, entry-protocol and template migrations remain held.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
@@ -545,7 +574,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Pi/Codex/Claude session capture and raw archive distinction | Current-session Pi capture and local observer hooks exported | Existing Codex/Claude history imports remain opt-in; whole private archive/replica system is not copied |
 | Source milestones, scoped commits and remote verification | Reviewed CLI/skill,21 real-Git controls and22 native supervised-workflow checks passed | New-host adoption; automatic all-session attribution remains open |
 | Terminal/project navigation and live-owner resume checks | Not exported | Fresh/known-live-owner collision and native resume controls |
-| Maintenance/update/rollback | Exact initial pins and retained failures | Candidate update, complete dependency closure, target activation and rollback |
+| Maintenance/update/rollback | Source staging and compatible runtime exchange, native doctor/Pi health, rollback and interrupted-exchange recovery passed | New-host adoption; dependency, entry-protocol and template migrations remain held |
 
 Do not mark the whole installer accepted until every selected requirement has
 its native evidence. Package tests and a successful deterministic lab demo do
