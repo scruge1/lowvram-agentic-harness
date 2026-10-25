@@ -141,7 +141,7 @@ class ArtifactStore:
 def without_bodies(value):
     if isinstance(value, dict):
         return {key: without_bodies(item) for key, item in value.items()
-                if key not in {"raw_content_base64", "content_base64", "cleaned_text", "cleaned_text_full", "text"}}
+                if key not in {"raw_content_base64", "content_base64", "cleaned_text", "cleaned_text_full", "text", "user_prompt"}}
     if isinstance(value, list):
         return [without_bodies(item) for item in value]
     return value
@@ -163,6 +163,8 @@ def text_view(record, view):
         return payload.get("response", {}).get("cleaned_text_full", "") if payload.get("response") else "", "full_extraction"
     if action == "render":
         return payload.get("document", {}).get("text", ""), "captured_browser_window"
+    if action == "mine":
+        return wire(payload).decode(), "source_bound_claims_not_consensus"
     return wire(payload.get("hits", [])).decode(), "search_metadata"
 
 
@@ -189,6 +191,11 @@ def projection(record, artifact_id, *, view="text", offset=0, limit=8192, cached
         if payload.get("document"):
             base.update(capture_truncated=payload["document"].get("truncated", True),
                         capture_offset=payload["document"].get("offset", 0))
+    if record["action"] == "mine":
+        base.update(run_identity_sha256=payload["run_identity_sha256"], complete=payload["complete"],
+                    attempted_shards=payload["attempted_shards"], analysed_shards=payload["analysed_shards"],
+                    expected_shards=payload["expected_shards"], analysed_rate=payload["analysed_rate"],
+                    claim_count=len(payload["claims"]), failure_count=len(payload["failure_ledger"]))
     remaining = limit
     while True:
         window = text[offset:offset + remaining].encode()[:remaining].decode("utf-8", errors="ignore")
@@ -273,6 +280,8 @@ class ResearchRuntime:
         return binding, identity, digest((root / ".icm/project.json").read_bytes())
 
     def execute(self, request):
+        if isinstance(request, dict) and request.get("action") in {"mine_prepare", "mine_finish"}:
+            return self.mining(request)
         allowed = {"action", "query", "url", "max_results", "timeout", "artifact_id", "view", "offset", "limit",
                    "wait_selector", "click_selectors", "download_selector", "allow_archive", "selection", "session_id"}
         require(isinstance(request, dict) and not set(request) - allowed, "Unexpected research request fields")
@@ -315,6 +324,82 @@ class ResearchRuntime:
         artifact_id = store.put(record)
         return projection(record, artifact_id, limit=request.get("limit", 8192))
 
+    def mining_model(self, value):
+        from harness.home import endpoint
+        fields = {"provider", "id", "api", "base_url", "context_window", "max_tokens", "reasoning",
+                  "compat_sha256", "models_sha256", "output_tokens"}
+        require(isinstance(value, dict) and set(value) == fields, "Invalid native mining model binding")
+        require(value["provider"] == "local" and value["api"] == "openai-completions"
+                and value["id"] == self.config.get("model") and value["base_url"] == self.config.get("base_url"),
+                "Mining requires the actual configured local home model")
+        require(endpoint(value["base_url"]) == value["base_url"], "Mining needs the configured local endpoint")
+        models, raw = read_json(self.home / "agent/models.json", 1024 * 1024)
+        require(digest(raw) == value["models_sha256"], "Configured mining model bytes changed")
+        provider = models.get("providers", {}).get("local", {})
+        candidates = [m for m in provider.get("models", []) if m.get("id") == value["id"]]
+        require(len(candidates) == 1 and provider.get("baseUrl") == value["base_url"]
+                and provider.get("api") == value["api"], "Native provider differs from the mining binding")
+        model = candidates[0]
+        require(value["context_window"] == model.get("contextWindow") and value["max_tokens"] == model.get("maxTokens")
+                and value["reasoning"] == model.get("reasoning", False)
+                and value["compat_sha256"] == digest(wire(model.get("compat", {})))
+                and type(value["output_tokens"]) is int and value["output_tokens"] == min(1000, value["max_tokens"]),
+                "Native model capabilities or transport changed")
+        return value
+
+    def mining(self, request):
+        from harness import research_mining as mining
+        common = {"action", "selection", "session_id", "model_binding"}
+        prepare_fields = {"query", "extraction_schema", "artifact_ids", "recall_bias", "resume_artifact_id", "mine_timeout_seconds"}
+        finish_fields = {"plan_artifact_id", "responses", "cancelled", "timed_out"}
+        preparing = request["action"] == "mine_prepare"
+        require(not set(request) - common - (prepare_fields if preparing else finish_fields), "Unexpected mining request fields")
+        model = self.mining_model(request.get("model_binding"))
+        binding, identity, before = self.selection(request)
+        state = Path(identity["state_root"])
+        require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project mining storage escaped this home")
+        store = ArtifactStore(state, binding)
+        if preparing:
+            plan = mining.prepare(request, store, model, text_view, wire, digest)
+            resume = request.get("resume_artifact_id")
+            if resume is not None:
+                prior = store.get(resume)
+                require(prior["action"] == "mine" and prior["payload"].get("complete") is True
+                        and prior["payload"].get("ok") is True and prior["payload"].get("status") == "ok"
+                        and prior["payload"].get("run_identity_sha256") == plan["run_identity_sha256"],
+                        "Only a successful unchanged mining result can mark these sources seen")
+                return {"schema": "research-mine-plan/v1", "ok": True, "authority": AUTHORITY,
+                        "cached_result": projection(prior, resume, cached=True)}
+            payload = {"ok": True, "status": "prepared", **plan}
+            record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
+                      "action": "mine_plan", "authority": AUTHORITY, "payload": payload}
+        else:
+            record = store.get(request.get("plan_artifact_id"))
+            require(record["action"] == "mine_plan" and record.get("identity_sha256") == before, "Mining plan/project identity changed")
+            plan = record["payload"]
+            spec = plan["spec"]
+            rebuilt = mining.prepare({"query": spec["question"], "extraction_schema": spec["extraction_schema"],
+                                      "artifact_ids": [s["artifact_id"] for s in spec["sources"]],
+                                      "recall_bias": "HIGH" if spec["recall_floor"] == 1 else "MEDIUM",
+                                      "mine_timeout_seconds": spec["mine_timeout_seconds"]},
+                                     store, model, text_view, wire, digest)
+            require(rebuilt["run_identity_sha256"] == plan["run_identity_sha256"], "Mining source/prompt/schema/model identity changed")
+            require(type(request.get("cancelled", False)) is bool and type(request.get("timed_out", False)) is bool, "Invalid mining cancellation state")
+            payload = mining.finish(rebuilt, request.get("responses"), cancelled=request.get("cancelled", False),
+                                    timed_out=request.get("timed_out", False))
+            payload["plan_artifact_id"] = request["plan_artifact_id"]
+            record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
+                      "session_id": str(request.get("session_id", ""))[:256], "action": "mine", "authority": AUTHORITY,
+                      "observed_at": datetime.now(timezone.utc).isoformat(), "payload": payload}
+        require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
+                "Project identity changed during mining; result was not published")
+        key = store.put(record)
+        if preparing:
+            return {"schema": "research-mine-plan/v1", "ok": True, "authority": AUTHORITY,
+                    "plan_artifact_id": key, **plan,
+                    "sources": [{k: v for k, v in source.items() if k != "text"} for source in plan["sources"]]}
+        return projection(record, key)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -324,8 +409,8 @@ def main():
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
     try:
-        raw = sys.stdin.buffer.read(65537)
-        require(len(raw) <= 65536, "Research request exceeds its byte limit")
+        raw = sys.stdin.buffer.read(524289)
+        require(len(raw) <= 524288, "Research request exceeds its byte limit")
         result = ResearchRuntime(args.home).execute(json.loads(raw))
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 0
