@@ -3,10 +3,18 @@ name: supervised-tasks
 description: Use for declared file changes through the installed workflow_step host supervisor.
 ---
 
-Read the current project checkpoint and call agent_capabilities. Admit the
-project, inspect relevant tools, memory and project knowledge, and select a
-ready card. Supply a short objective, exact cwd, action argv, verifier argv and
-relative output paths to workflow_step. Shell text is not an argv array.
+Admit the intended project with project_admit first. Admission resets capability,
+tool, memory and knowledge observations, even when the project is unchanged.
+Then call agent_capabilities and system_tool_query for the task. Query relevant
+local memory and project knowledge, read current project_context, and select an
+authorized ready card. Complete any remaining context reads. After compaction,
+refresh project_context before execution. Do not repeat project_admit merely to
+inspect the same board.
+
+Read this installed SKILL.md in full through the native read tool before
+workflow_step. A skill summary or this reference alone does not satisfy the
+host's skill check. Supply a short objective, exact cwd, action argv, verifier
+argv and relative output paths. Shell text is not an argv array.
 
 The verifier reads outputs relative to cwd and returns 1 for absent/invalid
 outputs. The host runs the same verifier in an empty negative-control directory
