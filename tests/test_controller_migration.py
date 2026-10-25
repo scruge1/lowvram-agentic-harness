@@ -1,4 +1,5 @@
 """Narrow controller migration fixtures; no installed target or model calls."""
+import copy
 import hashlib
 import inspect
 import json
@@ -87,22 +88,21 @@ def verify(home, identifier, expected_journal):
 '''
 
 
-def research_cli(path):
+def research_cli(path, *, previous=False):
     text = path.read_text(encoding="utf-8")
-    text = text.replace('def digest(file):', '''class CommandParser(argparse.ArgumentParser):
+    parser = '''class CommandParser(argparse.ArgumentParser):
     def error(self, message):
+        # A mistaken --api-key argument must not be copied to terminal logs.
         self.print_usage(sys.stderr)
         self.exit(2, "Invalid command arguments. Use --help for accepted commands and options.\\n")
 
 
-def digest(file):''', 1)
-    text = text.replace('parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)',
-                        'parser = CommandParser(description=__doc__, allow_abbrev=False)', 1)
-    text = text.replace('    args = parser.parse_args(argv)', '''    research = commands.add_parser("research", help="Set up optional web retrieval in your terminal or inspect redacted status")
+'''
+    options = '''    research = commands.add_parser("research", help="Set up optional web retrieval in your terminal or inspect redacted status")
     research.add_argument("operation", choices=("setup", "status", "skip", "revisit", "remove"))
     research.add_argument("--provider", help="Optional provider name from the research setup catalog")
-    args = parser.parse_args(argv)''', 1)
-    text = text.replace('        if args.command == "palace":', '''        if args.command == "research":
+'''
+    dispatch = '''        if args.command == "research":
             from harness import home_entry, research_setup
             home, _config = load(args.home)
             arguments = ["--home", str(home), args.operation]
@@ -110,8 +110,71 @@ def digest(file):''', 1)
                 arguments.extend(["--provider", args.provider])
             with home_entry.consumer(home):
                 return research_setup.main(arguments)
-        if args.command == "palace":''', 1)
+'''
+    if previous:
+        text = text.replace(parser, "", 1).replace(options, "", 1).replace(dispatch, "", 1)
+        text = text.replace('parser = CommandParser(description=__doc__, allow_abbrev=False)',
+                            'parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)', 1)
+    elif 'class CommandParser(' not in text:
+        text = text.replace('def digest(file):', parser + 'def digest(file):', 1)
+        text = text.replace('parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)',
+                            'parser = CommandParser(description=__doc__, allow_abbrev=False)', 1)
+        text = text.replace('    args = parser.parse_args(argv)', options + '    args = parser.parse_args(argv)', 1)
+        text = text.replace('        if args.command == "palace":', dispatch + '        if args.command == "palace":', 1)
     path.write_text(text, encoding="utf-8")
+
+
+def redacted_status():
+    return {"schema": "agent-home-research-status/v1", "guidance_checked": "2026-10-25",
+            "limits": "Local configuration only. No provider request, quota check or managed environment forwarding was tested.",
+            "providers": {name: {"configured_state": "unconfigured", "state": "unconfigured", "credential_present": False,
+                                 "credential_source": "none", "tested": False}
+                          for name in ("searxng", "exa", "brave", "tavily", "ddg")}}
+
+
+class ResearchStatusContractTests(unittest.TestCase):
+    def test_complete_redacted_status_and_known_enum_values(self):
+        value = redacted_status()
+        update.validate_research_status(value)
+        from harness import research_config
+        self.assertEqual(set(value["providers"]), set(research_config.ORDER))
+        for guidance in (research_config.GUIDANCE_CHECKED, "2026-10-26", "2028-02-29"):
+            candidate = copy.deepcopy(value)
+            candidate["guidance_checked"] = guidance
+            update.validate_research_status(candidate)
+        for field, choices in {"configured_state": ("enabled", "skipped", "unconfigured"),
+                               "state": ("skipped", "unconfigured", "retention_hold", "endpoint_missing", "credential_missing", "ready"),
+                               "credential_source": ("none", "environment", "home"), "credential_present": (True, False)}.items():
+            for choice in choices:
+                candidate = copy.deepcopy(value)
+                candidate["providers"]["exa"][field] = choice
+                update.validate_research_status(candidate)
+
+    def test_malformed_unknown_and_secret_fields_are_refused(self):
+        good = redacted_status()
+        values = [None, [], {}, {**good, "providers": {}}, {**good, "guidance_checked": "tomorrow"},
+                  {**good, "limits": "tested"}, {**good, "api_key": "synthetic-private-value"},
+                  {key: value for key, value in good.items() if key != "limits"}]
+        for guidance in ("2026-02-30", "2026-13-01", "20261025", "2026-1-01", "0000-01-01", None, 0):
+            values.append({**good, "guidance_checked": guidance})
+        for field, invalid in (("api_key", "synthetic-private-value"), ("endpoint", "http://synthetic.invalid"),
+                               ("configured_state", "ready"), ("state", "successful"), ("state", "enabled"), ("state", {}),
+                               ("credential_source", "synthetic-private-value"), ("credential_present", 1), ("tested", True), ("tested", 0)):
+            candidate = copy.deepcopy(good)
+            candidate["providers"]["exa"][field] = invalid
+            values.append(candidate)
+        for change in ("missing", "unknown", "malformed"):
+            candidate = copy.deepcopy(good)
+            if change == "missing":
+                del candidate["providers"]["ddg"]
+            elif change == "unknown":
+                candidate["providers"]["unknown"] = candidate["providers"]["ddg"]
+            else:
+                candidate["providers"]["ddg"] = []
+            values.append(candidate)
+        for index, value in enumerate(values):
+            with self.subTest(case=index), self.assertRaises(ValueError):
+                update.validate_research_status(value)
 
 
 class ControllerMigrationTests(UpdateFixture):
@@ -121,9 +184,11 @@ class ControllerMigrationTests(UpdateFixture):
         # Fixture handler only. Native adoption must separately use the actual
         # complete research feature and unchanged normal managed Pi handler.
         (case["source"] / "harness/research_setup.py").write_text(
-            'import json\ndef main(argv):\n print(json.dumps({"schema":"agent-home-research-status/v1","providers":{}}))\n return 0\n')
+            'import json\ndef main(argv):\n print(' + repr(json.dumps(redacted_status())) + ')\n return 0\n')
         # Give the predecessor a distinct updater identity. Retained real old
         # verification semantics are exercised independently below.
+        old_home = case["home"] / "runtime/harness/home.py"
+        research_cli(old_home, previous=True)
         old = case["home"] / "runtime/harness/runtime_update.py"
         raw = old.read_text()
         raw = raw.replace('CONTROLLER_SCOPE = "controller-cli-v1"', 'CONTROLLER_SCOPE = "unavailable-predecessor"')
@@ -131,8 +196,8 @@ class ControllerMigrationTests(UpdateFixture):
         manifest = case["home"] / "runtime/runtime-manifest.json"
         value = state.read_json(manifest)
         for item in value["files"]:
-            if item["path"] == "harness/runtime_update.py":
-                item["sha256"] = digest(old)
+            if item["path"] in {"harness/runtime_update.py", "harness/home.py"}:
+                item["sha256"] = digest(case["home"] / "runtime" / item["path"])
         manifest.write_text(json.dumps(value))
         config = case["home"] / "home.json"
         value = state.read_json(config)
@@ -183,8 +248,11 @@ class ControllerMigrationTests(UpdateFixture):
         refused = update.qualified
         with self.assertRaisesRegex(ValueError, "qualification contract"):
             refused(case["qualification"], digest(case["qualification"]), update.plan(case["home"], case["operation"]), True)
-        with self.assertRaisesRegex(ValueError, "closure"):
-            update.controller_plan(case["home"], case["operation"])
+        # After the research merge the normal checkout can be the candidate.
+        # Bind an actual distinct predecessor updater to prove closure refusal.
+        with mock.patch.object(update, "__file__", str(case["home"] / "runtime/harness/runtime_update.py")):
+            with self.assertRaisesRegex(ValueError, "closure"):
+                update.controller_plan(case["home"], case["operation"])
         self.assertFalse(self.journal().exists())
 
     def test_exact_controller_qualification_bindings_are_required(self):

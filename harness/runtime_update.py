@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import ast
 from contextlib import contextmanager
+from datetime import date
 import hashlib
 import json
 import os
@@ -538,6 +539,36 @@ def restore_predecessor(home, target, journal, value):
             "Restored predecessor does not match its complete retained active identity")
 
 
+def validate_research_status(value):
+    """Accept only the reviewed redacted research-status v1 wire contract."""
+    guidance = value.get("guidance_checked") if isinstance(value, dict) else None
+    try:
+        valid_date = isinstance(guidance, str) and date.fromisoformat(guidance).isoformat() == guidance
+    except ValueError:
+        valid_date = False
+    require(isinstance(value, dict)
+            and set(value) == {"schema", "providers", "guidance_checked", "limits"}
+            and value.get("schema") == "agent-home-research-status/v1"
+            and valid_date
+            and value.get("limits") == "Local configuration only. No provider request, quota check or managed environment forwarding was tested.",
+            "Actual research status response is outside the redacted v1 contract")
+    providers = value["providers"]
+    require(isinstance(providers, dict) and set(providers) == {"searxng", "exa", "brave", "tavily", "ddg"},
+            "Actual research status provider inventory differs")
+    for provider in providers.values():
+        require(isinstance(provider, dict)
+                and set(provider) == {"configured_state", "state", "credential_present", "credential_source", "tested"},
+                "Actual research status provider fields differ")
+        require(isinstance(provider["configured_state"], str)
+                and provider["configured_state"] in {"enabled", "skipped", "unconfigured"}
+                and isinstance(provider["state"], str)
+                and provider["state"] in {"skipped", "unconfigured", "retention_hold", "endpoint_missing", "credential_missing", "ready"}
+                and type(provider["credential_present"]) is bool
+                and isinstance(provider["credential_source"], str)
+                and provider["credential_source"] in {"none", "environment", "home"}
+                and provider["tested"] is False, "Actual research status provider values differ")
+
+
 def managed_doctor(home, target):
     # Launch a fresh interpreter through the actual stable entry. Do not call
     # the controller's imported bootstrap module and label that new-runtime QA.
@@ -637,8 +668,7 @@ def _verify(home, identifier, expected_journal, *, controller=False):
                 text, record = run_bound([Path(value["controller"]["python"]), "-B", home / "agent-home.py", "research", "status"],
                                          home=home, target=target, label="managed-research-status")
                 observed = json.loads(text)
-                require(observed.get("schema") == "agent-home-research-status/v1"
-                        and isinstance(observed.get("providers"), dict), "Actual research status response is invalid")
+                validate_research_status(observed)
                 value["controller_consumer"] = {"command": record, "schema": observed["schema"]}
             if value["profile"] == "core":
                 value["acceptance_scope"] = "Core inspection only; no Pi/model/runtime enforcement claim"
