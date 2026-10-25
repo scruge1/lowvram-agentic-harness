@@ -144,6 +144,26 @@ synthetic card case, matched decoded tool content fell from105,410 to7,599bytes
 inference. Full host details stayed unchanged. This measures one tool reply,
 not complete requests, token counts or end-to-end latency.
 
+## Reuse existing engineering work
+
+The installed `reuse-first-engineering` skill ports the existing working method:
+recover the owner's complete outcome and prior decisions, inspect actual native
+capabilities and source, directly reuse a working implementation, then compare
+the result with independent checks and the best retained baseline. Preserve
+the reasoning behind the existing architecture when making it portable.
+
+Pi discovers the skill through its normal metadata. Read the selected
+`SKILL.md` for substantive engineering and only the needed section of its
+`references/reuse-and-comparison.md`. Do not inject every reference into each
+request. A workflow using this procedure declares
+`required_skills: ["reuse-first-engineering"]`; the existing gate requires that
+selected skill to have been read before the action. The posture guides skill
+selection; this is not a claim that semantic reuse is independently enforced.
+
+Fourteen native, model-free consumer checks passed, including real standard
+library reuse and independent edge/negative checks. Actual model-driven
+selection and first-project quality remain separate acceptance work.
+
 ## Save reviewed project source
 
 Read the installed `source-control` skill before a source milestone. It uses
@@ -340,6 +360,7 @@ private runtime source and active session identifiers stay outside this repo.
 | Requirement | Current public state | Remaining acceptance |
 |---|---|---|
 | Home location, thin instructions, personalization handoff | Implemented | Normal current-agent handoff |
+| Reuse-first engineering and selective native skills | Thin posture and native skill/reference installed;14 scripted native checks passed | Real selected-model discovery, reuse and useful first-project quality |
 | Local model routing and isolated packages | Fresh full one-command Linux install, doctor and30-tool startup passed | Real selected-model request and new-host acceptance |
 | Per-project Git and board creation | Implemented; native board/context composition passed35 checks | First ordinary project and outcome acceptance |
 | Optional planning adviser, direct card select, saved navigation | Model-free native composition passed35 checks | Normal model-driven use |
