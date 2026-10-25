@@ -533,6 +533,15 @@ behavior from the private system or prove final-provider consumption.
 
 ## Current qualification
 
+The owned-runtime shell path has also been exercised on a fresh Linux home.
+Fresh Python/Node provisioning and all five default packages passed without
+borrowed environments. Network SSL failures were retained; explicit normal
+installer resume completed the remaining packages in251.778 seconds. Normal
+managed Pi health, stable doctor and exact owned-hub shutdown passed afterward,
+without a generative request. The complete resume/health/shutdown check took
+272.690 seconds. This does not claim an uninterrupted download/install or a
+successful model-led project.
+
 The current source snapshot passes the offline release gate on Linux and
 Windows: 21 checks, including all seven self-tests. Ruff 0.16.10 also passes.
 The earlier explicit full installation passed on Linux as one normal command:

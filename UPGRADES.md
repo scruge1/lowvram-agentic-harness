@@ -30,7 +30,16 @@ unrelated-child preservation, recycled-PID refusal and helper drift/redirect
 refusal. Managed Python used libc for both operations; its descriptor count was
 unchanged after probing. Windows passed15 applicable memory and five guard
 controls with explicit Linux skips. Complete fresh-bootstrap acceptance is
-recorded separately from these component checks.
+recorded separately from these component checks. A new owned runtime/home then
+downloaded Python/Node and installed all five default packages without borrowed
+environments. Two SSL failures interrupted the uv download and exact Hermes
+fetch; both failures and partials were retained. Explicit normal installer resume
+completed the remaining packages in251.778 seconds. Stable doctor returned no
+failures, normal managed Pi health observed the configured local model limits,
+required tools and47 MemPalace tools, and the exact owned hub stopped. Total
+resume plus health/shutdown took272.690 seconds, with zero generative requests.
+This qualifies the normal resume path; an uninterrupted fresh install and useful
+model-led project remain separate acceptance boundaries.
 
 ## Compatible runtime activation and recovery — 2026-10-25
 
@@ -46,8 +55,10 @@ Unknown or damaged history stays pending. A stage used by runtime exchange canno
 be withdrawn because its admission receipt remains part of rollback identity.
 
 Linux core controls passed14 tests with one platform skip; Windows passed its
-four applicable tests with11 explicit Linux skips. Nine native full-profile
-checks exercised actual Framework and memory helpers, apply, normal consumer
+four applicable tests with11 explicit Linux skips. Nine native checks in three
+isolated `pi`-profile homes borrowed four exact accepted package prefixes; this
+was not a fresh package installation. They exercised actual Framework and memory
+helpers, apply, normal consumer
 acceptance, exact rollback with new user data preserved, next staging, and an
 interruption after real Framework replacement followed by retained-controller
 recovery. All three owned hubs stopped; borrowed dependencies were unchanged and
