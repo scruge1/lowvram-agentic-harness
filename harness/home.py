@@ -86,7 +86,7 @@ def write_json(file, value):
         stream.write(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
 
 
-def run(argv, *, cwd, env=None, input=None, timeout=900):
+def run(argv, *, cwd, env=None, input=None, timeout=900, pass_fds=()):
     """Retain complete command output privately; show bounded failure details."""
     log_root = Path(cwd) / "logs"
     log_root.mkdir(exist_ok=True)
@@ -99,7 +99,7 @@ def run(argv, *, cwd, env=None, input=None, timeout=900):
             request.seek(0)
             child = subprocess.Popen([str(arg) for arg in argv], cwd=cwd, env=child_env,
                                      stdin=request, stdout=log, stderr=errors,
-                                     shell=False)
+                                     shell=False, pass_fds=pass_fds)
             try:
                 child.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
@@ -151,6 +151,11 @@ def source_files(source):
                 if file.is_symlink() or not file.resolve().is_relative_to(source.resolve()):
                     raise HomeError(f"Source escaped checkout: {file}")
                 paths.append(file)
+    observer_policy = source / "harness/claude-memory-patch.json"
+    if (source / "harness/claude_memory_patch.py").exists():
+        if not observer_policy.is_file() or observer_policy.is_symlink() or observer_policy.resolve() != observer_policy.absolute():
+            raise HomeError("The observer requires its canonical downstream patch manifest.")
+        paths.append(observer_policy)
     model_module = source / "harness/model_service.py"
     model_pins = source / "harness/model-service-pins.json"
     if model_module.exists() or model_module.is_symlink():
@@ -507,6 +512,9 @@ def package_artifacts(home, key, npm_name=None):
         paths = [prefix / "package-lock.json", prefix / "node_modules" / package_name / "package.json"]
         if key == "claude-mem":
             paths.append(prefix / "node_modules/claude-mem/plugin/scripts/worker-service.cjs")
+            from harness import claude_memory_patch
+            claude_memory_patch.verify(home)
+            paths.extend(claude_memory_patch.artifacts(home)[1:])
         if key == "pi":
             paths.extend([prefix / "node_modules" / package_name / relative for relative in (
                 "dist/core/tools/path-utils.js", "dist/utils/tools-manager.js")])
@@ -534,6 +542,12 @@ def check_package(home, key, record):
         path = Path(item["path"])
         if not path.is_relative_to(home) or not path.is_file() or digest(path) != item["sha256"]:
             return "installed package missing or changed: " + key
+    if key == "claude-mem":
+        from harness import claude_memory_patch
+        try:
+            claude_memory_patch.verify(home)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            return "Claude-mem downstream patch verification failed: " + str(error)
     if key == "research":
         from harness import research_install
         try:
@@ -556,14 +570,47 @@ def package_plan(config):
 
 
 def install_packages(home, config, python312=None):
-    package_plan(config)
+    selected = package_plan(config)
     from harness import home_entry
+    if "claude-mem" in selected and "claude-mem" not in config["installed"]:
+        # Preserve dependency order, then mutate the observer package only while
+        # exclusive. Never upgrade or release an existing entry's shared lease.
+        with home_entry.consumer(home):
+            _install_packages(home, config, python312,
+                              only=tuple(key for key in selected if key != "claude-mem"), finalize=False)
+        with _observer_install_exclusive(home, python312) as held_fds:
+            _install_packages(home, config, python312, only=("claude-mem",), finalize=False, lifecycle_fds=held_fds)
+        with home_entry.consumer(home):
+            return _install_packages(home, config, python312)
     with home_entry.consumer(home):
         return _install_packages(home, config, python312)
 
 
-def _install_packages(home, config, python312=None):
+@contextlib.contextmanager
+def _observer_install_exclusive(home, python312=None):
+    from harness import home_entry
+    home, config = home_entry.selected_home(home)
+    if platform.system() != "Linux" or "lifecycle_guard_sha256" not in config:
+        raise HomeError("Observer package staging requires an integrated Linux home and its exclusive lease.")
+    pin = config["lifecycle_guard_sha256"]
+    guard = home_entry._load_guard(home, pin)
+    command = shlex.join([str(python312 or sys.executable), "-s", "-B", str(Path(__file__).resolve()),
+                          "--home", str(home), "resume-install", "--python312", str(python312 or sys.executable)])
+    try:
+        with guard.lease(home, expected_sha256=pin, mode="exclusive") as held:
+            yield held.pass_fds
+    except guard.LeaseBusy as error:
+        raise HomeError("Observer package staging needs an exclusive home. Keep active consumers and partial files intact. "
+                        "After they settle, run the retained reviewed source controller directly: " + command
+                        + ". An installed entry's outer READ lease is never upgraded.") from error
+
+
+def _install_packages(home, config, python312=None, *, only=None, finalize=True, lifecycle_fds=()):
     selected = package_plan(config)
+    if only is not None:
+        if not isinstance(only, tuple) or not set(only).issubset(selected):
+            raise HomeError("Internal package selection differs from the pinned plan.")
+        selected = tuple(key for key in selected if key in only)
     if not selected:
         return
     if platform.system() != "Linux":
@@ -609,7 +656,8 @@ def _install_packages(home, config, python312=None):
             command = [node, npm_cli] if managed_node or npm_cli.is_file() else [npm]
             npm_name = bun_package if key == "bun" else NPM_NAMES[key]
             requirement = npm_name + "@" + PINS["bun"].rsplit("@", 1)[1] if key == "bun" else PINS[key]
-            output = run([*command, "install", "--prefix", prefix, "--save-exact", "--no-audit", "--no-fund", "--prefer-offline", requirement], cwd=home, env=env)
+            install_options = {"pass_fds": lifecycle_fds} if lifecycle_fds else {}
+            output = run([*command, "install", "--prefix", prefix, "--save-exact", "--no-audit", "--no-fund", "--prefer-offline", requirement], cwd=home, env=env, **install_options)
             actual = json.loads((prefix / "node_modules" / npm_name / "package.json").read_text())["version"]
         else:
             target = home / "envs" / key
@@ -641,10 +689,15 @@ def _install_packages(home, config, python312=None):
             (target / "installed-freeze.txt").write_text(actual, encoding="utf-8")
             run([executable(target), "-m", "pip", "check"], cwd=home, env=env)
         (home / "logs" / f"install-{key}.log").write_text(output, encoding="utf-8")
+        if key == "claude-mem":
+            from harness import claude_memory_patch
+            claude_memory_patch.stage(home)
         config["installed"][key] = {"requested": PINS[key], "observed": actual,
                                     "artifacts": package_artifacts(home, key, npm_name), "npm_name": npm_name,
                                     "running": "not_started", "acceptance": "not_run"}
         save_status(home, config)
+    if not finalize:
+        return
     memory_python = executable(home / "envs/mempalace")
     memory_wrapper = home / "runtime/harness/memory_runtime.py"
     if not config.get("memory_runtime"):

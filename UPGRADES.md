@@ -139,6 +139,41 @@ Windows/Linux limits. They do not establish live keyed-provider access, current
 account rights or real model research quality. The compatible updater protects
 home.py; existing-controller migration is still separate from fresh setup.
 
+## Foreground observer with an explicit downstream package patch - 2026-10-25
+
+Parent commit: `a9af9dc48e77e838b73aaafad9a30f23d4991521` (foreground source
+from `e7bb49cf0aa0de4c12c8384d927ff156a251bf8f`, on main `eefb72a`).
+
+Claude-mem13.29.0 starts an unscoped process-table sweep even with Chroma
+disabled. Disable only that exact upstream function during new-home package
+staging. Pin upstream, replacement span, patch and effective hashes separately;
+retain original bytes and the unchanged licence footer. Publish recoverable
+original/provenance entries durably before effective replacement. Inventory,
+doctor and worker entry verify all provenance. Health distinguishes upstream
+version from the required downstream artifact. Unknown bytes or partial
+provenance fail closed. A live/stale worker identity prevents first staging;
+any persisted supervisor entry prevents startup, without deleting old metadata.
+
+The full source installer runs other packages under a shared home lease,
+Claude-mem npm/staging/inventory under an exclusive lease, then final binding
+under a shared lease. npm inherits the actual exclusive descriptor. Default
+agent/pi paths stay unchanged. An installed entry with an outer READ lease
+refuses the exclusive phase and prints the exact retained reviewed source
+controller command for `resume-install`; it never upgrades that lease. Existing
+installed unpatched records remain held. The earlier controller-only migration
+does not qualify this core package change or its adoption.
+
+Linux passed46 observer/patch/lease tests and12 home tests. Windows ran46 with
+seven Linux-only skips, plus12 passing home tests. Pinned Ruff0.16.10 and all
+seven offline selftests passed. A new archive QA home staged the actual public
+worker under an observed exclusive lease: upstream `e201a443` became reviewed
+effective `48aa2fb3`, original/licence/inventory checks passed, donor unchanged.
+Its data remained settings-only and its installed registry remained empty.
+This is source and byte-staging proof, not a fresh installation. Actual Bun
+foreground startup, zero-POST lifecycle, generated capture/readback and owned
+full-profile admission remain held for separate qualification. No worker was
+imported or launched. No private store, profile or package was migrated.
+
 ## Human-terminal optional search setup — 2026-10-25
 
 Parent commit: `4f9465dfbcd8883842dceaac18393f6391415803`.
