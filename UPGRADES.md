@@ -5,6 +5,27 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## One source-bound native child - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+Add one serial `task_agent` over Pi1.4's native in-memory session and model runtime.
+The current hierarchy child card and retained owner source remain host-bound.
+A fixed tool subset forwards through the existing parent native tool hooks and
+supervisor, without a new dispatcher, board, provider or session-writer bypass.
+Parent context must be delivered first. Actual child calls/messages/usage remain
+untrusted, bounded parent-journal evidence; child return cannot accept a root task.
+
+A forced parent-loss fixture exposed running intake state with an unmatched
+child start. Restore and effect/settlement gates now retain an uncertainty hold;
+a model checkpoint cannot clear it. Fresh same-project owner resume uses the
+existing intake route. No child state is reconstructed or automatically replayed.
+Native fixtures cover source/config/model changes, unknown recursive tools,
+actual guarded file output and independent checking, cancellation and parent
+loss. Kernel exit, unreaped zombies and final owner reaping are distinct evidence.
+Synthetic SSE and explicit memory fixtures do not qualify real model behavior,
+whole-profile delegation, model capacity or root-outcome quality.
+
 ## Answer questions without pausing approved work - 2026-10-26
 
 Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.

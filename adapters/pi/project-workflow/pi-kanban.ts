@@ -18,7 +18,7 @@ const PYTHON = requiredEnvironment('PI_PROJECT_KANBAN_PYTHON');
 const ADAPTER = requiredEnvironment('PI_PROJECT_KANBAN_ADAPTER');
 const ADAPTER_SHA256 = requiredEnvironment('PI_PROJECT_KANBAN_ADAPTER_SHA256');
 const MAX_OUTPUT = 1024 * 1024;
-const EXECUTION_TOOLS = new Set(['workflow_step', 'run_step', 'run_ledger']);
+const EXECUTION_TOOLS = new Set(['workflow_step', 'run_step', 'run_ledger', 'task_agent']);
 const RARE_PROJECT_TOOLS = [
   'kanban_hierarchy', 'kanban_decompose', 'project_knowledge_rebuild',
   'project_closeout_prepare', 'project_skill_candidate_compile', 'project_memory_candidate_prepare',
@@ -244,7 +244,9 @@ export default function (pi: ExtensionAPI) {
   pi.on('session_tree', restoreSelection);
 
   const contextDelivery = registerProjectContext(pi, { project: () => activeProject });
-  registerRequestIntake(pi, {
+  let runningChild: string | undefined;
+  const intake = registerRequestIntake(pi, {
+    child: () => runningChild,
     project: () => activeProject,
     task: () => activeTask?.cardId ?? null,
     select: (id: string) => {
@@ -253,6 +255,32 @@ export default function (pi: ExtensionAPI) {
     },
     failed: () => boardAdmissionFailed,
     call: callAdapter,
+  });
+
+  let childController: AbortController | undefined;
+  let childEpoch = 0;
+  for (const event of ['input', 'session_start', 'session_tree', 'session_shutdown', 'model_select'] as const)
+    pi.on(event, async () => { childEpoch++; childController?.abort(); });
+  pi.registerTool({
+    name: 'task_agent', label: 'Run one managed child',
+    description: 'One serial operational child on the CURRENT already source-authorized runnable hierarchy child card. Parent must first select, prepare and load required skills normally. No new approval/card selection, recursive children or root acceptance. Uses the same owned local model and parent guarded tools. Child context is in memory only; inspect retained parent journal/results after interruption, never auto-replay.',
+    parameters: Type.Object({ task: Type.String({ minLength: 1, maxLength: 4000 }),
+      timeout_seconds: Type.Integer({ minimum: 1, maximum: 86385 }) }, { additionalProperties: false }),
+    async execute(id, params, signal, _update, ctx) {
+      if (childController) return failure(new Error('One managed child is already active'));
+      const controller = new AbortController(); childController = controller; runningChild = id;
+      const epoch = childEpoch, abort = () => controller.abort();
+      signal?.addEventListener('abort', abort, { once: true });
+      try {
+        if (signal?.aborted) controller.abort();
+        const grant = await intake.childGrant(ctx);
+        const { runManagedChild } = await import('./managed-child.ts');
+        return await runManagedChild(pi, ctx, id, params, grant, controller.signal, () => {
+          if (epoch !== childEpoch) throw new Error('Parent input/model/session changed; child delivery held');
+        });
+      } catch (error) { return failure(error); }
+      finally { signal?.removeEventListener('abort', abort); childController = undefined; runningChild = undefined; }
+    },
   });
 
   const projectRequest = (request: Record<string, unknown>) => {

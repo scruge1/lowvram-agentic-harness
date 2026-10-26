@@ -13,7 +13,7 @@ type Project = { root: string; projectId: string; boardId: string };
 type Document = { path: string; role: string; text: string; sha256: string; source_bytes: number; excerpt: boolean;
   range?: { start: number; end: number; total: number }; window_sha256?: string };
 type View = { root: string; directory: string; documents: Document[] };
-const EXECUTION = new Set(['workflow_step', 'run_step', 'run_ledger', 'write', 'edit']);
+const EXECUTION = new Set(['workflow_step', 'run_step', 'run_ledger', 'write', 'edit', 'task_agent']);
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const within = (root: string, file: string) => file === root || file.startsWith(root + sep);
 const MAX_RETURN_BYTES = 32768;
@@ -255,7 +255,7 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
           targets.push(...dirs);
         }
       } else {
-        const cwd = canonical(resolve(event.input?.cwd ?? process.cwd()));
+        const cwd = canonical(resolve(event.toolName === 'task_agent' ? ctx.cwd : event.input?.cwd ?? process.cwd()));
         targets.push(cwd);
         if (Array.isArray(event.input?.outputs)) {
           for (const file of event.input.outputs) targets.push(canonical(resolve(cwd, file)));
