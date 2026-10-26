@@ -460,7 +460,10 @@ server.serve_forever()
             with self.assertRaises(ValueError):
                 with guard.lease(self.root, expected_sha256=config["lifecycle_guard_sha256"], mode="exclusive"):
                     self.fail("Actual child READ lease was not held")
-            self.assertEqual(claude_memory.stop_worker(proof), {"status": "stopped"})
+            stopped = claude_memory.stop_worker(proof)
+            self.assertEqual(stopped["status"], "stopped")
+            self.assertFalse(stopped["restart_ready"])  # Fixture has no native complete metadata.
+            self.assertEqual(stopped["owned_stop"]["pid"], child.pid)
             child.wait(timeout=3)
             with guard.lease(self.root, expected_sha256=config["lifecycle_guard_sha256"], mode="exclusive"):
                 self.assertIsNone(claude_memory.live_pid(root))

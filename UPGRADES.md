@@ -5,6 +5,40 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Report observer restart readiness after owned stop - 2026-10-26
+
+Parent commit: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.
+
+An owned observer could exit while its native metadata still named the same
+unreaped process. Retire only exact captured registry/PID records after the known
+PIDFD reports exit and the process is absent or has the same UID/start ticks in
+Z/X state. Retain preimages, recheck before each change and hold unknown, changed,
+live or reused records. Do not add startup pruning or another process manager.
+
+Report registry settlement and strict port availability separately. A stopped
+SO_REUSEADDR listener can leave TCP TIME_WAIT: the strict startup bind then fails
+even though no listener remains. Use reuse only for the temporary exact-owned
+metadata-retirement guard; a real active listener still blocks. Keep startup's
+strict bind unchanged. `restart_ready` is true only when both predicates pass.
+
+Ten owned CPU/PIDFD/TCP source controls passed, including an actual unreaped
+zombie, metadata drift/rollback, TIME_WAIT and a reuse-address active listener.
+A fresh actual Bun 1.4.4/Claude-mem 13.29.0 component case passed two separate-helper
+stop/restart cycles in 67.56 seconds. Both stops truthfully returned settled
+metadata with restart unavailable during observed TIME_WAIT. A single cooperative
+test wait reached strict readiness after 62.73 seconds, within its 75-second bound,
+before the second start. Bun removed its own metadata in these cycles; the
+separate CPU tests establish exact leftover retirement. The preceding failed
+second-start case remains failed; a later free port was not retrospective proof
+of its cause.
+
+The actual component case conserved all 309 source files and public dependency
+hashes, settled both owned lifetimes and the outer guard, released the home lease,
+and recorded zero capture hooks or generation POSTs. These component results used
+copied public packages. They do not qualify a fresh full install, generated-memory
+acceptance or active-session adoption. Keep the existing worker/source/lease
+protections.
+
 ## Complete the optional search provider catalog - 2026-10-26
 
 Parent: `ab7a637cdf140ca14f3dafb37c5d4b38cfc35777`.
