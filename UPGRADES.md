@@ -36,6 +36,13 @@ mining failure and metadata limits. Seven self-tests and pinned Ruff pass.
 These are component checks, not a new-host package install, whole managed CLI
 adoption, complete history indexing or useful model recall acceptance.
 
+The first hosted Windows run completed its545-test second group with one legacy
+fixture error. Its temporary path was not canonicalized before the helper call.
+Resolve that fixture root, matching the real CLI; preserve the production path
+guard. An owned NTFS-junction control reproduces the unresolved-path refusal
+and passes the corrected original test. Preserve the failed run; no gate or
+runtime deadline is increased.
+
 ## Preserve a failed report during explicit evidence-bound repair - 2026-10-26
 
 Parent commit: `5e65ba17b94b166db65e43a671cdbaf0af8059fd`.

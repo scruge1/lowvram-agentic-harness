@@ -292,7 +292,7 @@ class PiMemoryCaptureTests(unittest.TestCase):
 
     def test_selected_source_does_not_import_other_sessions_or_change_originals(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             sessions = root / "sessions"
             sessions.mkdir()
             selected, other = sessions / "current.jsonl", sessions / "older.jsonl"
