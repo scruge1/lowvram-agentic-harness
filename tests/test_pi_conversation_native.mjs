@@ -170,7 +170,77 @@ async function boundaryCase(r) {
 }
 let failure;
 try {
-  if (options['boundary-base']) {
+  if (options.case === 'current-intent') {
+    assert.ok(options['reference-intake'], 'Bind the exact main63 predecessor');
+    const p = await profile('current-intent-differential', true); await approved(p);
+    const first = p.task, originalSource = snapshot(p).queue[0].source;
+    const approval = await capture(p, 'Owner explicitly approves independent task B now. Keep the older approved task A.');
+    const parts = [{ kind: 'task', summary: 'Current approved task B', execute: true }];
+    await tool(p, 'kanban_intake_route', { source_id: approval, parts });
+    const second = snapshot(p).queue.find(item => item.source === approval).task;
+    const selection = () => p.manager.getBranch().findLast(entry => entry.customType === 'pi-kanban-selection/v1').data.task.cardId;
+    check('exact-main63-native-counterexample-keeps-stale-A-after-approved-B', selection() === first && first !== second);
+    const predecessor = { session_sha256: hash(p.manager.getSessionFile()), intake_sha256: hash(path.join(p.runtime, 'adapters/pi/intake/request-intake-138.ts')) };
+    fs.copyFileSync(path.join(source, 'adapters/pi/intake/request-intake-138.ts'), path.join(p.runtime, 'adapters/pi/intake/request-intake-138.ts'));
+    await reopen(p);
+    await tool(p, 'kanban_intake_route', { source_id: approval, parts });
+    check('exact-routed-replay-recovers-current-selection-without-new-card', selection() === second
+      && (await tool(p, 'kanban_list', {})).details.result.tasks.length === 2 && snapshot(p).queue.some(item => item.source === originalSource));
+    const progress = snapshot(p).progress, queue = JSON.stringify(snapshot(p).queue);
+    await capture(p, 'Status only. Answer and keep approved work; unapproved draft D must not start.');
+    check('status-question-still-continues-older-approved-queue', (await answer(p)).continue === true
+      && JSON.stringify(snapshot(p).queue) === queue && snapshot(p).progress === progress && selection() === second);
+    for (const fault of ['none', 'replacement_intent', 'create_lost_reply', 'routed_before_selection']) {
+      const id = await capture(p, 'The owner explicitly approves the next isolated fixture task. This original source already gives permission.');
+      await tool(p, 'kanban_intake_route', { source_id: id, parts: [{ kind: 'question', summary: 'Controlled erroneous effect-free classification' }] });
+      const request = { source_id: id, reclassify_current: true, parts: [{ kind: 'task', summary: 'Approved original-source task ' + fault, execute: true }] };
+      const beforeCount = (await tool(p, 'kanban_list', {})).details.result.tasks.length;
+      const append = p.manager.appendCustomEntry.bind(p.manager);
+      let injected = false;
+      if (fault === 'replacement_intent' || fault === 'routed_before_selection') p.manager.appendCustomEntry = (kind, data) => {
+        const value = append(kind, data);
+        if (!injected && data?.id === id && (fault === 'replacement_intent'
+          ? kind === 'pi-request-route-intent/v1' && data.intent.parts.some(part => part.execute)
+          : kind === 'pi-request-routed/v1')) { injected = true; throw Error('Controlled crash boundary after native journal append'); }
+        return value;
+      };
+      if (fault === 'create_lost_reply') fs.writeFileSync(path.join(p.base, 'lose-next-create'), 'Controlled post-create lost reply');
+      const initial = await tool(p, 'kanban_intake_route', request, fault !== 'none');
+      if (fault !== 'none') {
+        check(fault + '-retained-injected-failure', initial.isError === true);
+        p.manager.appendCustomEntry = append;
+        await reopen(p);
+        await tool(p, 'kanban_intake_route', request);
+      }
+      const work = snapshot(p).queue.find(item => item.source === id);
+      await tool(p, 'kanban_intake_route', request);
+      const branch = p.manager.getBranch();
+      check(fault + '-native-correction-recovery-one-card-and-current-selection', work && selection() === work.task
+        && (await tool(p, 'kanban_list', {})).details.result.tasks.length === beforeCount + 1
+        && branch.some(entry => entry.customType === 'pi-request-classification-correction/v1' && entry.data.id === id)
+        && branch.filter(entry => entry.customType === 'pi-request-route-intent/v1' && entry.data.id === id).length === 2);
+      const changed = await tool(p, 'kanban_intake_route', { ...request, parts: [{ ...request.parts[0], summary: 'Rewrite frozen effectful intent' }] }, true);
+      check(fault + '-effectful-intent-stays-frozen', changed.isError === true);
+    }
+    const runner = p.session.extensionRunner, ui = runner.getUIContext(); let draft = 'Unsent original owner text';
+    runner.setUIContext({ ...ui, getEditorText: () => draft });
+    const count = p.manager.getBranch().length;
+    check('native-typed-draft-suppresses-bookkeeping-and-preserves-text', !(await answer(p)).continue
+      && draft === 'Unsent original owner text' && p.manager.getBranch().length === count + 1); // Only scripted assistant answer.
+    draft = ''; await p.session.steer('Queued owner input; no automatic model call.');
+    const queuedCount = p.session.pendingMessageCount;
+    check('native-queued-input-suppresses-automatic-continuation', queuedCount > 0 && !(await answer(p)).continue && p.session.pendingMessageCount === queuedCount);
+    p.session.clearQueue();
+    fs.writeFileSync(path.join(p.base, 'hold-next-show'), 'Read-only projection barrier');
+    const pending = answer(p), deadline = Date.now() + 10000;
+    while (!fs.existsSync(path.join(p.base, 'show-entered')) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    assert.ok(fs.existsSync(path.join(p.base, 'show-entered')), 'Native projection reached existing show barrier');
+    draft = 'Owner typed while retained board projection awaited'; fs.unlinkSync(path.join(p.base, 'hold-next-show'));
+    check('native-mid-await-typing-discards-continuation-without-clearing-draft', !(await pending).continue && draft.includes('while retained'));
+    runner.setUIContext(ui);
+    trace.push({ predecessor, final_intake_sha256: hash(path.join(p.runtime, 'adapters/pi/intake/request-intake-138.ts')),
+      limits: 'Old/new source differential and injected native append/lost-reply recovery. UI text uses supported public UI context; no natural editor/model behavior. Final other-handler/core-commit editor race remains open.' });
+  } else if (options['boundary-base']) {
     const p = await profile('ready-state-boundary-continuation', false, options['boundary-base']);
     assert.equal(calls(p).filter(call => call.action === 'project_admit').length, 0, 'Do not duplicate an automatic admission');
     await tool(p, 'project_admit', { project_root: p.project });
