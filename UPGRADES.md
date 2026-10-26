@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Forward the actual current assistant text to observer summaries - 2026-10-26
+
+Parent commit: `fe571e6687c3df4669c3baecd823e61bf7eb09f1`.
+
+The Pi settlement event contains only an abort flag. Sending an empty summary
+payload caused the pinned observer to report a missing last assistant message.
+Use Pi's supported read-only branch API to select the final persisted assistant
+message after the current agent-start marker, with the same session and working
+directory. Forward only its plain text through the existing bounded hook. Read
+after all message-end replacements; never substitute thinking, tool calls or an
+older run. Aborted runs skip summary dispatch. Missing, failed or drifted current
+messages hold it. Freeze queued hook identity and payload before asynchronous
+dispatch. No controller, package, provider or store contract changes.
+
+Actual Pi1.4 inert native checks cover final-message replacement and persistence,
+existing input/read hooks, empty/error/aborted summary refusal, session drift and
+queued identity/payload conservation. Synthetic SSE and Python child transport
+make zero model or HTTP requests. This is source/transport evidence, not real
+observer generation, credential-rotation acceptance or installed-target adoption.
+
 ## Add an explicit fresh owned full-bundle candidate - 2026-10-25
 
 Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.

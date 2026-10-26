@@ -810,6 +810,15 @@ ownership. Owned capture validates the actual worker's current credential and
 lease. A stale worker after service-key rotation is held for explicit stop/start;
 resolving a fresh key for a helper does not silently rotate or replace it.
 
+Summary hooks send only the final persisted plain assistant text from the
+current run. They bind its session, working directory and branch at agent start,
+observe final message-hook replacements, and omit thinking and tool calls.
+Aborted runs do not enqueue summaries. Missing text, failed messages or changed
+bindings hold the summary; older history is not a substitute. Queued hooks retain
+their original session, directory and payload snapshot. Native Pi1.4 tests use
+synthetic foreground responses and an inert Python transport with zero model
+or HTTP requests; these tests do not establish target adoption or summary quality.
+
 The native `CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW` and
 `CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS` settings are bound to this home's
 configured context/output limits in both disk settings and the worker environment.
