@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## State the first-report preparation and routing order - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An observed first-report attempt searched for a skill name as a tool, activated
+graph/memory schemas and reached the writer before routing the request. Its
+source ID was valid. Routing then failed because a new task supplied task_id,
+an amendment named no existing card, and a held part requested execution. Keep
+that evidence distinct from a missing source ID or a faulty writer/checker.
+
+Use the existing direct project_prepare inspection, exact installed skill path
+and current pending request ID. Supply a new-task route template without task_id;
+amend only an actual existing card and use execute only for task/amend. The host
+still prepares identity, Git and an empty board. The agent performs normal native
+routing; no host card, approval, exposure change or automatic handoff is added.
+Keep the original writer, input pins, independent checker and execution gates.
+
+Qualification covers source contracts and actual native instruction delivery,
+including all five preparation sections and existing refusal controls. Matched
+serializer measurements and passive cache timings justify clearer guidance;
+they do not prove a future token, latency, task-success or report-quality gain.
+Existing running attempts retain their source and prompt unchanged.
+
 ## Answer questions without pausing approved work - 2026-10-26
 
 Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.

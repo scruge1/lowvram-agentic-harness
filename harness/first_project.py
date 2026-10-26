@@ -107,6 +107,28 @@ def _facts(home, config):
     }
 
 
+def _native_sequence(home):
+    skill = {"path": str(home / "agent/skills/supervised-tasks/SKILL.md")}
+    route = {"source_id": "CURRENT_PENDING_REQUEST_ID_FROM_STATUS", "parts": [
+        {"kind": "task", "summary": "Write and verify hardware-report.md from the prepared inputs", "execute": True}]}
+    return (
+        "The host prepared the project's identity, Git and empty board. Route this explicit one-task "
+        "writing request through the existing native intake to create its card.\n"
+        "1. Call the directly available project_prepare with query \"write and verify the prepared hardware report\". "
+        "Its actual result supplies capabilities, relevant system tools, validated memory, project knowledge "
+        "and missing context. Complete every remaining_reads window and let the result reach model context.\n"
+        "2. Read the complete installed skill through native read with EXACTLY this JSON: "
+        + json.dumps(skill, ensure_ascii=False) + "\n"
+        "3. Call kanban_intake_status and inspect the current pending writing request. Use that entry's own id "
+        "as source_id in this route TEMPLATE; replace CURRENT_PENDING_REQUEST_ID_FROM_STATUS with the actual "
+        "returned id before calling kanban_intake_route:\n"
+        + json.dumps(route, ensure_ascii=False) + "\n"
+        "For this new task omit task_id. Use amend only for an actual existing board card; execute=true is "
+        "valid only for task/amend parts. Use the ready card returned by normal routing and the existing "
+        "readiness checks before workflow_step. Source IDs, project identities and manifest pins are not card IDs.\n"
+    )
+
+
 def prepare(home, name):
     """Create only an explicitly new normal Git/board project; preserve failures."""
     from harness import home as agent_home
@@ -146,9 +168,8 @@ def prepare(home, name):
             "Give practical next steps. Inventory only observes; actual tuning would launch a server and make "
             "inference requests. It is not authorized by this task. Your saved report is a file-changing action. "
             "Do not call the complete run read-only. Do not assert a word count; the fixed checker counts it.\n\n"
-            "Read the complete installed supervised-tasks/SKILL.md through native read. Use project_admit first; "
-            "then agent_capabilities, system_tool_query, relevant local memory and project_knowledge_query. "
-            "Read project_context for this directory and complete remaining_reads. Select an authorized ready card. "
+            "Use read-only project_admit first, then follow this native sequence:\n"
+            + _native_sequence(home) + "\n"
             "After compaction refresh project_context before workflow_step. Do not repeat project_admit and erase "
             "the observations just collected. Aim near300 words. Pass the COMPLETE report text in the action argv; never assume a body file exists. "
             "Declare only hardware-report.md as output. Use the pinned check argv returned by prepare; "
@@ -299,6 +320,7 @@ def run(home, name, *, mode="json"):
             "Do not initialize, recover or replace its identity, and do not supply native_authority. "
             "The owner's display name is not a replacement project authority. "
             "If this read-only admission fails, retain its error and stop this attempt. "
+            + _native_sequence(home) + "\n"
             "Read FIRST-PROJECT.md and hardware-facts.json completely, and follow the installed "
             "supervised-tasks skill and normal project/context/intake gates. Create hardware-report.md "
             "through the existing supervised workflow. Use this EXACT original verifier argv as "
