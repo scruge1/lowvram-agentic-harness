@@ -23,16 +23,18 @@ rank/provider data; timestamps, artifact IDs and repeated content are not new wo
 Failed/empty/cached/read results abstain. Successful bounded browser text stays
 partial evidence. Mining/consensus accounting is deferred. Retain fingerprints in
 existing native intake snapshots and use a bounded recent cache only for lookup;
-eviction does not recount old content or cap new work after256 results.
+eviction does not recount old content or cap new work after 256 results.
+Load the optional research validator only for a committed research candidate;
+the standalone minimal coordinator does not require the research directory.
 
-Focused validation passed35 Linux controls, pinned Ruff0.16.10 and11 Windows
-helper controls. An actual Pi1.4/guarded-helper/Hermes/Framework composition used
+Focused validation passed 35 Linux controls, pinned Ruff 0.16.10 and 11 Windows
+helper controls. An actual Pi 1.4/guarded-helper/Hermes/Framework composition used
 synthetic fetch transport and injected native committed-result/turn-end/settlement
-events, with no network or inference. New evidence progressed2/3/4 with continued
+events, with no network or inference. New evidence progressed 2/3/4 with continued
 unfinished work; unchanged cached reads still stopped. Metadata-only/altered content,
 artifact drift, new input and injected context abort earned no credit. A separate
-native-history membership fixture covered301 snapshots beyond the256-entry cache;
-it does not represent301 research operations. Exact fixture cleanup reached EX and
+native-history membership fixture covered 301 snapshots beyond the 256-entry cache;
+it does not represent 301 research operations. Exact fixture cleanup reached EX and
 selected borrowed dependency hashes were unchanged. Target model behavior and
 installed runtime adoption remain separate acceptance.
 

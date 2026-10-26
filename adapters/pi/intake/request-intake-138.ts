@@ -5,7 +5,6 @@ import { buildRetainedPacket, cancelledSelection, nativeCompletionOrder, workKey
 import { decideRetainedWork, packetDigest } from './decision-bridge-138.ts';
 import { checkedReceipt, inspectReceipt, watchReceipt, blockedTaskIds, type TaskWait, type Receipt } from './dependency-receipts-138.ts';
 import { registerReadLoopGuard } from './read-loop-079.ts';
-import { validateResearchProgress } from '../research/research-tools.ts';
 
 // Registered by pi-kanban, not a second extension/board/dispatcher.
 const CAPTURE = 'pi-request-capture/v1';
@@ -609,6 +608,10 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
           current = packet.tasks.find((value: any) => value.id === current.parent);
         }
         if (!admitted || blockedTaskIds(packet).has(task!)) continue;
+        // Research is optional in standalone/minimal coordinator installs.
+        // Resolve through the native extension loader only for real delivered
+        // research, rather than adding a mandatory startup dependency.
+        const { validateResearchProgress } = await import('../research/research-tools.ts');
         const verified = await validateResearchProgress(delivery, ctx);
         if (ctx.signal?.aborted || call.scope !== researchScope(ctx) || verified.ok !== true || verified.credit !== true
             || !/^[a-f0-9]{64}$/.test(verified.fingerprint ?? '')) continue;
