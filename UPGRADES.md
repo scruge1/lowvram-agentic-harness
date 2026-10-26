@@ -5,6 +5,38 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Recover current approved routing without dropping older work - 2026-10-26
+
+Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
+
+Reuse the maintained intake's fresh-source selection, effect-free classification
+correction and queued/typed-input checks. Fresh approved work selects its card;
+exact route retries recover navigation after an interrupted selection. The
+original native capture, intent and correction records stay retained. Only a
+current question/control classification without effects can be corrected against
+the same original explicit approval. Frozen effectful intents stay immutable.
+
+Keep the public continuation rule: answer a status question, then continue
+approved work; drafts do not authorize new work. Older approvals, real holds,
+source guards and needs-board-only progress remain unchanged. Do not import a
+latest-only focus policy or a conversation-wide execution stop. Typed/queued
+input suppresses intake continuation around its own awaits; a later native
+core-commit editor race remains open. Source/native fixture checks and real
+model adoption must be reported separately.
+
+Validation: the exact predecessor reproduced stale task selection in a paired
+native fixture. The new intake passed23actual SDK/Hermes controls, including
+three injected journal/lost-reply recovery boundaries and mid-await typing.
+Twenty-five focused unit tests, seven self-tests and pinned Ruff pass. Scripted
+answers, a supported fixture UI context and zero model/HTTP calls establish the
+component behavior; they do not prove natural model use or live adoption.
+A review counterexample caught unchanged historical pending input losing its
+existing routing guidance. Compare the retained scope across the await instead
+of suppressing every pending capture. The exact predecessor and follow-up
+whole-module controls distinguish retained routing guidance from new input,
+typed drafts and queued messages; they do not grant execution permission.
+The added pending-history/race controls bring the focused passing total to27.
+
 ## Admit the reviewed agent lab source frontier - 2026-10-26
 
 Parent commit: `8fb72488cc9c5b2583a0b1258014d0487f00382b`.
