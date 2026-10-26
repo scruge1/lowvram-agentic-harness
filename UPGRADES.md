@@ -37,6 +37,26 @@ boundary. Full final-source recovery/compaction repetition remains held; earlier
 full passes apply to their recorded source revisions. Natural model conversation
 and useful root outcomes remain separate acceptance work.
 
+## Explain optional provider keys and actual fallback limits - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Refresh the existing provider catalog and terminal guidance from current official
+sources. Explain where to create keys, the selected Brave Search plan and its
+usage/auto-reload controls, Tavily basic-search credit use, and the owned SearXNG
+root/JSON requirement. Retain Brave's explicit storage-rights hold for both
+artifacts and native history. Setup still performs no account or provider call.
+
+Document first-success search separately from URL retrieval and bounded clean
+browser rendering. Keys do not grant destination login access, enable hosted
+answer/research products, guarantee fallback success or establish corroboration.
+Reuse the same catalog, resolver, protected files and skip/revisit/remove paths.
+
+Focused source controls exercise the grouped home CLI and a real Linux terminal
+with a synthetic key: hidden entry, skip dominance, blank revisit and redacted
+status. No actual account, credential, paid API, browser or model is used. These
+controls do not establish live provider acceptance or whole research parity.
+
 ## Count committed research evidence as retained-work progress - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
