@@ -381,6 +381,10 @@ full-profile scaffold declaration does not enable the lab extension in an
 existing home. Later source-files or interface packaging changes are outside
 this exact frontier.
 
+The qualified controller payload is [commit `1aceecd`](https://github.com/scruge1/lowvram-agentic-harness/commit/1aceecd37220c630ef7f71766f90457f827c8af2).
+Use that reviewed source selection for this frontier. A later checkout with
+other protected home changes is still refused; publication does not admit it.
+
 A separate isolated Linux home passed this frontier's normal stage/apply,
 stable doctor, research status, Pi health with zero generation requests, and
 exact rollback. The actual source60 verifier refused both new intermediate

@@ -37,6 +37,53 @@ requests. This is source adoption using verified borrowed public dependencies;
 fresh installation, full-profile migration and model-task acceptance stay
 separate.
 
+## Read an existing project through the native board - 2026-10-26
+
+Parent commit: `d188446a45d16bc97bfe6a110b8eff2c63c2f15f`.
+
+Add a foreground `agent-home.py board --project PATH` read view. Reuse the
+existing home lease, project identity, Hermes database and JSON adapter. Serve
+only the explicitly selected project on loopback. Refuse effects, foreign
+selection, changed identity and changed assets. Do not create a projects registry,
+start the full Hermes dashboard, or infer checked-output acceptance from a task's
+status or result text.
+
+Build the pinned upstream Kanban component with real React/Nous primitives,
+native theme, the unchanged public utility source and retained licences. Keep
+source imports explicit. Disable unavailable orchestration, live updates,
+worker-log requests and comment entry. Preserve native cards, details and result
+summaries. See [PROJECT-BOARD.md](PROJECT-BOARD.md) for current asset flags and limits.
+
+A fresh isolated Linux component fixture exercised the actual stable entry and
+browser: three cards, a comment, a review summary, filtering, desktop/mobile
+layout and disabled effects. Seventeen browser requests stayed on its loopback
+origin and returned 200. Ownership close stopped the listener; an exclusive home
+lease then succeeded. Existing board/knowledge database bytes and borrowed public
+package artifacts stayed unchanged. This uses one verified borrowed Hermes
+environment; the other four selected packages remain uninstalled in that fixture.
+
+Focused isolation/entry controls and all seven offline self-tests passed. The
+source-closure check initially refused a missing local utility; retaining its
+exact upstream source and explicit import closed that defect without relaxing
+the guard. Focused maintenance stage/plan controls then passed. Complete hosted
+checks, installer-owned asset admission, normal fresh installation, existing-home
+controller adoption, remote exposure and effect controls remain separate work.
+
+The successor builder admission binds the actual clean pinned upstream Git
+generation, including transitive workspace source and licence. It checks staged,
+working and untracked source before and after compilation, with only explicit
+dependency/pip-metadata exclusions. Three real-Git controls refuse source drift,
+ignored new source, wrong commits and a nested checkout root. A fresh genuine
+checkout with an exact copy of the separately qualified locked dependencies built
+identical UI files to the component-qualified predecessor. Dependency-source
+qualification remains distinct from the Git source-tree check. The top notice
+uses plain capability language; it does not promise saved-file verification.
+
+Legacy migration fixtures reconstruct their reviewed historical definitions and
+load the actual historical home module. The new board controller is explicitly
+refused by both older migration scopes; production hashes and guards stay fixed.
+Windows fixture paths use their canonical identity, as real project selection does.
+
 ## Connect the optional deterministic component lab - 2026-10-26
 
 Parent commit: `3808ec7610d3e2d083cd68124c75d381e956a74d`.

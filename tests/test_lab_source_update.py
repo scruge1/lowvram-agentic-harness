@@ -2,6 +2,7 @@
 import ast
 import copy
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -11,11 +12,14 @@ from unittest import mock
 from harness import home as bootstrap, maintenance as state, runtime_update as update
 from harness.research_install import REQUIREMENTS
 from tests import test_agent_core_update as core_fixture
+from tests.test_controller_migration import reviewed_home_before_board
 from tests.test_runtime_update import UpdateFixture, digest
 
 
 def source60_home(text):
     """Reverse the exact released61 lab-only wiring, never synthesize approval."""
+    if '    board_view = commands.add_parser("board",' in text:
+        text = reviewed_home_before_board(text)
     nodes = ast.parse(text).body
     environment = next(node for node in nodes if isinstance(node, ast.FunctionDef) and node.name == "environment")
     choices = [node for node in environment.body if isinstance(node, ast.If)
@@ -59,10 +63,18 @@ class LabSourceUpdateTests(UpdateFixture):
 
     def setUp(self):
         super().setUp()
-        check = mock.patch.object(bootstrap, "check_package", return_value=None)
+        case = self.case
+        candidate = case["source"] / "harness/home.py"
+        candidate.write_text(reviewed_home_before_board(candidate.read_text(encoding="utf-8")), encoding="utf-8")
+        spec = importlib.util.spec_from_file_location("harness.lab_source61_unit_fixture", candidate)
+        historical_home = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(historical_home)
+        binding = mock.patch.object(state, "bootstrap", historical_home)
+        binding.start()
+        self.addCleanup(binding.stop)
+        check = mock.patch.object(historical_home, "check_package", return_value=None)
         check.start()
         self.addCleanup(check.stop)
-        case = self.case
         file = case["home"] / "runtime/harness/home.py"
         file.write_text(source60_home(file.read_text(encoding="utf-8")), encoding="utf-8")
         # Synthetic old payload identity only. The frozen old verifier is
@@ -94,6 +106,12 @@ class LabSourceUpdateTests(UpdateFixture):
             update.controller_plan(case["home"], case["operation"])
         file = case["source"] / "harness/home.py"
         original = file.read_bytes()
+        try:
+            file.write_bytes(Path(bootstrap.__file__).read_bytes())
+            with self.assertRaisesRegex(ValueError, "Unreviewed home|outside agent-core"):
+                update.core_source_bindings(case["home"], case["source"])
+        finally:
+            file.write_bytes(original)
         for before, after in [('"agent": ("pi", "hermes", "mempalace", "framework", "research")',
                                '"agent": ("pi", "hermes")'),
                               ('"PI_HARNESS_LAB_COMMAND"', '"CHANGED_LAB_COMMAND"')]:

@@ -14,6 +14,8 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
@@ -164,6 +166,43 @@ def show(conn: sqlite3.Connection, task_id: str, tenant: str) -> dict[str, Any]:
             for item in kb.list_comments(conn, task_id)
         ],
     }
+
+
+def board_read_view(conn: sqlite3.Connection, tenant: str, include_archived=False) -> dict[str, Any]:
+    """Native Kanban DTO from this existing project board; no other registry."""
+    require(isinstance(include_archived, bool), "include_archived must be Boolean")
+    tasks = kb.list_tasks(conn, tenant=tenant, include_archived=include_archived, limit=1001)
+    require(len(tasks) <= 1000, "Read view exceeds 1000 tasks; use the bounded project CLI views")
+    summaries = kb.latest_summaries(conn, [task.id for task in tasks])
+    # Preserve the pinned native board's order, including its scheduled lane.
+    columns = {name: [] for name in ("triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done")}
+    if include_archived:
+        columns["archived"] = []
+    for task in tasks:
+        row = asdict(task)
+        row["latest_summary"] = (summaries.get(task.id) or "")[:200] or None
+        row["link_counts"] = {"parents": len(kb.parent_ids(conn, task.id)), "children": len(kb.child_ids(conn, task.id))}
+        row["comment_count"] = len(kb.list_comments(conn, task.id))
+        columns.setdefault(task.status, []).append(row)
+    return {"columns": [{"name": name, "tasks": rows} for name, rows in columns.items()],
+            "tenants": [tenant], "assignees": sorted({task.assignee for task in tasks if task.assignee}),
+            "now": int(time.time()), "read_only": True, "live_events": False}
+
+
+def task_read_view(conn: sqlite3.Connection, task_id: str, tenant: str) -> dict[str, Any]:
+    show(conn, task_id, tenant)  # Reuse the existing project/tenant boundary.
+    task = kb.get_task(conn, task_id)
+    parents, children = kb.parent_ids(conn, task_id), kb.child_ids(conn, task_id)
+    require(all(kb.get_task(conn, item) is not None and kb.get_task(conn, item).tenant == tenant for item in parents + children),
+            "Task links cross the selected project; read view is held")
+    return {"task": {**asdict(task), "latest_summary": kb.latest_summary(conn, task_id)},
+            "comments": [asdict(item) for item in kb.list_comments(conn, task_id)],
+            "events": [asdict(item) for item in kb.list_events(conn, task_id)],
+            "links": {"parents": parents, "children": children},
+            "attachments": [asdict(item) for item in kb.list_attachments(conn, task_id)],
+            "child_results": [task_value(kb.get_task(conn, child)) for child in children],
+            "runs": [asdict(item) for item in kb.list_runs(conn, task_id)],
+            "read_only": True, "attachment_delivery": "not_qualified"}
 
 
 def decomposition_children(conn: sqlite3.Connection, task_id: str) -> list[str]:
@@ -476,7 +515,7 @@ def execute(request: Mapping[str, Any]) -> dict[str, Any]:
         result = recover_project(request)
         return {"schema": SCHEMA, "ok": True, "action": "project_recover", "result": result,
                 "limits": ["Legacy identity recovery only; not project execution or approval."]}
-    exact(request, {"action", "project_root"}, {"initialize", "native_authority", "target", "why", "system_setup", "terms", "snapshot", "status", "limit", "task_id", "title", "body", "priority", "parents", "idempotency_key", "initial_status", "transition", "reason", "summary", "comment", "session_id", "card_id", "receipt_path", "receipt_sha256", "lessons", "request_id", "objective", "draft_plan", "name", "description", "closeout_path", "closeout_sha256", "drawer_snapshot_path", "triggers", "steps", "verification", "stop_conditions", "children", "depth"})
+    exact(request, {"action", "project_root"}, {"initialize", "native_authority", "target", "why", "system_setup", "terms", "snapshot", "status", "limit", "task_id", "title", "body", "priority", "parents", "idempotency_key", "initial_status", "transition", "reason", "summary", "comment", "session_id", "card_id", "receipt_path", "receipt_sha256", "lessons", "request_id", "objective", "draft_plan", "name", "description", "closeout_path", "closeout_sha256", "drawer_snapshot_path", "triggers", "steps", "verification", "stop_conditions", "children", "depth", "include_archived"})
     action = identifier(request["action"], "action")
     initialize = request.get("initialize", False)
     require(isinstance(initialize, bool), "initialize must be Boolean")
@@ -592,6 +631,10 @@ def execute(request: Mapping[str, Any]) -> dict[str, Any]:
             result = {"tasks": [task_value(task) for task in tasks], "count": len(tasks)}
         elif action == "show":
             result = show(conn, identifier(request.get("task_id"), "task_id"), tenant)
+        elif action == "board_read_view":
+            result = board_read_view(conn, tenant, request.get("include_archived", False))
+        elif action == "task_read_view":
+            result = task_read_view(conn, identifier(request.get("task_id"), "task_id"), tenant)
         elif action == "hierarchy":
             result = hierarchy(conn, identifier(request.get("task_id"), "task_id"), tenant, request.get("depth", 6))
         elif action == "decompose":
