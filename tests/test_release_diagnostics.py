@@ -8,10 +8,33 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from scripts.verify_ssot_release import UNSETTLED_CHILDREN, output_snapshot, run
+from scripts.verify_ssot_release import UNSETTLED_CHILDREN, output_snapshot, run, unit_test_commands
 
 
 class ReleaseDiagnosticsTests(unittest.TestCase):
+    def test_native_discovery_groups_assign_each_test_file_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("test_agent.py", "test_model.py", "test_native.py", "test_zero.py"):
+                (root / name).touch()
+            commands = unit_test_commands(root)
+        self.assertEqual([command[-2] for command in commands], ["test_[a-m]*.py", "test_[n-z]*.py"])
+        for command in commands:
+            self.assertEqual(command[:6], [sys.executable, "-m", "unittest", "discover", "-s", "tests"])
+
+    def test_unassigned_or_overlapping_test_file_refuses_before_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "testUnexpected.py"
+            source.touch()
+            with self.assertRaisesRegex(RuntimeError, "exactly one"):
+                unit_test_commands(root)
+            source.unlink()
+            (root / "test_agent.py").touch()
+            with mock.patch("scripts.verify_ssot_release.UNIT_TEST_PATTERNS", ("test*.py", "test_a*.py")):
+                with self.assertRaisesRegex(RuntimeError, "exactly one"):
+                    unit_test_commands(root)
+
     def test_tail_truncation_and_snapshot_preserve_writer_offset(self):
         with tempfile.TemporaryFile(mode="w+b") as stream:
             stream.write(b"x" * 30000)

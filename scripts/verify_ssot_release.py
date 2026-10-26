@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import fnmatch
 import os
 import shutil
 import subprocess
@@ -29,9 +30,23 @@ SETTLEMENT_SECONDS = 3
 # The prior 240s Linux gate exhausted its budget; its tail showed no assertion failure.
 # Keep runtime deadlines, output bounds and child settlement unchanged.
 UNIT_TEST_TIMEOUT = 480 if os.name == "nt" else 300
+UNIT_TEST_PATTERNS = ("test_[a-m]*.py", "test_[n-z]*.py")
 # Preserve ownership when an exact child does not settle. Never infer that its
 # descendants stopped, and do not let a Popen context manager wait indefinitely.
 UNSETTLED_CHILDREN = []
+
+
+def unit_test_commands(test_root: Path = ROOT / "tests") -> list[list[str]]:
+    # Keep native discovery and its imports. Refuse an unassigned/overlapping
+    # file rather than silently omitting a new test from the two bounded groups.
+    for path in test_root.rglob("test*.py"):
+        matches = sum(fnmatch.fnmatchcase(path.name, pattern) for pattern in UNIT_TEST_PATTERNS)
+        if matches != 1:
+            raise RuntimeError(f"Test file must belong to exactly one release group: {path.name}")
+    return [
+        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", pattern, "-v"]
+        for pattern in UNIT_TEST_PATTERNS
+    ]
 
 
 def output_snapshot(stream) -> dict:
@@ -113,12 +128,9 @@ def run(argv: list[str], *, cwd: Path = ROOT, env=None, timeout: int = 120) -> d
 
 def main() -> int:
     results = []
-    results.append(
-        run(
-            [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
-            timeout=UNIT_TEST_TIMEOUT,
-        )
-    )
+    commands = unit_test_commands()
+    for command in commands:
+        results.append(run(command, timeout=UNIT_TEST_TIMEOUT))
     for path in SELFTESTS:
         results.append(run([sys.executable, path, "--selftest"]))
 
@@ -759,7 +771,7 @@ else:
         "status": "tested" if not failures else "failed",
         "checks": len(results) + 4,
         "failed": failures,
-        "unit_test_command": results[0]["argv"],
+        "unit_test_commands": commands,
         "selftest_count": len(SELFTESTS),
         "copied_demo": demo_status,
         "copied_enforced_demo": enforced_status,
