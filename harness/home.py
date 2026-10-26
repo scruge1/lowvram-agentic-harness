@@ -164,7 +164,7 @@ def source_files(source):
             raise HomeError("The optional model service requires its canonical module and exact model-service-pins.json data.")
         paths.append(model_pins)
     if (source / "harness/project_board.py").exists():
-        view_sources = [source / "harness/project-board-native.json", source / "scripts/build_project_board_assets.py",
+        view_sources = [source / "harness/project-board-native.json", source / "scripts/build_project_board_assets.py", source / "scripts/__init__.py",
                         *[source / "adapters/project-board" / name for name in
                           ("entry.js", "style.css", "index.html", "native-utils.ts", "NOTICE.md", "HERMES-LICENSE.txt")]]
         if any(not file.is_file() or file.is_symlink() or not file.resolve().is_relative_to(source.resolve()) for file in view_sources):
@@ -563,6 +563,12 @@ def check_package(home, key, record):
         path = Path(item["path"])
         if not path.is_relative_to(home) or not path.is_file() or digest(path) != item["sha256"]:
             return "installed package missing or changed: " + key
+    if key == "hermes" and record.get("board_ui") is not None:
+        from harness import project_board_assets
+        try:
+            project_board_assets.verify(home, record["board_ui"])
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            return "Native board UI verification failed: " + str(error)
     if key == "claude-mem":
         from harness import claude_memory_patch
         try:
@@ -593,40 +599,55 @@ def package_plan(config):
 def install_packages(home, config, python312=None):
     selected = package_plan(config)
     from harness import home_entry
-    if "claude-mem" in selected and "claude-mem" not in config["installed"]:
-        # Preserve dependency order, then mutate the observer package only while
-        # exclusive. Never upgrade or release an existing entry's shared lease.
+    if "hermes" in selected:
+        from harness import project_board_assets
+        project_board_assets.preflight(home, config)
+    exclusive = [key for key in selected if key in {"hermes", "claude-mem"} and key not in config["installed"]]
+    if exclusive:
+        # Observe that source entry can acquire EX before any package effects.
+        # An installed entry's outer READ lease is never upgraded.
+        with _observer_install_exclusive(home, python312, label="Package"):
+            pass
+    shared = []
+    for key in selected:
+        if key in {"hermes", "claude-mem"} and key not in config["installed"]:
+            if shared:
+                with home_entry.consumer(home):
+                    _install_packages(home, config, python312, only=tuple(shared), finalize=False)
+                shared.clear()
+            label = "Native board" if key == "hermes" else "Observer"
+            with _observer_install_exclusive(home, python312, label=label) as held:
+                _install_packages(home, config, python312, only=(key,), finalize=False,
+                                  lifecycle_fds=held.pass_fds, lifecycle_lease=held)
+        else:
+            shared.append(key)
+    if shared:
         with home_entry.consumer(home):
-            _install_packages(home, config, python312,
-                              only=tuple(key for key in selected if key != "claude-mem"), finalize=False)
-        with _observer_install_exclusive(home, python312) as held_fds:
-            _install_packages(home, config, python312, only=("claude-mem",), finalize=False, lifecycle_fds=held_fds)
-        with home_entry.consumer(home):
-            return _install_packages(home, config, python312)
+            _install_packages(home, config, python312, only=tuple(shared), finalize=False)
     with home_entry.consumer(home):
         return _install_packages(home, config, python312)
 
 
 @contextlib.contextmanager
-def _observer_install_exclusive(home, python312=None):
+def _observer_install_exclusive(home, python312=None, *, label="Observer"):
     from harness import home_entry
     home, config = home_entry.selected_home(home)
     if platform.system() != "Linux" or "lifecycle_guard_sha256" not in config:
-        raise HomeError("Observer package staging requires an integrated Linux home and its exclusive lease.")
+        raise HomeError(label + " package staging requires an integrated Linux home and its exclusive lease.")
     pin = config["lifecycle_guard_sha256"]
     guard = home_entry._load_guard(home, pin)
     command = shlex.join([str(python312 or sys.executable), "-s", "-B", str(Path(__file__).resolve()),
                           "--home", str(home), "resume-install", "--python312", str(python312 or sys.executable)])
     try:
         with guard.lease(home, expected_sha256=pin, mode="exclusive") as held:
-            yield held.pass_fds
+            yield held
     except guard.LeaseBusy as error:
-        raise HomeError("Observer package staging needs an exclusive home. Keep active consumers and partial files intact. "
+        raise HomeError(label + " package staging needs an exclusive home. Keep active consumers and partial files intact. "
                         "After they settle, run the retained reviewed source controller directly: " + command
                         + ". An installed entry's outer READ lease is never upgraded.") from error
 
 
-def _install_packages(home, config, python312=None, *, only=None, finalize=True, lifecycle_fds=()):
+def _install_packages(home, config, python312=None, *, only=None, finalize=True, lifecycle_fds=(), lifecycle_lease=None):
     selected = package_plan(config)
     if only is not None:
         if not isinstance(only, tuple) or not set(only).issubset(selected):
@@ -649,6 +670,7 @@ def _install_packages(home, config, python312=None, *, only=None, finalize=True,
     node_version = run([node, "--version"], cwd=home, env=env).strip().lstrip("v")
     if tuple(map(int, node_version.split("."))) < (22, 19, 0):
         raise HomeError("Pi requires Node 22.19 or newer.")
+    board_npm_cli = Path(managed_node["npm_cli"]) if managed_node else Path(npm).resolve()
     bun_package = None
     if "bun" in selected:
         arch = {"x86_64": "x64", "amd64": "x64", "aarch64": "aarch64", "arm64": "aarch64"}.get(platform.machine().lower())
@@ -662,6 +684,8 @@ def _install_packages(home, config, python312=None, *, only=None, finalize=True,
     temporary.mkdir(exist_ok=True)
     env["TMPDIR"] = str(temporary)
     for key in selected:
+        child_options = {"pass_fds": lifecycle_fds} if lifecycle_fds else {}
+        board_ui = None
         if key in config["installed"]:
             problem = check_package(home, key, config["installed"][key])
             if problem:
@@ -683,18 +707,18 @@ def _install_packages(home, config, python312=None, *, only=None, finalize=True,
         else:
             target = home / "envs" / key
             if not executable(target).exists():
-                run([python, "-m", "venv", str(target)], cwd=home, env=env)
+                run([python, "-m", "venv", str(target)], cwd=home, env=env, **child_options)
             requirement = PINS[key]
             if key in GIT_SOURCES:
                 url, commit = GIT_SOURCES[key]
                 checkout = home / "packages" / (key + "-source")
                 if not checkout.exists():
                     checkout.mkdir()
-                    run(["git", "init", "--quiet", str(checkout)], cwd=home, env=env)
+                    run(["git", "init", "--quiet", str(checkout)], cwd=home, env=env, **child_options)
                 # Fetch one exact source object. Install the verified checkout
                 # directly; pip's local clone does not handle shallow roots.
-                run(["git", "-C", checkout, "fetch", "--depth", "1", url, commit], cwd=home, env=env)
-                run(["git", "-C", checkout, "checkout", "--detach", commit], cwd=home, env=env)
+                run(["git", "-C", checkout, "fetch", "--depth", "1", url, commit], cwd=home, env=env, **child_options)
+                run(["git", "-C", checkout, "checkout", "--detach", commit], cwd=home, env=env, **child_options)
                 observed = run(["git", "-C", checkout, "rev-parse", "HEAD"], cwd=home, env=env).strip()
                 if observed != commit:
                     raise HomeError("Fetched source commit mismatch: " + key)
@@ -705,10 +729,14 @@ def _install_packages(home, config, python312=None, *, only=None, finalize=True,
                 output = research_install.install_owned(home, execute=run, environment=env)
             else:
                 install_args = ["--editable", requirement] if key == "hermes" else [requirement]
-                output = run([executable(target), "-m", "pip", "install", *install_args], cwd=home, env=env)
+                output = run([executable(target), "-m", "pip", "install", *install_args], cwd=home, env=env, **child_options)
             actual = run([executable(target), "-m", "pip", "freeze"], cwd=home, env=env)
             (target / "installed-freeze.txt").write_text(actual, encoding="utf-8")
-            run([executable(target), "-m", "pip", "check"], cwd=home, env=env)
+            run([executable(target), "-m", "pip", "check"], cwd=home, env=env, **child_options)
+        if key == "hermes":
+            from harness import project_board_assets
+            board_ui = project_board_assets.install(home, node=node, npm_cli=board_npm_cli, environment=env,
+                                                    run=run, lease=lifecycle_lease)
         (home / "logs" / f"install-{key}.log").write_text(output, encoding="utf-8")
         if key == "claude-mem":
             from harness import claude_memory_patch
@@ -716,6 +744,9 @@ def _install_packages(home, config, python312=None, *, only=None, finalize=True,
         config["installed"][key] = {"requested": PINS[key], "observed": actual,
                                     "artifacts": package_artifacts(home, key, npm_name), "npm_name": npm_name,
                                     "running": "not_started", "acceptance": "not_run"}
+        if board_ui is not None:
+            config["installed"][key]["board_ui"] = board_ui
+            config["installed"][key]["artifacts"].append({"path": str(home / board_ui["manifest"]), "sha256": board_ui["sha256"]})
         save_status(home, config)
     if not finalize:
         return
@@ -805,6 +836,8 @@ def doctor(home):
             problem = check_package(home, key, config["installed"][key])
             if problem:
                 failures.append(problem)
+    if "hermes" in config["installed"] and config["installed"]["hermes"].get("board_ui") is None:
+        failures.append("native board UI assets not installed; older package records need reviewed maintenance")
     if config["profile"] != "core" and "framework" in config["installed"]:
         binding = home / "state/framework-binding.json"
         if not binding.is_file() or digest(binding) != config.get("framework_binding_sha256"):
