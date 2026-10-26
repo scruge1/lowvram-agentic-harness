@@ -88,27 +88,23 @@ def verify(home, identifier, expected_journal):
 '''
 
 
-def reviewed_home_before_board(text):
-    """Reconstruct the legacy fixture, not a new controller admission scope."""
-    boundaries = (
-        ('    if (source / "harness/project_board.py").exists():\n',
-         '    if not (source / "adapters/pi/project-workflow/pi_kanban.py").is_file():\n'),
-        ('    board_view = commands.add_parser("board",', '    memory = commands.add_parser("memory")\n'),
-        ('        if args.command == "board":\n', '        if args.command == "research":\n'),
-    )
-    for start, following in boundaries:
-        if text.count(start) != 1 or text.count(following) != 1:
-            raise AssertionError("Published board fixture boundary changed")
-        first = text.index(start)
-        last = text.index(following, first)
-        text = text[:first] + text[last:]
-    # Existing production AST checks below still require the exact reviewed
-    # historical nodes. Current board definitions remain outside those scopes.
-    return text
+def legacy_controller_source():
+    """Exact public pre-board home.py; no Git history or new-scope assumption."""
+    # Commit3808ec7610d3e2d083cd68124c75d381e956a74d, harness/home.py;
+    # Git blob6c4f6da54eff24ae49caf79a5b3a445fcd8168ed. Accept only raw
+    # Git LF or its complete Windows LF-to-CRLF checkout transformation.
+    path = Path(__file__).parent / "fixtures/agent-home-controller-source60.py.txt"
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() not in {
+        "999eedb6636a5eb8b84d84890dd75624e99c5a7ff6c0ec1f88cf091734ddff50",
+        "b7db7c1aecee13264a727ad759ace588b818d48c0cc934887cc520e62a60c1b3",
+    }:
+        raise AssertionError("Frozen public legacy controller fixture changed")
+    return raw.decode("utf-8").replace("\r\n", "\n")
 
 
 def research_cli(path, *, previous=False):
-    text = reviewed_home_before_board(path.read_text(encoding="utf-8"))
+    text = legacy_controller_source()
     parser = '''class CommandParser(argparse.ArgumentParser):
     def error(self, message):
         # A mistaken --api-key argument must not be copied to terminal logs.

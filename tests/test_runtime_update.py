@@ -39,7 +39,7 @@ class UpdateFixture(unittest.TestCase):
                     target = self.baseline / path.relative_to(REPO)
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(path, target)
-        for relative in ("harness/project-board-native.json", "scripts/build_project_board_assets.py",
+        for relative in ("harness/project-board-native.json", "scripts/build_project_board_assets.py", "scripts/__init__.py",
                          "adapters/project-board/entry.js", "adapters/project-board/style.css",
                          "adapters/project-board/index.html", "adapters/project-board/native-utils.ts",
                          "adapters/project-board/NOTICE.md", "adapters/project-board/HERMES-LICENSE.txt"):

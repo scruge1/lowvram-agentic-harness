@@ -29,6 +29,119 @@ Unicode/space paths, source/cancel/home refusals and unchanged intake records.
 That fixture makes no model or service request and does not qualify live owned
 service status, normal managed CLI deployment or useful model behavior.
 
+## Record installer-owned local board assets - 2026-10-26
+
+Parent commit: `a47dab60701bb407da8b405add0ab2163414fda8`.
+
+Build the pinned web closure and static read view during a new Hermes package's
+exclusive phase, before its package fingerprint is saved. Reuse the existing
+installer loop, home lease, child descriptor forwarding and package record.
+Retain the exact source/host/runtime manifest and licences. The normal board
+command resolves that record without manual asset flags; package checks and
+doctor expose missing or changed UI files. Older installed records and unknown
+partial output refuse before package effects. No UI server starts during setup.
+
+The compiler copies an explicit host file set and checks it for drift. Its own
+local Python helper package is included in the runtime closure. Historical C7
+tests use an exact public pre-board home.py fixture, with explicit LF/CRLF hashes
+and actual module loading at its true copied path. Original production v1 hashes
+and scopes stay fixed; the current controller remains outside those frontiers.
+The later lab-frontier fixture adds only the two exact published source61 lab
+blocks to that frozen source60, then checks the unchanged old/new AST hashes.
+Its candidate equals the complete published source61 text. The join reuses the
+existing exhaustive unit-test groups without changing their deadlines.
+
+Focused source controls cover package-record/path/source/asset drift, retained
+partials, shared or foreign lease refusal, actual EX child descriptor forwarding,
+installed-entry READ refusal and both legacy migration scopes. These synthetic
+fixtures perform no npm or package installation and do not establish a normal
+fresh factory, browser adoption or model result. Actual fresh install followed
+by the default board command remains required before one-install acceptance.
+
+## Recover current approved routing without dropping older work - 2026-10-26
+
+Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
+
+Reuse the maintained intake's fresh-source selection, effect-free classification
+correction and queued/typed-input checks. Fresh approved work selects its card;
+exact route retries recover navigation after an interrupted selection. The
+original native capture, intent and correction records stay retained. Only a
+current question/control classification without effects can be corrected against
+the same original explicit approval. Frozen effectful intents stay immutable.
+
+Keep the public continuation rule: answer a status question, then continue
+approved work; drafts do not authorize new work. Older approvals, real holds,
+source guards and needs-board-only progress remain unchanged. Do not import a
+latest-only focus policy or a conversation-wide execution stop. Typed/queued
+input suppresses intake continuation around its own awaits; a later native
+core-commit editor race remains open. Source/native fixture checks and real
+model adoption must be reported separately.
+
+Validation: the exact predecessor reproduced stale task selection in a paired
+native fixture. The new intake passed23actual SDK/Hermes controls, including
+three injected journal/lost-reply recovery boundaries and mid-await typing.
+Twenty-five focused unit tests, seven self-tests and pinned Ruff pass. Scripted
+answers, a supported fixture UI context and zero model/HTTP calls establish the
+component behavior; they do not prove natural model use or live adoption.
+A review counterexample caught unchanged historical pending input losing its
+existing routing guidance. Compare the retained scope across the await instead
+of suppressing every pending capture. The exact predecessor and follow-up
+whole-module controls distinguish retained routing guidance from new input,
+typed drafts and queued messages; they do not grant execution permission.
+The added pending-history/race controls bring the focused passing total to27.
+
+## Admit the reviewed agent lab source frontier - 2026-10-26
+
+Parent commit: `8fb72488cc9c5b2583a0b1258014d0487f00382b`.
+
+The original controller CLI prototype already shipped in PR39 and passed
+normal native verification and rollback. The later source40-to41 core update
+also shipped with separate native evidence. Preserve those paths rather than
+reimplementing them from the old prototype checkout.
+
+Extend the existing core-source route with the exact released source60-to61
+environment/scaffold AST pairs, named `agent-lab-source-v1`. All other home
+nodes and stable protocol bytes must match. The same five selected/installed
+agent packages and existing qualification/exchange/journal/pending/EX/recovery
+path remain mandatory. Ordinary compatible updates still refuse the changed
+controller. New pending/failed states ensure the actual source60 core verifier
+cannot accept this newly reviewed frontier merely by ignoring added metadata.
+
+No package, profile, settings, template, trust or personal-data migration is
+added. Existing full homes do not gain the new lab extension through this
+agent-only source update. Later interface/source-files changes require another
+reviewed frontier.
+
+31 affected source tests, pinned Ruff and seven offline self-tests passed.
+A new isolated attached-endpoint fixture then passed normal native source
+activation/consumer verification and exact rollback. Both actual source60
+verifier refusals, a retained controlled consumer failure, unchanged package
+and settings bytes, old/new personal data, donor conservation, owned hub stop
+and exclusive lease release were checked. The endpoint received zero HTTP
+requests. This is source adoption using verified borrowed public dependencies;
+fresh installation, full-profile migration and model-task acceptance stay
+separate.
+
+The first combined Linux release check exhausted its unchanged300-second unit
+budget; its retained tail showed passing controls. Windows passed. Consolidate
+the four new fixture scaffolds into one, keeping every original assertion body
+and three separate native update operations. Restore negative inputs in finally
+and require a clean predecessor between phases. The ordinary targeted run was
+20.256s versus26.877s for four fixtures on the same test host. A separate observed
+run confirmed one setup/case/scaffold; its profiler overhead is not a comparable
+timing. No production source, CI budget or native qualification was changed.
+
+The second aggregate Linux run still exhausted 300s after passing more runtime
+update controls. Retain both failed runs. Split native unittest discovery into
+two filename groups and refuse any test file assigned to zero or multiple
+groups. Each command retains the existing 300s Linux/480s Windows deadline,
+output capture and child settlement. The 15-minute job cap is unchanged. The
+release report replaces `unit_test_command` with `unit_test_commands`; no
+repository reader consumes the old field. Actual discovery produced exactly
+the same 830 test IDs across groups of 333 and 497, with no duplicates. Ten
+release diagnostic controls and pinned Ruff passed. This changes test execution
+grouping, not the update frontier or its native qualification.
+
 ## One source-bound native child - 2026-10-26
 
 Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.

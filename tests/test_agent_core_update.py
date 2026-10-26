@@ -16,13 +16,13 @@ from unittest import mock
 
 from harness import home as bootstrap, maintenance as state, runtime_update as update
 from harness.research_install import REQUIREMENTS
-from tests.test_controller_migration import redacted_status, reviewed_home_before_board
+from tests.test_controller_migration import redacted_status, legacy_controller_source
 from tests.test_runtime_update import UpdateFixture, digest
 
 
-def source40_home(text):
+def source40_home():
     """Reverse only the published source41 diff; require real old node hashes."""
-    text = reviewed_home_before_board(text)
+    text = legacy_controller_source()
     def replace(old, new=""):
         nonlocal text
         if text.count(old) != 1:
@@ -186,7 +186,7 @@ class AgentCoreUpdateTests(UpdateFixture):
         super().setUp()
         case = self.case
         candidate = case["source"] / "harness/home.py"
-        candidate.write_text(reviewed_home_before_board(candidate.read_text(encoding="utf-8")), encoding="utf-8")
+        candidate.write_text(legacy_controller_source(), encoding="utf-8")
         # Execute the real reconstructed home module. Changing only __file__
         # would misrepresent the exact executing controller closure.
         spec = importlib.util.spec_from_file_location("harness.source41_unit_fixture", candidate)
@@ -200,7 +200,7 @@ class AgentCoreUpdateTests(UpdateFixture):
         self.package_check.start()
         self.addCleanup(self.package_check.stop)
         old = case["home"] / "runtime/harness/home.py"
-        old.write_text(source40_home(old.read_text(encoding="utf-8")), encoding="utf-8")
+        old.write_text(source40_home(), encoding="utf-8")
         config = state.read_json(case["home"] / "home.json")
         config["profile"] = "agent"
         config["selected_packages"] = {name: bootstrap.PINS[name] for name in update.CORE_PACKAGES}
@@ -292,7 +292,9 @@ class AgentCoreUpdateTests(UpdateFixture):
         original = candidate.read_text(encoding="utf-8")
         try:
             candidate.write_bytes(Path(bootstrap.__file__).read_bytes())
-            with self.assertRaisesRegex(ValueError, "outside agent-core-source"):
+            # A later frontier may recognize its named nodes, then refuse the
+            # remaining current controller definitions. Both paths stay closed.
+            with self.assertRaisesRegex(ValueError, "outside agent-core-source|Unreviewed home definitions/constants/imports changed"):
                 update.core_source_bindings(self.case["home"], self.case["source"])
         finally:
             candidate.write_bytes(original_bytes)
