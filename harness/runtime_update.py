@@ -57,6 +57,19 @@ CORE_NEW_NODES = {
     "_install_packages": "360c362b8d50fb5886991059f2e5abaf05f189f0ceb88b89cc99af061e5c4b44",
     "_observer_install_exclusive": "70633f2094a023b5a6b64dc51482a811202685df07a534d0c57fb6abca4aa528",
 }
+# Reviewed source60 -> source61 optional lab wiring. The selected agent
+# profile/package plan stays unchanged. Other home nodes must match exactly.
+CORE_LAB_FRONTIER = "agent-lab-source-v1"
+CORE_LAB_OLD_NODES = {
+    "environment": "509438e8497159973a5639b1137d3ebc86ce1966e24cea7bccec703312ad4f33",
+    "scaffold": "14afe7df0d4266cb56242d2a8a2b4b3bcaacc74a9d284cf150266cf9b283e6b1",
+}
+CORE_LAB_NEW_NODES = {
+    "environment": "4d004dcfecde92e555b7a1f5e2cbccc3ca7b9689a2b066d26c1bc503211a05f9",
+    "scaffold": "5afda756535f3485dea96baf4756b5cbe995b6fa258381f854efd2515a990f13",
+}
+CORE_LAB_PENDING = "core_lab_pending_consumer_acceptance"
+CORE_LAB_FAILED = "core_lab_verification_failed"
 # Reviewed research CLI definitions, from source commit 98076e3. Other AST
 # nodes must match the installed controller, including imports and constants.
 CONTROLLER_MAIN = "5e33d2aa155aa9e5a5a0a763429e0da1958d2c3dee2dffc39af108ca77001c90"
@@ -270,21 +283,39 @@ def core_source_bindings(home, candidate):
     after = home_nodes(candidate / "harness/home.py")
     def checked(nodes, expected):
         selected = [node for node in nodes if isinstance(node, ast.FunctionDef) and node.name in expected]
-        require(len(selected) == len(expected) and {node.name: node_hash(node) for node in selected} == expected,
-                "Home definitions are outside agent-core-source-v1")
+        if len(selected) != len(expected) or {node.name: node_hash(node) for node in selected} != expected:
+            return None
         return [node_dump(node) for node in nodes if node not in selected]
-    require(checked(before, CORE_OLD_NODES) == checked(after, CORE_NEW_NODES),
+    previous, following = checked(before, CORE_OLD_NODES), checked(after, CORE_NEW_NODES)
+    frontier = None
+    if previous is None or following is None:
+        previous, following = checked(before, CORE_LAB_OLD_NODES), checked(after, CORE_LAB_NEW_NODES)
+        frontier = CORE_LAB_FRONTIER
+    require(previous is not None and following is not None, "Home definitions are outside agent-core-source-v1")
+    require(previous == following,
             "Unreviewed home definitions/constants/imports changed")
     relative = "harness/templates/agent-home/gitignore.template"
     if not (home / "runtime" / relative).exists():
         # Preserve the existing packaging-only exception. It is not rendered
         # over this home's personal .gitignore during runtime exchange.
         require(state.digest(candidate / relative) in CORE_GITIGNORE_DATA, "Unreviewed gitignore source data")
-    return {"scope": CORE_SOURCE_SCOPE, "old": {name: state.digest(home / "runtime" / name) for name in FIXED_SOURCE},
+    result = {"scope": CORE_SOURCE_SCOPE, "old": {name: state.digest(home / "runtime" / name) for name in FIXED_SOURCE},
             "new": {name: state.digest(candidate / name) for name in FIXED_SOURCE},
             "executing_closure": executing_controller(candidate), "packages": core_package_bindings(home),
             "python": str(Path(sys.executable).resolve()), "python_sha256": state.digest(Path(sys.executable).resolve()),
             "recovery_controller": str(candidate / "harness/runtime_update.py")}
+    if frontier:
+        result["frontier"] = frontier
+    return result
+
+
+def core_source_states(binding):
+    """Distinct new-frontier states keep earlier verifiers from accepting it."""
+    require(isinstance(binding, dict), "Core source binding is invalid")
+    if binding.get("frontier") == CORE_LAB_FRONTIER:
+        return CORE_LAB_PENDING, CORE_LAB_FAILED
+    require("frontier" not in binding, "Unreviewed core source frontier")
+    return "core_source_pending_consumer_acceptance", "core_source_verification_failed"
 
 
 def plan(home, identifier):
@@ -341,7 +372,7 @@ def _plan(home, identifier, *, controller=False, core_source=False):
         result["apply_result"] = "controller_pending_consumer_acceptance; not accepted"
     if core_source:
         result["core_source"] = core_source_bindings(home, candidate)
-        result["apply_result"] = "core_source_pending_consumer_acceptance; not accepted"
+        result["apply_result"] = core_source_states(result["core_source"])[0] + "; not accepted"
     result["plan_sha256"] = state.canonical_hash(result)
     return result
 
@@ -564,7 +595,7 @@ def _apply(home, identifier, expected_plan, qualification, qualification_sha256,
         publish(home, target, journal, value, "home.json", raw_json(new_config))
         require(inventory(home / "runtime") == after_runtime and controls(home) == value["controls"], "Final active source/control drift")
         value["after_active_sha256"] = state.active_snapshot(home)[2]["sha256"]
-        value["status"] = ("core_source_pending_consumer_acceptance" if core_source else
+        value["status"] = (core_source_states(value["core_source"])[0] if core_source else
                            "controller_pending_consumer_acceptance" if controller else "activated_pending_consumer_acceptance")
         save_journal(journal, value, "coherent-activation-committed")
         _fault("coherent-activation-committed")
@@ -682,6 +713,7 @@ def check_core_source_recovery(home, target, value):
         return
     binding = value["core_source"]
     require(isinstance(binding, dict) and binding.get("scope") == CORE_SOURCE_SCOPE, "Invalid core source scope binding")
+    core_source_states(binding)
     contract = value["qualification"]["contract"]
     require(contract.get("scope") == CORE_SOURCE_SCOPE and contract.get("core_source") == binding,
             "Core source journal/qualification binding differs")
@@ -701,7 +733,8 @@ def recover(home, identifier, expected_journal):
         require(value["status"] in {"activation_incomplete", "rollback_incomplete", "activated_pending_consumer_acceptance",
                                     "recovered_pending_consumer_acceptance", "rolled_back_pending_consumer_acceptance",
                                     "controller_pending_consumer_acceptance", "controller_verification_failed",
-                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed"},
+                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed",
+                                    CORE_LAB_PENDING, CORE_LAB_FAILED},
                 "Operation is not an incomplete recoverable transaction")
         restore_predecessor(home, target, journal, value)
         value["status"] = "recovered_pending_consumer_acceptance"
@@ -725,7 +758,8 @@ def rollback(home, identifier, expected_journal):
         check_core_source_recovery(home, target, value)
         require(value["status"] in {"activated_pending_consumer_acceptance", "consumer_verification_failed", "accepted",
                                     "controller_pending_consumer_acceptance", "controller_verification_failed",
-                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed"},
+                                    "core_source_pending_consumer_acceptance", "core_source_verification_failed",
+                                    CORE_LAB_PENDING, CORE_LAB_FAILED},
                 "Operation is not an active generation eligible for rollback")
         require(state.active_snapshot(home)[2]["sha256"] == value["after_active_sha256"], "Active generation drift; rollback refused")
         require(controls(home) == value["controls"], "Control drift; rollback refused without changing user files")
@@ -767,7 +801,7 @@ def _verify(home, identifier, expected_journal, *, controller=False, core_source
         require(state.digest(journal) == expected_journal, "Journal changed before verification admission")
         require(bool(value.get("controller")) == controller, "Use the explicit controller verification scope")
         require(("core_source" in value) == core_source, "Use the explicit core source verification scope")
-        statuses = ({"core_source_pending_consumer_acceptance", "core_source_verification_failed"} if core_source else
+        statuses = (set(core_source_states(value.get("core_source"))) if core_source else
                     {"controller_pending_consumer_acceptance", "controller_verification_failed"} if controller else
                     {"activated_pending_consumer_acceptance", "consumer_verification_failed"})
         require(value["status"] in statuses,
@@ -849,7 +883,7 @@ def _verify(home, identifier, expected_journal, *, controller=False, core_source
             value["candidate_runtime_acceptance"] = value["acceptance_scope"]
             save_journal(journal, value, "normal-consumers-accepted")
         except (OSError, ValueError, subprocess.SubprocessError) as error:
-            value["status"] = ("core_source_verification_failed" if core_source else
+            value["status"] = (core_source_states(value["core_source"])[1] if core_source else
                                "controller_verification_failed" if controller else "consumer_verification_failed")
             value["consumer_error"] = str(error)
             save_journal(journal, value, "normal-consumer-verification-failed")

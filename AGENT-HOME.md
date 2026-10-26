@@ -366,6 +366,36 @@ created after activation also survived rollback. The owned memory hub stopped,
 the exclusive lease passed, all watched donor files were preserved and the inert
 loopback endpoint received zero HTTP requests.
 
+The additional `agent-lab-source-v1` frontier uses those same core-source
+commands for the exact released source60 to source61 home definitions. It
+admits only the reviewed `environment` and `scaffold` changes; every other
+definition, import, constant and fixed support file must match. Its qualification
+must retain the exact `core_source.frontier` binding. It publishes distinct
+`core_lab_pending_consumer_acceptance` and `core_lab_verification_failed` states
+so the actual older core verifier cannot accept this generation.
+
+This frontier still requires the unchanged five-package `agent` profile. It
+does not migrate an installed full profile, add packages, render templates or
+change existing `agent/settings.json`. In particular, changing the source's
+full-profile scaffold declaration does not enable the lab extension in an
+existing home. Later source-files or interface packaging changes are outside
+this exact frontier.
+
+The qualified controller payload is [commit `1aceecd`](https://github.com/scruge1/lowvram-agentic-harness/commit/1aceecd37220c630ef7f71766f90457f827c8af2).
+Use that reviewed source selection for this frontier. A later checkout with
+other protected home changes is still refused; publication does not admit it.
+
+A separate isolated Linux home passed this frontier's normal stage/apply,
+stable doctor, research status, Pi health with zero generation requests, and
+exact rollback. The actual source60 verifier refused both new intermediate
+states. A controlled malformed-config consumer failure was retained; restoring
+that synthetic input allowed the normal positive check. Settings, five package
+bindings, nine personal-file controls and a post-activation file survived.
+The fixture's memory hub stopped, the exclusive lease released and all 1,399 watched
+donor files stayed unchanged. The inert endpoint received zero HTTP requests.
+This used verified borrowed public dependencies; it does not qualify a fresh
+package install, full-profile migration or model task.
+
 That native evidence uses verified borrowed dependencies. It qualifies source
 adoption and rollback for that fixture, without observer installation, memory
 retrieval, model task quality or fresh installation claims. Other hosts and package
@@ -876,8 +906,10 @@ Actual Pi registration, demo, abort and parent-loss cleanup passed in an isolate
 component fixture without model calls. This is source adoption with copied public
 dependencies; it does not establish a fresh full install or agent quality.
 Model experiments remain held. See [the lab adapter](adapters/pi/lab/README.md).
-The new home environment wiring is outside the narrow core-source updater scope;
-do not assume an older home can adopt it through that reviewed scope.
+The new home environment wiring remains outside ordinary compatible updates.
+The exact `agent-lab-source-v1` frontier above covers source adoption for the
+five-package agent profile; it does not migrate full-profile settings or enable
+the optional lab in an existing home.
 
 Claude-mem package installation alone supplies its SDK. This installer also
 writes the explicit local-compatible endpoint/model, disables hosted quota
