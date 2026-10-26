@@ -9,7 +9,7 @@ import subprocess
 import unittest
 from unittest import mock
 
-from harness import model_service_handoff as handoff, resource_status as status
+from harness import home as factory, model_service_handoff as handoff, resource_status as status
 
 
 class ResourceStatusTests(unittest.TestCase):
@@ -153,6 +153,15 @@ class ResourceStatusTests(unittest.TestCase):
         self.assertEqual(report["host_snapshot"]["ram"], {"total_gb": None, "available_gb": None})
         self.assertFalse(report["host_snapshot"]["exclusive_allocation"])
         self.assertEqual(report["new_owned_gpu_start_admission"], "held_no_qualified_atomic_owner_route")
+
+    def test_factory_includes_status_closure_and_current_board_compiler_package(self):
+        root = Path(__file__).resolve().parents[1]
+        included = {file.relative_to(root).as_posix() for file in factory.source_files(root)}
+        self.assertTrue({"harness/resource_status.py", "harness/home_entry.py", "harness/model_service.py",
+                         "harness/model_service_handoff.py", "harness/model_profiles.py", "harness/bootstrap.py",
+                         "harness/hardware_probe.py", "harness/model-service-pins.json",
+                         "adapters/pi/project-workflow/agent-capabilities.ts", "scripts/__init__.py",
+                         "scripts/build_project_board_assets.py", "harness/project_board_assets.py"}.issubset(included))
 
     def test_actual_capabilities_module_wait_projection_is_bounded_and_not_authority(self):
         node = shutil.which("node")

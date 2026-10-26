@@ -22,7 +22,8 @@ occupancy, queue length, model fit and task capability remain unknown. Attached
 endpoints establish no service ownership. No new allocator, registry, poller,
 model start, foreign service action or GPU admission is added.
 
-Validation: eight source controls cover ownership/refusal/secret projections;
+Validation: nine source controls cover ownership/refusal/secret projections
+and the current factory's helper/compiler source closure;
 their owned-process functions are explicitly mocked. Twelve actual native SDK
 checks cover the attached/unmanaged branch, isolated helper and command,
 Unicode/space paths, source/cancel/home refusals and unchanged intake records.
