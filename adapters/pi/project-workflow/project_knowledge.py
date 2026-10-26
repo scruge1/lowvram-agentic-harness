@@ -441,7 +441,7 @@ def _inspect_current(root: Path, *, terms: str | None = None, limit: int = 10,
             reasons.append("index_unavailable")
         else:
             index_stamp = _stamp(index)
-            connection = sqlite3.connect(index.as_uri() + "?mode=ro", uri=True, timeout=min(3, seconds))
+            connection = sqlite3.connect(index.as_uri() + "?mode=ro", uri=True, timeout=0)
             connection.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
             connection.execute("BEGIN")
             metadata_rows = connection.execute("SELECT key,value FROM metadata").fetchmany(5)
@@ -547,8 +547,13 @@ def current(root: Path, **request: Any) -> dict[str, Any]:
         return {"ok": False, "schema": INDEX_SCHEMA, "status": "deferred", "fresh": False,
                 "reason": str(exc), "authority": "retrieval_only"}
     except sqlite3.Error as exc:
-        return {"ok": False, "schema": INDEX_SCHEMA, "status": "deferred" if getattr(exc, "sqlite_errorcode", None) == 9 else "unavailable",
-                "fresh": False, "reason": "Current index could not be validated", "authority": "retrieval_only"}
+        code = getattr(exc, "sqlite_errorcode", None)
+        # Older Python SQLite exceptions omit the native numeric error code.
+        busy = (isinstance(code, int) and (code & 255) in (5, 6)) or (code is None and any(
+            str(exc) == prefix or str(exc).startswith(prefix + ":") for prefix in (
+                "database is locked", "database table is locked", "database schema is locked")))
+        return {"ok": False, "schema": INDEX_SCHEMA, "status": "deferred" if busy or code == 9 else "unavailable",
+                "fresh": False, "reason": "Current index is busy" if busy else "Current index could not be validated", "authority": "retrieval_only"}
 
 
 def main(argv: list[str] | None = None) -> int:

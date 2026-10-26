@@ -137,6 +137,18 @@ class ProjectLibraryTests(unittest.TestCase):
         self.assertEqual(result["status"], "deferred")
         self.assertNotIn("source", result)
 
+    def test_actual_owned_exclusive_index_lock_defers_without_payload(self):
+        with closing(sqlite3.connect(self.database)) as held:
+            held.execute("BEGIN EXCLUSIVE")
+            result = self.query()
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["status"], "deferred")
+            self.assertEqual(result["reason"], "Current index is busy")
+            self.assertNotIn("results", result)
+            self.assertNotIn("source", result)
+            held.rollback()
+        self.assertTrue(self.query()["ok"])
+
     def test_changed_source_during_final_membership_check_is_not_delivered(self):
         original = knowledge.discover_sources
         calls = 0

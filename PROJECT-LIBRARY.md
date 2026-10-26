@@ -43,6 +43,8 @@ ceiling. An incomplete inspection returns typed `deferred`, with no partial
 query/source body. Default policy discovery prunes excluded directories. Complex
 custom recursive globs defer rather than start an unbounded scan. Operating-system
 I/O can still block; this is not a hard process-runtime guarantee.
+Current reads do not wait on a busy SQLite index. They return `deferred` without
+a query or source payload; no automatic retry or rebuild starts.
 
 Search uses the existing literal ASCII-term FTS query, not semantic retrieval.
 UTF-8 source bytes and line endings are retained. PDF/image/other original-format

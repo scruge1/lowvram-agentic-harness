@@ -30,15 +30,23 @@ the scan. Do not use the backup operation's cold-copy budgets as hot-query polic
 Import, edits and deletion remain ordinary authorized file actions followed by
 the existing explicit rebuild. No Pi authority, effect or completion gate changes.
 
-Validation:18 actual fictional filesystem/SQLite and scoped CLI controls pass on
-Linux; Windows passes with one native-symlink permission skip. The unchanged
-production bytes also pass seven coordinator regressions. Ruff0.16.10 and all
+Validation:19 actual fictional filesystem/SQLite and scoped CLI controls pass on
+Linux; Windows passes with one native-symlink permission skip. The preceding
+packet passed seven coordinator regressions; the busy-read correction leaves
+their legacy definitions unchanged. Ruff0.16.10 and all
 seven core self-tests pass. Controls cover actual edit/delete/add, retained legacy
 snapshots, strict abstention and explicit rebuild, source hashes/windows, actual
 chunk/orphan corruption, foreign/policy/manifest bindings, late changes, bounded
 deferral, CRLF, excluded credentials and unsupported formats. Retain the initial
 Windows fixture connection/newline failure and later test-only lint failure;
 neither was resolved by weakening the production checks.
+
+A later owned SQLite lock counter showed0.5s declared inspection completing at
+1.531s after0.4s controlled discovery work: the old connect timeout spent the
+budget again. Current reads now use zero busy wait and typed deferral on native
+busy/locked state, with no partial payload. Retain the measured counter and
+earlier frozen qualification. A focused actual exclusive-lock control verifies
+the corrected path and normal retrieval after the owner releases its lock.
 
 This is source/backend qualification, not installed Library or UI adoption.
 The current Pi query route still uses the labelled legacy snapshot behavior.
