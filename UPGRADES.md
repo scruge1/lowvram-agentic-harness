@@ -5,6 +5,49 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Inspect current project sources before Library retrieval - 2026-10-26
+
+Parent commit: `b3d55f6f28df2c054c529cf64404e5dbb37355ea`.
+
+The existing project index could return an old snippet after its source changed
+or disappeared. Keep its legacy snapshot query explicitly labelled. Add opt-in
+current query, status and bounded original-source read to the same knowledge
+module and CLI. Reuse the existing project identity, source policy, manifest and
+SQLite FTS5 index; add no database, service, registry or automatic rebuild.
+
+Current query compares policy/manifest/index bindings and actual indexed chunks
+with selected current source bytes inside one read-only SQLite snapshot. Recheck
+source hashes/membership before delivery. A changed, missing, unsupported or
+mismatched source set yields no current query results. An exact source read can
+still show current bytes while reporting a stale index; an expected SHA refuses
+the old binding. Preserve UTF-8 bytes and line endings, with at most4000 characters
+and50 lines in the read window.
+
+Default policy discovery checks the existing10-second caller ceiling and prunes
+excluded directories. Keep the existing2MiB default per-file ceiling. Defer on
+incomplete inspection or complex custom recursive policies instead of extending
+the scan. Do not use the backup operation's cold-copy budgets as hot-query policy.
+Import, edits and deletion remain ordinary authorized file actions followed by
+the existing explicit rebuild. No Pi authority, effect or completion gate changes.
+
+Validation:18 actual fictional filesystem/SQLite and scoped CLI controls pass on
+Linux; Windows passes with one native-symlink permission skip. The unchanged
+production bytes also pass seven coordinator regressions. Ruff0.16.10 and all
+seven core self-tests pass. Controls cover actual edit/delete/add, retained legacy
+snapshots, strict abstention and explicit rebuild, source hashes/windows, actual
+chunk/orphan corruption, foreign/policy/manifest bindings, late changes, bounded
+deferral, CRLF, excluded credentials and unsupported formats. Retain the initial
+Windows fixture connection/newline failure and later test-only lint failure;
+neither was resolved by weakening the production checks.
+
+This is source/backend qualification, not installed Library or UI adoption.
+The current Pi query route still uses the labelled legacy snapshot behavior.
+PDF/image/other original-format extraction, multilingual/semantic search,
+Library import/update UX and normal export integration remain open. Reuse the
+existing separately authorized backup/export route; add no archive engine or
+active project migration. No private corpus, protected home, model or service
+was read or changed by this qualification.
+
 ## Distinguish retained source capture from its short view - 2026-10-26
 
 Parent commit: `61600f0b73e0e1304ff0f1e96edc3e0c1a9a4bff`.
