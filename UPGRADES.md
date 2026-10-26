@@ -5,6 +5,38 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Answer questions without pausing approved work - 2026-10-26
+
+Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.
+
+Reuse durable discussion dispositions and a source-bound review/discussion/
+execution phase in the existing intake module. A question or draft can receive
+a normal answer without a forced tool, card or checkpoint. Retain its original
+capture and expose a bounded deferred-source preview with exact-source lookup.
+A deferred old source cannot authorize new work or controls; use the current
+explicit owner source. Routing classification is not an approval detector.
+
+After a status answer, the existing source-bound retained-work decision can
+continue an already-approved ready task. Do not copy a blanket discussion hold
+that suppresses that task. Discussion and deferral add no progress credit and
+cannot promote a proposed task. Keep explicit pause, scope/failure/dependency
+holds, genuine committed research progress and bound recovery independent.
+Legacy/historical pending inputs and frozen uncertain routing intents remain
+pending; a lost routing reply retains its original idempotent recovery path.
+A source deferred during read-only validation cannot start board writes.
+
+Source/native controls distinguish empty-queue questions, approved work during
+status/draft discussion, explicit holds, current approval, reload and uncertain
+routing. A controlled reference module retains its queue but suppresses native
+continuation after a status question; that is a model-free component result,
+not a claim about a live private session. No template, MCP, model, service,
+board engine or completion ledger is added. Fresh-fixture admission exceeded
+the unchanged ten-second deadline during qualification; those failures remain
+retained. A targeted normal read-only continuation covers the remaining write
+boundary. Full final-source recovery/compaction repetition remains held; earlier
+full passes apply to their recorded source revisions. Natural model conversation
+and useful root outcomes remain separate acceptance work.
+
 ## Explain optional provider keys and actual fallback limits - 2026-10-26
 
 Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
