@@ -5,17 +5,25 @@ security/ownership checks have their own tests; these tests never bypass them.
 """
 from datetime import datetime, timezone
 from email.utils import format_datetime
+import base64
+import copy
+import hashlib
+from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from harness import research_fetch as fetch
+from harness import research_fetch as fetch, web_research as web
 
 
 def page(text="Evidence. " * 60, *, status="ok", code=200, content_type="text/html", **extra):
+    raw = text.encode("utf-8")
+    digest = hashlib.sha256(raw).hexdigest()
     response = {"final_url": "https://example.com/final", "status_code": code,
-                "content_type": content_type, "cleaned_text_full": text,
+                "content_type": content_type, "cleaned_text_full": text, "cleaned_text": text,
                 "raw_truncated": False, "text_truncated": False,
-                "raw_content_base64": "c291cmNl", "raw_content_sha256": "synthetic-hash",
+                "raw_content_base64": base64.b64encode(raw).decode(), "raw_content_sha256": digest,
+                "full_cleaned_text_sha256": digest, "cleaned_text_sha256": digest,
+                "content_supported": content_type in {"text/html", "text/plain"},
                 "redirect_chain": [{"url": "https://example.com/final", "status_code": code}],
                 "response_headers": {}, "challenge_detected": False}
     response.update(extra)
@@ -53,8 +61,70 @@ class FetchTests(unittest.TestCase):
         self.assertIs(result["selected_native"], native)
         self.assertIs(result["response"], native["response"])
         self.assertEqual(result["selected_attempt"], 0)
-        self.assertEqual(result["attempts"][0]["native"]["response"]["raw_content_base64"], "c291cmNl")
+        self.assertEqual(result["attempts"][0]["native"]["response"]["raw_content_base64"], native["response"]["raw_content_base64"])
         transport.assert_called_once()
+
+    def native_long_page(self):
+        # Real native artifact constructor, no network or optional HTML parser.
+        raw = ("Quoted CSV field behavior is source evidence.\n" * 700).encode()
+        response = SimpleNamespace(encoding="utf-8", status_code=200, headers={"content-type": "text/plain; charset=utf-8"})
+        artifact = web._artifact("https://example.com/article", response, raw, [], 20000)
+        return {"schema": "web-research/v1", "ok": True, "status": "partial", "response": artifact, "attempts": []}
+
+    def test_complete_retained_capture_keeps_short_native_view_and_mining_prefix(self):
+        from harness import research_mining as mining, research_runtime as runtime
+        native = self.native_long_page()
+        original = copy.deepcopy(native)
+        result = self.run_fetch(Mock(return_value=native))
+        self.assertTrue(result["requested_source_complete"])
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(native, original)
+        self.assertIs(result["selected_native"], native)
+        self.assertEqual(native["status"], "partial")
+        self.assertTrue(native["response"]["text_truncated"])
+        self.assertEqual(len(native["response"]["cleaned_text"]), 20000)
+        self.assertGreater(len(result["text"]), 20000)
+        record = {"action": "fetch", "project": {"project_id": "p_fixture"}, "payload": result}
+        key = "sha256:" + hashlib.sha256(runtime.wire(record)).hexdigest()
+        projected = runtime.projection(record, key)
+        self.assertLessEqual(len(runtime.wire(projected)), runtime.MODEL_BYTES)
+        self.assertLessEqual(len(projected["text"]), 8192)
+        self.assertIsNotNone(projected["next_offset"])
+        store = SimpleNamespace(project=record["project"], get=lambda artifact_id: record)
+        plan = mining.prepare({"query": "What is the CSV field behavior?", "extraction_schema": ["behavior"],
+                               "artifact_ids": [key]}, store, {"id": "fixture-only-no-inference"},
+                              runtime.text_view, runtime.wire, runtime.digest)
+        source = plan["sources"][0]
+        self.assertEqual(source["input_chars"], mining.PAGE_CHARS)
+        self.assertTrue(source["input_truncated"])
+        self.assertEqual(source["source_chars"], len(result["text"]))
+        self.assertEqual(source["text"], result["text"][:14000])
+
+    def test_unproven_retained_capture_never_becomes_complete(self):
+        cases = [
+            {"raw_truncated": True}, {"content_supported": False}, {"challenge_detected": True},
+            {"status_code": 500}, {"full_cleaned_text_sha256": None},
+            {"full_cleaned_text_sha256": "0" * 64}, {"cleaned_text_sha256": "0" * 64},
+            {"raw_content_sha256": "0" * 64}, {"raw_content_base64": "invalid!"},
+            {"cleaned_text": "not a prefix", "cleaned_text_sha256": hashlib.sha256(b"not a prefix").hexdigest()},
+            {"text_truncated": False},
+            {"cleaned_text_full": ""}, {"cleaned_text_full": " " * 25000},
+        ]
+        for changed in cases:
+            with self.subTest(changed=list(changed)):
+                native = self.native_long_page()
+                native["response"].update(changed)
+                result = self.run_fetch(Mock(return_value=native))
+                self.assertFalse(result["requested_source_complete"])
+
+    def test_missing_hashes_do_not_promote_an_untruncated_legacy_packet(self):
+        for field in ("full_cleaned_text_sha256", "cleaned_text_sha256", "raw_content_sha256"):
+            with self.subTest(field=field):
+                native = page()
+                del native["response"][field]
+                result = self.run_fetch(Mock(return_value=native))
+                self.assertEqual(result["status"], "partial")
+                self.assertFalse(result["requested_source_complete"])
 
     def test_timeout_after_budget_retains_failure_without_more_calls(self):
         def timeout(url, **kwargs):
@@ -315,7 +385,7 @@ class FetchTests(unittest.TestCase):
         self.assertIsNone(marker["native"])
         self.assertGreater(marker["omitted_native"]["bytes"], 9 * 1024 * 1024)
         self.assertEqual(len(marker["omitted_native"]["sha256"]), 64)
-        self.assertEqual(marker["omitted_native"]["raw_content_sha256"], "synthetic-hash")
+        self.assertEqual(marker["omitted_native"]["raw_content_sha256"], native["response"]["raw_content_sha256"])
 
     def test_selected_alias_duplicates_count_against_real_store_budget(self):
         native = page(raw_content_base64="A" * (9 * 1024 * 1024))

@@ -7,6 +7,7 @@ No alternate source establishes completeness of the originally requested work.
 """
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import hashlib
@@ -89,6 +90,29 @@ def _fetch_text(packet):
     return str((packet.get("response") or {}).get("cleaned_text_full") or "")
 
 
+def _retained_capture_complete(response, max_bytes):
+    """A short display window does not truncate the separately retained source."""
+    if (response.get("raw_truncated") is not False or response.get("content_supported") is not True
+            or response.get("challenge_detected") is not False
+            or type(response.get("status_code")) is not int or not 200 <= response["status_code"] < 300):
+        return False
+    full, shown, encoded = (response.get(key) for key in ("cleaned_text_full", "cleaned_text", "raw_content_base64"))
+    if (not all(isinstance(value, str) for value in (full, shown, encoded)) or not full.strip()
+            or not full.startswith(shown) or not shown
+            or type(response.get("text_truncated")) is not bool
+            or response["text_truncated"] != (len(shown) < len(full))
+            or len(encoded) > 4 * ((max_bytes + 2) // 3)):
+        return False
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+        return (len(raw) <= max_bytes
+                and hashlib.sha256(raw).hexdigest() == response.get("raw_content_sha256")
+                and hashlib.sha256(full.encode("utf-8")).hexdigest() == response.get("full_cleaned_text_sha256")
+                and hashlib.sha256(shown.encode("utf-8")).hexdigest() == response.get("cleaned_text_sha256"))
+    except (ValueError, UnicodeError):
+        return False
+
+
 def _wire(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
@@ -166,8 +190,8 @@ def fetch(url, *, timeout=30, max_bytes=2_097_152, max_chars=20_000, max_redirec
         thin = mode == "fetch" and "html" in str(artifact.get("content_type", "")).lower() and len(text.strip()) < THIN_HTML_CHARACTERS
         if thin and scope == "full_extraction":
             scope = "thin_extraction"
-        complete = (candidate["kind"] == "original" and mode == "fetch" and packet.get("status") == "ok"
-                    and not thin and not artifact.get("raw_truncated", True) and not artifact.get("text_truncated", True))
+        complete = (candidate["kind"] == "original" and mode == "fetch" and packet.get("status") in {"ok", "partial"}
+                    and not thin and _retained_capture_complete(artifact, max_bytes))
         result.update(ok=True, selected_attempt=len(result["attempts"]) - 1,
                       selected_kind=candidate["kind"], selected_native=packet,
                       selected_url=artifact.get("final_url") or packet.get("page_url") or candidate["url"],
