@@ -1058,6 +1058,21 @@ Upstream references: [Pi configuration](https://github.com/earendil-works/pi/blo
 [Agent Framework](https://pypi.org/project/agent-framework-core/1.21.0/),
 [Harness2](https://github.com/google-research/harness2/tree/1cfe254e8d25b15f37048c3730134686abe60335).
 
+## Inspect captured-history receipts
+
+Use the existing `pi_memory_capture_status` tool for persisted current-home
+capture receipts after reopen. It reports capture-time prefix/export hashes,
+age and known gaps through a bounded read-only helper. It opens no palace and
+starts no capture, miner, model, service or scan of unknown sessions. Source
+metadata matches do not prove current bytes; `current_raw_bytes_verified` stays
+false. Exact native chunk coverage and trusted claim retrieval remain separate.
+
+The catalog keeps its older format for rollback. New receipt metadata stays in
+the existing private latest capture record. Missing legacy hashes are not
+invented. Explicit catch-up uses the existing selected-root capture CLI; no
+unattended old-session import is installed. See
+[capture scope and status limits](adapters/pi/memory-capture/README.md).
+
 ## Prepare the first checked report
 
 After package setup, run and check a new report through the normal managed
