@@ -25,7 +25,7 @@ summaries. See [PROJECT-BOARD.md](PROJECT-BOARD.md) for current asset flags and 
 A fresh isolated Linux component fixture exercised the actual stable entry and
 browser: three cards, a comment, a review summary, filtering, desktop/mobile
 layout and disabled effects. Seventeen browser requests stayed on its loopback
-origin and returned200. Ownership close stopped the listener; an exclusive home
+origin and returned 200. Ownership close stopped the listener; an exclusive home
 lease then succeeded. Existing board/knowledge database bytes and borrowed public
 package artifacts stayed unchanged. This uses one verified borrowed Hermes
 environment; the other four selected packages remain uninstalled in that fixture.
@@ -36,6 +36,77 @@ exact upstream source and explicit import closed that defect without relaxing
 the guard. Focused maintenance stage/plan controls then passed. Complete hosted
 checks, installer-owned asset admission, normal fresh installation, existing-home
 controller adoption, remote exposure and effect controls remain separate work.
+
+## Explain how to repair invalid intake parts - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An ordinary report attempt repeatedly supplied an invented card ID while routing
+new work. The refusal said to amend an existing card without explaining that a
+new task must omit task_id. State that correction in the existing refusal and
+task_id description. Also explain that held, question and control parts must
+omit execute or set it to false. This applies to all requests, alongside the
+first-report instruction guidance.
+
+The same validation still refuses these inputs before freezing intent or
+writing cards. No argument fields, defaults, authority, execution conditions,
+card recovery or completion behavior change. The running attempt keeps its
+original source. Source checks do not establish future model recovery or speed.
+
+## State the first-report preparation and routing order - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An observed first-report attempt searched for a skill name as a tool, activated
+graph/memory schemas and reached the writer before routing the request. Its
+source ID was valid. Routing then failed because a new task supplied task_id,
+an amendment named no existing card, and a held part requested execution. Keep
+that evidence distinct from a missing source ID or a faulty writer/checker.
+
+Use the existing direct project_prepare inspection, exact installed skill path
+and current pending request ID. Supply a new-task route template without task_id;
+amend only an actual existing card and use execute only for task/amend. The host
+still prepares identity, Git and an empty board. The agent performs normal native
+routing; no host card, approval, exposure change or automatic handoff is added.
+Keep the original writer, input pins, independent checker and execution gates.
+
+Qualification covers source contracts and actual native instruction delivery,
+including all five preparation sections and existing refusal controls. Matched
+serializer measurements and passive cache timings justify clearer guidance;
+they do not prove a future token, latency, task-success or report-quality gain.
+Existing running attempts retain their source and prompt unchanged.
+
+## Answer questions without pausing approved work - 2026-10-26
+
+Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.
+
+Reuse durable discussion dispositions and a source-bound review/discussion/
+execution phase in the existing intake module. A question or draft can receive
+a normal answer without a forced tool, card or checkpoint. Retain its original
+capture and expose a bounded deferred-source preview with exact-source lookup.
+A deferred old source cannot authorize new work or controls; use the current
+explicit owner source. Routing classification is not an approval detector.
+
+After a status answer, the existing source-bound retained-work decision can
+continue an already-approved ready task. Do not copy a blanket discussion hold
+that suppresses that task. Discussion and deferral add no progress credit and
+cannot promote a proposed task. Keep explicit pause, scope/failure/dependency
+holds, genuine committed research progress and bound recovery independent.
+Legacy/historical pending inputs and frozen uncertain routing intents remain
+pending; a lost routing reply retains its original idempotent recovery path.
+A source deferred during read-only validation cannot start board writes.
+
+Source/native controls distinguish empty-queue questions, approved work during
+status/draft discussion, explicit holds, current approval, reload and uncertain
+routing. A controlled reference module retains its queue but suppresses native
+continuation after a status question; that is a model-free component result,
+not a claim about a live private session. No template, MCP, model, service,
+board engine or completion ledger is added. Fresh-fixture admission exceeded
+the unchanged ten-second deadline during qualification; those failures remain
+retained. A targeted normal read-only continuation covers the remaining write
+boundary. Full final-source recovery/compaction repetition remains held; earlier
+full passes apply to their recorded source revisions. Natural model conversation
+and useful root outcomes remain separate acceptance work.
 
 ## Explain optional provider keys and actual fallback limits - 2026-10-26
 
