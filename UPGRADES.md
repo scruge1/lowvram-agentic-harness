@@ -5,6 +5,22 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Explain how to repair invalid intake parts - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An ordinary report attempt repeatedly supplied an invented card ID while routing
+new work. The refusal said to amend an existing card without explaining that a
+new task must omit task_id. State that correction in the existing refusal and
+task_id description. Also explain that held, question and control parts must
+omit execute or set it to false. This applies to all requests, alongside the
+first-report instruction guidance.
+
+The same validation still refuses these inputs before freezing intent or
+writing cards. No argument fields, defaults, authority, execution conditions,
+card recovery or completion behavior change. The running attempt keeps its
+original source. Source checks do not establish future model recovery or speed.
+
 ## Answer questions without pausing approved work - 2026-10-26
 
 Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.
