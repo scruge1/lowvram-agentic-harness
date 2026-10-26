@@ -26,6 +26,64 @@ loss. Kernel exit, unreaped zombies and final owner reaping are distinct evidenc
 Synthetic SSE and explicit memory fixtures do not qualify real model behavior,
 whole-profile delegation, model capacity or root-outcome quality.
 
+## Connect the optional deterministic component lab - 2026-10-26
+
+Parent commit: `3808ec7610d3e2d083cd68124c75d381e956a74d`.
+
+The full profile installed Harness2 and DeepSeek but exposed no portable lab
+status or demo. Add a full-profile-only Pi tool and status command, using the
+existing home lifecycle and descendant process guards. Check selected pins,
+recorded artifacts, local source checkout identity and installed Harness2 code.
+Invoke the pinned native scripted demo in both modes and independently verify
+the selected answers against both signed input ledgers. Keep unique run logs and
+partial failures. Model experiments stay held; no project authority is granted.
+
+Source adoption passed actual Pi 1.4 registration, status, demo, profile refusal,
+active abort and parent loss with owned descendant settlement and exclusive home
+lease release. The fixture copied public component dependencies and made no
+provider HTTP requests. It was not a fresh full install or an agent quality test.
+The environment wiring changes home.py outside the narrow existing core-source
+adoption frontier; that updater remains unchanged and may hold an older home.
+
+## Explain how to repair invalid intake parts - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An ordinary report attempt repeatedly supplied an invented card ID while routing
+new work. The refusal said to amend an existing card without explaining that a
+new task must omit task_id. State that correction in the existing refusal and
+task_id description. Also explain that held, question and control parts must
+omit execute or set it to false. This applies to all requests, alongside the
+first-report instruction guidance.
+
+The same validation still refuses these inputs before freezing intent or
+writing cards. No argument fields, defaults, authority, execution conditions,
+card recovery or completion behavior change. The running attempt keeps its
+original source. Source checks do not establish future model recovery or speed.
+
+## State the first-report preparation and routing order - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+An observed first-report attempt searched for a skill name as a tool, activated
+graph/memory schemas and reached the writer before routing the request. Its
+source ID was valid. Routing then failed because a new task supplied task_id,
+an amendment named no existing card, and a held part requested execution. Keep
+that evidence distinct from a missing source ID or a faulty writer/checker.
+
+Use the existing direct project_prepare inspection, exact installed skill path
+and current pending request ID. Supply a new-task route template without task_id;
+amend only an actual existing card and use execute only for task/amend. The host
+still prepares identity, Git and an empty board. The agent performs normal native
+routing; no host card, approval, exposure change or automatic handoff is added.
+Keep the original writer, input pins, independent checker and execution gates.
+
+Qualification covers source contracts and actual native instruction delivery,
+including all five preparation sections and existing refusal controls. Matched
+serializer measurements and passive cache timings justify clearer guidance;
+they do not prove a future token, latency, task-success or report-quality gain.
+Existing running attempts retain their source and prompt unchanged.
+
 ## Answer questions without pausing approved work - 2026-10-26
 
 Parent commit: `0db79bbdaeefba0b1da0136c85bdacc62080967a`.

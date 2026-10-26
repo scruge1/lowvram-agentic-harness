@@ -52,7 +52,9 @@ const loader = new sdk.DefaultResourceLoader({ cwd: project, agentDir: path.join
   disabledBuiltinExtensions: ['mcp', 'codemode', 'tool-search'], noSkills: true, noPromptTemplates: true, noThemes: true });
 await loader.reload(); assert.deepEqual(loader.getExtensions().errors, []);
 const credentials = { async read() {}, async list() { return []; }, async modify(_id, fn) { return fn(undefined); }, async delete() {} };
-const modelRuntime = await sdk.ModelRuntime.create({ credentials, modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+const catalog = new Map();
+const modelsStore = { async read(id) { return catalog.get(id); }, async write(id,value) { catalog.set(id,value); }, async delete(id) { catalog.delete(id); } };
+const modelRuntime = await sdk.ModelRuntime.create({ credentials, modelsStore, modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
 const model = { id: 'fixture-no-inference', provider: 'fixture-local', name: 'No inference', api: 'openai-completions',
   baseUrl: 'http://127.0.0.1:1/v1', input: ['text'], reasoning: false, contextWindow: 32768, maxTokens: 4096,
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
@@ -88,6 +90,14 @@ try {
   assert.ok(payload); const serialized = JSON.stringify(payload);
   assert.ok(serialized.includes('Action argv TEMPLATE JSON:')); assert.ok(serialized.includes('hardware-report.md'));
   assert.ok(serialized.includes('first_project.py run launches an agent')); assert.equal(http, 0);
+  const taskSection = payload.messages.find(item => JSON.stringify(item).includes('CURRENT_PENDING_REQUEST_ID_FROM_STATUS'));
+  assert.ok(taskSection, 'The actual native provider input must include the current-source route template');
+  assert.ok(instructions.includes('project_prepare'));
+  assert.ok(instructions.includes('kanban_intake_status'));
+  const skillArgs = JSON.parse(instructions.split('native read with EXACTLY this JSON: ')[1].split('\n')[0]);
+  assert.equal(skillArgs.path, path.join(home, 'agent/skills/supervised-tasks/SKILL.md'));
+  assert.ok(serialized.includes('Use amend only for an actual existing board card'));
+  checks.push('native-model-input-retains-direct-preparation-exact-skill-and-new-task-template');
   checks.push('actual-native-model-input-contains-task-template-with-zero-http');
   assert.ok(!(await call())?.block); checks.push('unchanged-delivered-normal-context-opens-only-existing-context-gate');
   assert.deepEqual(errors, []); assert.equal(fs.existsSync(path.join(project, 'hardware-report.md')), false);
