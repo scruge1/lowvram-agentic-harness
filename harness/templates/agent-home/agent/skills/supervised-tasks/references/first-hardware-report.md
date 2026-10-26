@@ -22,10 +22,15 @@ action and complete report fit in one response. Copy the five exact fact labels 
 units into a three-column Markdown table. Write `unknown` for unavailable
 observations. Cite `hardware-facts.json` and explain the limits in ordinary text.
 
-Pass the complete report text in the action argv. A short Python `-c` program
-can write `sys.argv[1]` to the relative `hardware-report.md` with UTF-8 encoding.
-The report text must be a real argv string in that same call. Do not invent or
-assume a `/tmp` body file. Declare only `hardware-report.md` as the output.
+Use the fixed action argv template in the prepared `FIRST-PROJECT.md` and the
+existing `.icm/workspace/PROJECT-SSOT.md`. Replace only its final string with
+your complete report text. Its installed Python `-I -B -c` program writes that
+separate argv value as UTF-8 to only `hardware-report.md`, with exclusive create
+mode. Existing files and symlinks refuse; preserve them for inspection rather
+than deleting or replaying. Do not invent an assumed body file. Declare only
+`hardware-report.md` as output and keep prepare's original verifier separate.
+`first_project.py run` launches the agent and prepares a project; it is not the
+report-writing action and must not be nested inside `workflow_step.action`.
 
 Use prepare's exact `check_argv` as `workflow_step.verify`. The fixed checker
 always reads relative to cwd and returns 1 for missing or invalid files, so the

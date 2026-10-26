@@ -27,6 +27,15 @@ INPUTS = ("hardware-facts.json", "FIRST-PROJECT.md")
 MANIFEST = "first-project.json"
 OUTPUT = "hardware-report.md"
 MAX_BYTES = 64 * 1024
+REPORT_TEXT_PLACEHOLDER = "<COMPLETE_REPORT_TEXT>"
+REPORT_WRITER = (
+    "import sys\n"
+    "from pathlib import Path\n"
+    "if len(sys.argv) != 2 or sys.argv[1] == '<COMPLETE_REPORT_TEXT>':\n"
+    "    raise SystemExit('Pass the complete report text as one separate argv value')\n"
+    "with Path('hardware-report.md').open('xb') as report:\n"
+    "    report.write(sys.argv[1].encode('utf-8'))\n"
+)
 
 
 class FirstProjectError(ValueError):
@@ -117,6 +126,12 @@ def prepare(home, name):
         admission = agent_home.project(home, name)
         if root.is_symlink() or root.resolve(strict=True) != root:
             raise FirstProjectError("New project path is redirected.")
+        task_route = root / ".icm/workspace/PROJECT-SSOT.md"
+        agent_route = root / "AGENTS.md"
+        for route in (task_route, agent_route):
+            if route.is_symlink() or not route.is_file() or route.resolve(strict=True) != route:
+                raise FirstProjectError("Prepared project is missing its existing normal instruction route: " + str(route))
+        action_template = [sys.executable, "-I", "-B", "-c", REPORT_WRITER, REPORT_TEXT_PLACEHOLDER]
         instructions = (
             "# First hardware report\n\n"
             "Create hardware-report.md, a useful 250-400 word Markdown report from hardware-facts.json. "
@@ -138,12 +153,30 @@ def prepare(home, name):
             "Do not edit these inputs or first-project.json. A passed checker still needs semantic review. "
             "No model/server/GPU changes, tuning, downloads, cloud fallback or commits.\n\n"
             "Word count uses Unicode word tokens; joined filenames, decimal/grouped numbers and hyphenated "
-            "words count as one. Markdown separator characters do not count as words.\n"
+            "words count as one. Markdown separator characters do not count as words.\n\n"
+            "## Report-writing action template\n\n"
+            "Use this argv TEMPLATE as workflow_step.action with cwd set to this project and "
+            "outputs set to [\"hardware-report.md\"]. Replace ONLY the final argv string with your COMPLETE "
+            "model-authored report, including its table and prose. Keep the fixed code and path unchanged. "
+            "The body is a separate string, not a shell command or an assumed body-file path. "
+            "The writer creates only hardware-report.md with exclusive x mode and UTF-8 bytes; an occupied "
+            "file or symlink refuses. Inspect any existing output and retain its evidence; do not delete, "
+            "overwrite or automatically replay it.\n\n"
+            "Action argv TEMPLATE JSON:\n" + json.dumps(action_template, ensure_ascii=False) + "\n\n"
+            "first_project.py run launches an agent and prepares a new project; it is NOT a report writer. "
+            "Do not nest that command inside the writing action or invent --input/--output/--manifest-sha256 flags. "
+            "Use the original pinned check_argv separately as workflow_step.verify.\n"
         )
         contents = {"hardware-facts.json": json.dumps(facts, indent=2) + "\n", "FIRST-PROJECT.md": instructions}
         for relative, text in contents.items():
             with (root / relative).open("xb") as stream:
                 stream.write(text.encode("utf-8"))
+        # The normal context tool already delivers this existing requirements
+        # surface. A Markdown link alone does not make a file a required source.
+        with task_route.open("ab") as stream:
+            stream.write(("\n## Prepared report task\n\nSource: [FIRST-PROJECT.md](../../FIRST-PROJECT.md).\n\n" + instructions).encode("utf-8"))
+        with agent_route.open("ab") as stream:
+            stream.write(b"\nReport task: follow [.icm/workspace/PROJECT-SSOT.md](.icm/workspace/PROJECT-SSOT.md) and [FIRST-PROJECT.md](FIRST-PROJECT.md).\n")
         manifest = {"schema": SCHEMA, "created_at": datetime.now(timezone.utc).isoformat(),
                     "inputs": {relative: digest(text.encode("utf-8")) for relative, text in contents.items()},
                     "output": OUTPUT, "words": {"minimum": 250, "maximum": 400}, "rows": _rows(facts)}
@@ -153,6 +186,7 @@ def prepare(home, name):
         return {"schema": SCHEMA, "status": "prepared", "project_root": str(root),
                 "admission": admission, "manifest_sha256": digest(raw),
                 "check_argv": [sys.executable, "-B", str(Path(__file__).resolve()), "check", "--expected-sha256", digest(raw)],
+                "action_argv_template": action_template,
                 "model_requests": 0, "semantic_review": "required_after_real_report"}
 
 
@@ -269,6 +303,10 @@ def run(home, name, *, mode="json"):
             "The following manifest pin binds the report inputs and checker only; it is not a project identity hash.\n"
             "Original manifest SHA-256: " + original_pin + "\n"
             "Original check_argv JSON: " + json.dumps(list(original_check_argv), ensure_ascii=False) + "\n"
+            "Writing action TEMPLATE JSON (replace ONLY its final string with your complete report body): "
+            + json.dumps(prepared["action_argv_template"], ensure_ascii=False) + "\n"
+            "Use this fixed argv through workflow_step, not first_project.py run as a nested writing action. "
+            "The complete task instructions/template are also in the existing PROJECT-SSOT.md delivered by project_context. "
             "Keep FIRST-PROJECT.md, hardware-facts.json and first-project.json unchanged. "
             "Do not change model/server/GPU settings, run tuning, download models or commit. "
             "A checker pass requires separate semantic review. Stop after this single task; "

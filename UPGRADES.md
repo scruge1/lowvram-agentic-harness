@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Give the first-report agent an exact writing template - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+A real failed report run repeatedly treated the first-project agent launcher
+as a report writer and supplied no report body. Give each newly prepared task
+a reviewed action argv template and put the same required instructions on its
+existing `PROJECT-SSOT.md` context surface. Keep `AGENTS.md` short and preserve
+the generated workspace text. A missing normal workspace refuses; preparation
+does not invent a replacement route or alter an existing failed project.
+
+The installed Python runs a fixed isolated program for only the relative
+`hardware-report.md`. The agent passes its complete report as a separate argv
+string; exclusive create mode refuses occupied files/symlinks and UTF-8 preserves
+literal text. This is no new writer CLI, controller, canned report or automatic
+execution. Keep the pinned checker, empty-directory negative control, project
+discovery/intake/context gates and separate semantic review.
+
+Source controls execute the generated template with quotes, newlines, dollar
+signs, backticks and Unicode, check exact bytes and unchanged inputs, and refuse
+missing/placeholder text, occupied outputs and dangling symlinks. Native context
+delivery and useful actual model output remain separate acceptance evidence.
+
 ## Score complete cached mining inputs without inference - 2026-10-25
 
 Parent commit: `fd096f30bf027f8fb26b0278007ba5d1f25d8c3a`.

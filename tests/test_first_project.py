@@ -11,6 +11,15 @@ from unittest import mock
 from harness import first_project, hardware_probe, home, onboarding
 
 
+def fixture_board(_home, request):
+    # Normal home.project admission creates this required surface. Board/package
+    # ownership remains an explicit fixture in these source/file tests.
+    workspace = Path(request["project_root"]) / ".icm/workspace"
+    workspace.mkdir(parents=True)
+    (workspace / "PROJECT-SSOT.md").write_text("# Synthetic existing workspace\n\nKeep this original route.\n", encoding="utf-8")
+    return {"fixture_board_admission": True}
+
+
 class FirstProjectTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -39,7 +48,7 @@ class FirstProjectTests(unittest.TestCase):
         # board transport are explicit fixtures, not actual Hermes acceptance.
         with mock.patch.object(onboarding, "inventory", return_value=self.observed) as inventory, \
              mock.patch.object(home, "check_package", return_value=None), \
-             mock.patch.object(home, "board", return_value={"fixture_board_admission": True}) as board:
+             mock.patch.object(home, "board", side_effect=fixture_board) as board:
             result = first_project.prepare(self.home, name)
         inventory.assert_called_once_with(self.home / "projects")
         self.assertEqual(board.call_count, 1)
@@ -87,6 +96,75 @@ class FirstProjectTests(unittest.TestCase):
         self.assertEqual(observation["changes"], [])
         self.assertGreater(observation["storage"]["total_bytes"], 0)
         self.assertIn("total_gb", observation["hardware"]["ram"])
+
+    def test_generated_template_and_task_body_use_existing_context_routes(self):
+        project, result = self.prepare()
+        instructions = (project / "FIRST-PROJECT.md").read_text(encoding="utf-8")
+        template = json.loads(instructions.split("Action argv TEMPLATE JSON:\n", 1)[1].split("\n", 1)[0])
+        self.assertEqual(template, result["action_argv_template"])
+        self.assertEqual(template[0], result["check_argv"][0])
+        self.assertEqual(template[1:4], ["-I", "-B", "-c"])
+        route = (project / ".icm/workspace/PROJECT-SSOT.md").read_text(encoding="utf-8")
+        self.assertTrue(route.startswith("# Synthetic existing workspace\n\nKeep this original route.\n"))
+        self.assertIn(instructions, route)
+        self.assertLess(len((project / "AGENTS.md").read_bytes()), 1024)
+        self.assertIn("it is NOT a report writer", instructions)
+        self.assertEqual(set(first_project.INPUTS), {"hardware-facts.json", "FIRST-PROJECT.md"})
+
+    def test_generated_writer_executes_literal_complete_argv_without_shell_and_refuses_overwrite(self):
+        project, result = self.prepare()
+        template = json.loads((project / "FIRST-PROJECT.md").read_text(encoding="utf-8")
+                              .split("Action argv TEMPLATE JSON:\n", 1)[1].split("\n", 1)[0])
+        body = ('# Synthetic writer fixture\n\n"double" and \'single\' quotes.\n'
+                '$HOME $(touch shell-effect) `touch shell-effect`\n'
+                "__import__('pathlib').Path('shell-effect').write_text('bad')\n"
+                'Unicode: 漢字🙂 café. Backslash: \\ and literal dollars: $$.\r\nFinal line.\n')
+        before = {p.relative_to(project): p.read_bytes() for p in project.rglob("*") if p.is_file()}
+        command = template[:-1] + [body]
+        ran = subprocess.run(command, cwd=project, shell=False, capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
+        self.assertEqual(ran.returncode, 0, ran.stderr)
+        output = project / "hardware-report.md"
+        self.assertEqual(output.read_bytes(), body.encode("utf-8"))
+        self.assertFalse((project / "shell-effect").exists())
+        for relative, raw in before.items():
+            self.assertEqual((project / relative).read_bytes(), raw)
+        occupied = subprocess.run(template[:-1] + ["Replacement must not overwrite."], cwd=project, shell=False,
+                                  capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
+        self.assertNotEqual(occupied.returncode, 0)
+        self.assertEqual(output.read_bytes(), body.encode("utf-8"))
+
+    def test_writer_placeholder_or_missing_body_does_not_create_a_report(self):
+        project, result = self.prepare()
+        template = result["action_argv_template"]
+        for command in (template, template[:-1]):
+            ran = subprocess.run(command, cwd=project, shell=False, capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
+            self.assertNotEqual(ran.returncode, 0)
+            self.assertFalse((project / "hardware-report.md").exists())
+
+    def test_generated_writer_refuses_a_dangling_symlink_without_touching_its_target(self):
+        project, result = self.prepare()
+        target = self.root / "uncreated-target.md"
+        output = project / "hardware-report.md"
+        try:
+            output.symlink_to(target)
+        except OSError:
+            self.skipTest("This platform does not permit owned symlink creation")
+        ran = subprocess.run(result["action_argv_template"][:-1] + ["Synthetic body"], cwd=project,
+                             shell=False, capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
+        self.assertNotEqual(ran.returncode, 0)
+        self.assertTrue(output.is_symlink())
+        self.assertFalse(target.exists())
+
+    def test_missing_normal_workspace_refuses_instead_of_inventing_a_route(self):
+        with mock.patch.object(onboarding, "inventory", return_value=self.observed), \
+             mock.patch.object(home, "check_package", return_value=None), \
+             mock.patch.object(home, "board", return_value={"fixture_missing_workspace": True}):
+            with self.assertRaisesRegex(ValueError, "existing normal instruction route"):
+                first_project.prepare(self.home, "missing-workspace")
+        project = self.home / "projects/missing-workspace"
+        self.assertTrue((project / ".git").is_dir())
+        self.assertFalse((project / "FIRST-PROJECT.md").exists())
+        self.assertFalse((project / ".icm/workspace").exists())
 
     def test_prepare_refuses_occupied_project_before_observation_or_changes(self):
         project = self.home / "projects/existing"
