@@ -108,6 +108,36 @@ class MemoryRuntimeTests(unittest.TestCase):
                 self.runtime.dispatch(self.home, self.config, self.records, "validated", ["--query", "private token"])
             prepare.assert_not_called()
 
+    def test_capture_status_uses_bound_helper_and_shared_consumer_without_memory_packages_or_hub(self):
+        project = SOURCE.parents[1]
+        for relative in self.runtime.HELPERS["capture-status"]:
+            path = self.home / "runtime" / relative
+            path.write_bytes((project / relative).read_bytes())
+            self.records[relative] = self.runtime.digest(path)
+        output = io.StringIO()
+        with mock.patch.object(self.runtime, "prepare_runtime", side_effect=AssertionError("Status imports no memory package")), \
+             mock.patch.object(self.runtime, "require_hub", side_effect=AssertionError("Status opens no hub")), \
+             mock.patch.object(self.runtime.importlib, "import_module", side_effect=AssertionError("No native memory import")), \
+             mock.patch.object(sys, "argv", []), contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as stopped:
+                self.runtime.dispatch(self.home, self.config, self.records, "capture-status", [])
+        self.assertEqual(stopped.exception.code, 0)
+        self.assertEqual(json.loads(output.getvalue())["status"], "not_observed")
+        self.assertFalse((self.home / "memory/pi-capture").exists())
+        self.assertFalse((self.home / "agent/sessions").exists())
+
+    def test_capture_status_refuses_extra_arguments_and_changed_source_before_execution(self):
+        with mock.patch.object(self.runtime.runpy, "run_path") as run, \
+             mock.patch.object(self.runtime, "prepare_runtime") as prepare:
+            with self.assertRaisesRegex(ValueError, "fixed sessions"):
+                self.runtime.dispatch(self.home, self.config, self.records, "capture-status", ["--state-root", "/foreign"])
+            path = self.home / "runtime" / self.runtime.HELPERS["capture-status"][0]
+            path.write_text("# Controlled source drift\n")
+            with self.assertRaisesRegex(ValueError, "source byte drift"):
+                self.runtime.dispatch(self.home, self.config, self.records, "capture-status", [])
+            run.assert_not_called()
+            prepare.assert_not_called()
+
     def test_mcp_uses_direct_stdio_server_with_fixed_palace(self):
         observed = []
         server = SimpleNamespace(main=lambda: observed.append(list(sys.argv)))

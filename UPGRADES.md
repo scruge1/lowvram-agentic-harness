@@ -5,6 +5,37 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Retain scoped capture receipts across native reopen - 2026-10-26
+
+Parent commit: `b3d55f6f28df2c054c529cf64404e5dbb37355ea`.
+
+The existing capture status lived only in extension memory. Reopening lost that
+view, while the source catalog recorded only size and mtime. Reuse the current
+capture reader, native formatter, existing latest receipt and status tool. Hash
+raw prefixes and exports while those streams are already processed; do not add
+a second full-history pass. Preserve all original JSONL bytes and keep tool
+metadata distinct from full raw diagnostic evidence.
+
+Keep `sources.json` list values unchanged for retained consumers and rollback.
+Versioned hashes stay in existing `latest.json`; an older consumer can discard
+them without breaking its catalog. Missing receipts remain unverified until an
+explicit selected recapture. Record pending/failed mining separately from
+captured bytes. The status entry reuses the source-bound memory wrapper and
+shared home consumer, without importing memory packages or requiring a hub.
+It reads bounded metadata and stats, not raw bodies. Size/mtime agreement never
+becomes cryptographic currentness, claim trust, permission or task progress.
+
+Validation:37 Linux source controls and13 actual native SDK checks pass. The
+native fixture uses an owned offline core scaffold, a read-only supplied Pi and
+Python dependency, real native session create/open and the actual MemPalace3.11
+pure formatter in export-only mode. It covers persistent receipts, bounded
+model content, source/home/cancel refusals and conserved raw/config/catalog
+bytes, with no provider, miner, palace or service request. Source controls cover
+a stopped52 MiB stream, explicit catch-up, growth, no-op, legacy receipt loss,
+mining failure and metadata limits. Seven self-tests and pinned Ruff pass.
+These are component checks, not a new-host package install, whole managed CLI
+adoption, complete history indexing or useful model recall acceptance.
+
 ## Distinguish retained source capture from its short view - 2026-10-26
 
 Parent commit: `61600f0b73e0e1304ff0f1e96edc3e0c1a9a4bff`.

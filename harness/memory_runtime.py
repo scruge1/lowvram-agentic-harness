@@ -34,6 +34,7 @@ ONNX_MODULE = "chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2"
 ONNX_SOURCE = "chromadb/utils/embedding_functions/onnx_mini_lm_l6_v2.py"
 HELPERS = {
     "capture": ("adapters/pi/memory-capture/capture.py",),
+    "capture-status": ("adapters/pi/memory-capture/capture.py", "harness/home_entry.py"),
     "validated": ("adapters/pi/memory/validated_memory_query.py",
                   "adapters/pi/memory/memory_retrieval_policy.py"),
     "verify": ("adapters/pi/memory-capture/verify.py", "adapters/pi/memory-capture/capture.py"),
@@ -485,6 +486,23 @@ def dispatch(home: Path, config: dict, records: dict, mode: str, arguments: list
         return run_hub(home, config, arguments[0])
     if mode == "mcp" and arguments:
         raise MemoryRuntimeError("The home MCP entry uses fixed local stdio arguments")
+    if mode == "capture-status":
+        if arguments:
+            raise MemoryRuntimeError("Capture status uses only this home's fixed sessions and state")
+        # Reuse the stable shared consumer, without a palace or package import.
+        entry = checked_source(home, records, "harness/home_entry.py")
+        raw = entry.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != records["harness/home_entry.py"]:
+            raise MemoryRuntimeError("Memory status lifecycle source drift")
+        module = types.ModuleType("memory_capture_status_entry")
+        module.__file__, module.__package__ = str(entry), ""
+        exec(compile(raw, str(entry), "exec"), module.__dict__)
+        with module.consumer(home):
+            sys.path.insert(0, str(helper.parent))
+            sys.argv = [str(helper), "--status", "--sessions-root", str(home / "agent/sessions"),
+                        "--state-root", str(home / "memory/pi-capture")]
+            runpy.run_path(str(helper), run_name="__main__")
+        return 0
     if mode == "cli":
         if arguments[:1] in (["serve"], ["daemon"]) or any(value in {"--daemon", "--background"} for value in arguments):
             raise MemoryRuntimeError("Use the owned native hub; separate daemon/background writers are refused")
@@ -528,7 +546,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--home", required=True, type=Path)
     parser.add_argument("--bind", action="store_true", help="Print package/cache identity without importing or running memory")
-    parser.add_argument("mode", nargs="?", choices=("cli", "mcp", "capture", "validated", "verify",
+    parser.add_argument("mode", nargs="?", choices=("cli", "mcp", "capture", "capture-status", "validated", "verify",
                                                    "hub-start", "hub-status", "hub-stop", "hub-run"))
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
