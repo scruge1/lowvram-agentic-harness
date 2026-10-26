@@ -116,7 +116,9 @@ def validate_mine(store, artifact_id, identity_sha256, deadline=None):
     rebuilt = mining.prepare({"query": spec["question"], "extraction_schema": spec["extraction_schema"],
                               "artifact_ids": [s["artifact_id"] for s in spec["sources"]],
                               "recall_bias": "HIGH" if spec["recall_floor"] == 1 else "MEDIUM",
-                              "mine_timeout_seconds": spec["mine_timeout_seconds"]},
+                              "mine_timeout_seconds": spec["mine_timeout_seconds"],
+                              **({k: spec["research_binding"][k] for k in ("research_plan_id", "retrieval_plan_id")}
+                                 | {"identity_sha256": identity_sha256} if "research_binding" in spec else {})},
                              store, spec["model"], text_view, wire, digest)
     check_deadline(deadline)
     require(all(saved.get(key) == value for key, value in rebuilt.items())

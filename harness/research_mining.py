@@ -41,6 +41,11 @@ def system_prompt(fields):
 
 
 def prepare(request, store, model, text_view, wire, digest):
+    research_binding = None
+    if {"research_plan_id", "retrieval_plan_id"} & set(request):
+        from harness import research_plan
+        value, research_binding = research_plan.mining_intent(store, request, request.get("identity_sha256"))
+        request = {**request, **{k: value[k] for k in ("query", "extraction_schema", "recall_bias")}}
     question = request.get("query")
     fields = request.get("extraction_schema")
     ids = request.get("artifact_ids")
@@ -78,6 +83,8 @@ def prepare(request, store, model, text_view, wire, digest):
             "page_chars": PAGE_CHARS, "shard_fields": SHARD_FIELDS, "minimum_analysed_rate": MIN_ANALYSED_RATE,
             "mine_timeout_seconds": timeout,
             "sources": [{k: v for k, v in source.items() if k not in {"text", "user_prompt"}} for source in sources]}
+    if research_binding is not None:
+        spec["research_binding"] = research_binding
     return {"spec": spec, "run_identity_sha256": digest(wire({"project": store.project, "spec": spec})),
             "sources": sources, "shards": shards, "system_prompts": prompts}
 
