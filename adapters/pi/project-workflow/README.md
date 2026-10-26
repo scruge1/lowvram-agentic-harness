@@ -157,6 +157,25 @@ retained-task decision can continue its authorized ready task after the answer.
 Explicit pause, scope/failure/dependency holds stay independent. Neither the
 conversation phase nor deferral creates progress or root acceptance.
 
+Routing fresh approved work selects its own card in the current admitted
+project. Older approvals remain in the retained queue. An exact retry can
+recover selection after the route was saved; retrying an older source cannot
+replace navigation for a newer conversation. This does not change projects,
+promote a card, cancel older work, or clear an independent hold.
+
+If the current original source explicitly approved execution but the agent
+classified it as effect-free question/control, `kanban_intake_route` accepts
+`reclassify_current:true` with the corrected task/amendment. It preserves the
+original classification and freezes the replacement before board effects. The
+original explicit approval is still required. Deferred/stale sources, changed
+project identities and frozen effectful intents cannot use this correction.
+
+Queued input or an unsent editor draft suppresses automatic continuation at
+the intake checks, including after its awaited projection. Editor text remains
+unchanged. A later extension can still await after intake returns: the stock
+Pi1.4 final core commit has no synchronous editor veto. That separate native
+race remains open; these extension checks do not claim to close it.
+
 The coordinator can answer questions and inspect with native read-only tools.
 Project and task selection persist in the native session branch. Startup and
 branch navigation revalidate project, board and card identities through the
