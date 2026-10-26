@@ -33,7 +33,10 @@ REPORT_WRITER = (
     "from pathlib import Path\n"
     "if len(sys.argv) != 2 or sys.argv[1] == '<COMPLETE_REPORT_TEXT>':\n"
     "    raise SystemExit('Pass the complete report text as one separate argv value')\n"
-    "with Path('hardware-report.md').open('xb') as report:\n"
+    "target = Path('hardware-report.md')\n"
+    "if target.is_symlink():\n"
+    "    raise SystemExit('Report path is a symlink; preserve it for inspection')\n"
+    "with target.open('xb') as report:\n"
     "    report.write(sys.argv[1].encode('utf-8'))\n"
 )
 

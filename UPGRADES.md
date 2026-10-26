@@ -27,6 +27,9 @@ Source controls execute the generated template with quotes, newlines, dollar
 signs, backticks and Unicode, check exact bytes and unchanged inputs, and refuse
 missing/placeholder text, occupied outputs and dangling symlinks. Native context
 delivery and useful actual model output remain separate acceptance evidence.
+The first exact hosted Windows gate then exposed that Python3.13 exclusive open
+could follow a dangling symlink. Retain that failure and the native negative;
+the fixed writer explicitly refuses a symlink before its exclusive open.
 
 ## Bind declared research requests to immutable outcomes - 2026-10-26
 
