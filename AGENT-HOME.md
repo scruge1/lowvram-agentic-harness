@@ -482,7 +482,8 @@ for the home-configured provider cascade, `fetch` for public HTTP extraction, `r
 for a clean read-only Chromium context and `read` for saved evidence windows.
 New search/fetch/render evidence can advance retained-work progress after its
 actual committed result window matches the saved artifact and current native
-source binding. Cached reads, duplicate content, failed or empty results do not
+source binding. Only delivered text counts; incomplete search-hit JSON earns
+no credit. Cached reads, duplicate content, failed or empty results do not
 count. Successful bounded browser text remains partial evidence. Credits stay
 in native intake history; the 256-entry recent cache is not a session limit.
 This neither completes a task nor changes execution permission. Mining and

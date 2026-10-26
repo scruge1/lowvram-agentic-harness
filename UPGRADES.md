@@ -20,6 +20,9 @@ metadata-only replies, malformed windows and altered artifacts cannot supply cre
 Keep the existing execution sets, permission gates, failure/pause/wait states,
 settlement stop and task completion rules. Normalize search ordering and incidental
 rank/provider data; timestamps, artifact IDs and repeated content are not new work.
+Fingerprint the actual delivered text window, never unseen host text or hits.
+Incomplete/unparsable search-hit windows abstain. Focused counterexamples retained
+both unseen-tail and hidden-hit failures before this correction.
 Failed/empty/cached/read results abstain. Successful bounded browser text stays
 partial evidence. Mining/consensus accounting is deferred. Retain fingerprints in
 existing native intake snapshots and use a bounded recent cache only for lookup;

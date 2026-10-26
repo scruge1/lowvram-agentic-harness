@@ -13,6 +13,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
 }
 for (const name of ['source', 'pi-package', 'research-python', 'hermes-python', 'framework-python', 'fixture-parent'])
   assert.ok(options[name], `Missing --${name}`);
+const windowOnly = options['window-only'] === 'yes';
 assert.equal(process.platform, 'linux');
 const source = fs.realpathSync(options.source), piPackage = fs.realpathSync(options['pi-package']);
 const fixture = fs.mkdtempSync(path.join(fs.realpathSync(options['fixture-parent']), 'pi-research-progress-'));
@@ -61,7 +62,9 @@ _fixture_socket.create_connection = _no_network
 from harness import research_fetch as _fixture_retrieval
 def _fixture_fetch(url, **kwargs):
     assert url.startswith('https://example.org/native-progress/')
-    text = 'Controlled public research evidence: ' + url.rsplit('/', 1)[1]
+    suffix = url.rsplit('/', 1)[1]
+    text = (('New visible delivery facts. ' if suffix == 'window-visible-new' else 'Seven visible rows require42 litres per hour. ') * 500 + suffix
+            if suffix.startswith('window-') else 'Controlled public research evidence: ' + suffix)
     return {'ok': True, 'status': 'ok', 'text': text, 'content_scope': 'full_extraction',
             'requested_url': url, 'selected_url': url, 'selected_kind': 'requested_static',
             'requested_source_complete': True, 'attempts': [{'status': 'ok', 'fixture': 'synthetic_transport_no_http'}]}
@@ -163,7 +166,7 @@ async function createProfile(label) {
   const project = path.join(home, 'projects', label); fs.mkdirSync(project, { recursive: true });
   fs.writeFileSync(path.join(project, 'AGENTS.md'), '# Controlled research-progress fixture\n\nRetain unfinished authorized work. Evidence is not root acceptance.\n');
   const settings = sdk.SettingsManager.inMemory({ extensions: [path.join(runtime, 'adapters/pi/project-workflow/pi-kanban.ts'),
-    path.join(runtime, 'adapters/pi/research/research-tools.ts'), historyProbe], defaultTools: [], cacheWarming: 'off' });
+    path.join(runtime, 'adapters/pi/research/research-tools.ts'), ...(windowOnly ? [] : [historyProbe])], defaultTools: [], cacheWarming: 'off' });
   const loader = new sdk.DefaultResourceLoader({ cwd: project, agentDir, settingsManager: settings,
     noSkills: true, noPromptTemplates: true, noThemes: true, disabledBuiltinExtensions: ['mcp', 'codemode', 'tool-search'] });
   await loader.reload(); assert.deepEqual(loader.getExtensions().errors, []);
@@ -201,6 +204,31 @@ function durable(profile, artifact) {
 const started = Date.now();
 let failure;
 try {
+  if (windowOnly) {
+    const p = await createProfile('visible_window_only'), checks = [];
+    const arm = { kind: 'visible_window_only', project: p.project, task: p.task, session_id: p.manager.getSessionId(), checks };
+    arms.push(arm);
+    const returned = [];
+    for (const suffix of ['window-tail-first', 'window-tail-second', 'window-visible-new']) {
+      const before = await state(p);
+      const artifact = (await tool(p, 'web_research', { action: 'fetch', url: 'https://example.org/native-progress/' + suffix, timeout: 2 })).details;
+      const stored = durable(p, artifact), afterTool = await state(p);
+      const boundary = await p.session.extensionRunner.emitBoundary({ type: 'agent_before_settle', outcome: 'completed' },
+        entries => ({ contextEntries: [], contextMessages: [], llmMessages: [], pendingMessages: [], canContinue: entries.length > 0 }));
+      const afterSettle = await state(p), shown = (await tool(p, 'kanban_show', { task_id: p.task })).details.result.task;
+      assert.equal(shown.status, 'ready'); assert.equal(boundary.continue, true);
+      returned.push(artifact);
+      checks.push({ suffix, before, artifact, durable: stored, after_tool: afterTool, after_settle: afterSettle, boundary, task_status: shown.status });
+    }
+    assert.equal(returned[0].text, returned[1].text, 'The complete model-facing body window must match');
+    assert.equal(returned[0].window_sha256, returned[1].window_sha256);
+    assert.notEqual(returned[0].artifact_id, returned[1].artifact_id);
+    assert.notEqual(returned[0].text_sha256, returned[1].text_sha256, 'Stored but unseen full content must differ');
+    assert.deepEqual(checks.map(value => value.after_tool.progress - value.before.progress), [1, 0, 1]);
+    assert.deepEqual(checks.map(value => value.after_settle.stalls), [0, 1, 0]);
+    assert.notEqual(returned[1].text, returned[2].text);
+    assert.deepEqual(p.errors, []); assert.equal(httpAttempts, 0);
+  } else {
   for (const kind of ['new_artifact', 'repeat_cached_read']) {
     const p = await createProfile(kind), checks = [], artifacts = [];
     const arm = { kind, project: p.project, task: p.task, session_id: p.manager.getSessionId(), session_file: p.manager.getSessionFile(), initial: await state(p), checks };
@@ -325,6 +353,7 @@ try {
   negatives.push('injected-native-context-abort-during-validator-holds-credit');
   write(path.join(fixture, 'negative-checks.json'), { negatives, history, task: negative.task, state: snapshot(negative),
     abort_scope: 'Exact native context signal supplier is injected in owned fixture; no live model cancellation acceptance claim' });
+  }
 } catch (error) {
   failure = String(error);
 } finally {
@@ -346,7 +375,8 @@ with g.lease(h,expected_sha256=c['lifecycle_guard_sha256'],mode='exclusive'):
       hermes_python: options['hermes-python'], hermes_python_sha256: hash(options['hermes-python']),
       framework_python: options['framework-python'], framework_python_sha256: hash(options['framework-python']), framework_binding_sha256: framework.sha256 },
     guard_sha256: guarded.guard_sha256, home_exclusive_passed: exclusive, source_files: manifest,
-    scope: 'Injected zero-inference no-network counterexample on two new own retained unfinished fixture tasks; no source fix, effect-gate change, package install, model/service/MCP/Bun activation, live home or full9 adoption' };
+    scope: windowOnly ? 'Targeted actual committed-window regression on one new own unfinished fixture task; changed unseen host tails do not earn progress. No model/network/service or failed005 replay.'
+      : 'Injected zero-inference no-network progress controls on own retained unfinished fixture tasks; no effect-gate change, package install, model/service/MCP/Bun activation, live home or full9 adoption' };
   write(path.join(fixture, 'receipt.json'), receipt);
   for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, originalEnvironment);
   console.log(JSON.stringify({ status: receipt.status, failure, fixture, seconds: receipt.seconds, receipt_sha256: hash(path.join(fixture, 'receipt.json')),

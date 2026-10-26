@@ -406,8 +406,13 @@ class ResearchRuntime:
                 "Delivered research differs from its saved source")
         if action == "search":
             # Rank, provider order, timestamps and duplicate hits are not new
-            # evidence. Normalize the actual returned source observations.
-            hits = payload.get("hits")
+            # evidence. Incomplete hit JSON cannot expose unseen observations.
+            if offset != 0 or count != len(text):
+                return abstain
+            try:
+                hits = json.loads(window)
+            except ValueError:
+                return abstain
             if not isinstance(hits, list) or not 0 < len(hits) <= 100:
                 return abstain
             meaningful = set()
@@ -422,9 +427,7 @@ class ResearchRuntime:
                 return abstain
             evidence = wire(sorted(meaningful))
         else:
-            if not isinstance(text, str) or not text.strip():
-                return abstain
-            evidence = " ".join(text.split()).encode()
+            evidence = " ".join(window.split()).encode()
         require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
                 "Research project source changed during validation")
         return {**abstain, "credit": True, "status": "validated_source_evidence",

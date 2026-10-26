@@ -136,3 +136,25 @@ class ResearchProgressTests(TestCase):
         self.assertEqual(before, sorted((file.name, file.read_bytes()) for file in self.store.directory.iterdir()))
         with self.assertRaisesRegex(ValueError, "Unexpected progress"):
             self.validate(copy.deepcopy(delivered), provider="untrusted")
+
+    def test_unseen_fetch_tail_does_not_make_identical_delivered_window_new(self):
+        prefix = "Seven visible rows require42 litres per hour. " * 400
+        first, _ = self.saved(payload={"ok": True, "status": "ok", "text": prefix + "Unseen first tail", "content_scope": "full_extraction"})
+        second, _ = self.saved(payload={"ok": True, "status": "ok", "text": prefix + "Different unseen tail", "content_scope": "full_extraction"})
+        self.assertEqual(first["text"], second["text"])
+        self.assertNotEqual(first["text_sha256"], second["text_sha256"])
+        self.assertNotEqual(first["artifact_id"], second["artifact_id"])
+        self.assertEqual(self.validate(first)["fingerprint"], self.validate(second)["fingerprint"])
+
+    def test_incomplete_search_window_cannot_credit_hits_outside_delivery(self):
+        def hit(letter):
+            observation = {"url": "https://example.org/" + letter, "title": "Official source " + letter,
+                           "snippet": "Visible source facts. " * 90}
+            return {**observation, "observations": [observation]}
+        shared = [hit("a"), hit("b"), hit("c")]
+        first, _ = self.saved("search", {"ok": True, "status": "ok", "hits": shared + [hit("hidden-first")]})
+        second, _ = self.saved("search", {"ok": True, "status": "ok", "hits": shared + [hit("hidden-second")]})
+        self.assertEqual(first["text"], second["text"])
+        self.assertNotEqual(first["text_sha256"], second["text_sha256"])
+        self.assertFalse(self.validate(first)["credit"])
+        self.assertFalse(self.validate(second)["credit"])
