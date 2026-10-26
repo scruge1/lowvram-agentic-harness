@@ -244,7 +244,8 @@ class ResearchSetupTests(unittest.TestCase):
             try:
                 child = subprocess.Popen([sys.executable, "-B", "-m", "harness.home", "--home", str(self.home),
                                           "research", action, "--provider", "tavily"],
-                                         cwd=Path(__file__).resolve().parents[1], stdin=slave, stdout=slave, stderr=slave)
+                                         cwd=Path(__file__).resolve().parents[1], stdin=slave, stdout=slave, stderr=slave,
+                                         start_new_session=True)
                 os.close(slave)
                 slave = None
                 deadline = time.monotonic() + 8
