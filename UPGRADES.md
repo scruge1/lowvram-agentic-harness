@@ -33,6 +33,17 @@ cleanup; explicit fixture close fixes that control. Positive installed-home
 adoption, recurrence source handoff, local notification delivery and live-agent
 scheduled work remain separate.
 
+Canonicalize every positive temporary/home root, including secondary fixture
+homes, before invoking an installed entry. Windows can expose TEMP through an
+8.3 alias. Keep deliberate alias-refusal tests separate from positive readiness
+checks; do not relax the stable entry's path identity to fix a fixture.
+Hosted Windows run40321330664 completed its577-test group in194.188s with one
+assertion failure: a secondary fixture retained that alias and the entry
+correctly refused it. Derive the secondary home from the canonical primary
+fixture parent. Preserve the failed run; production guards and budgets are
+unchanged. The owned corrected original-method control also uses an explicitly
+aliased TEMP name while keeping both positive home paths canonical.
+
 ## Inspect current project sources before Library retrieval - 2026-10-26
 
 Parent commit: `b3d55f6f28df2c054c529cf64404e5dbb37355ea`.

@@ -181,7 +181,7 @@ class SchedulingTests(unittest.TestCase):
                 scheduling.inspect(self.root, "list")
 
     def test_installed_cli_missing_package_and_forbidden_commands_do_not_create_jobs(self):
-        other = Path(self.temp.name) / "Core home"
+        other = self.root.parent / "Core home"
         home.scaffold(other, profile="core", base_url="http://127.0.0.1:9/v1", model="no-model", offline=True)
         cli = [sys.executable, "-B", str(other / "agent-home.py"), "schedule"]
         run = subprocess.run([*cli, "list"], capture_output=True, text=True, timeout=20)
