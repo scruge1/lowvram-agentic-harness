@@ -37,6 +37,15 @@ requests. This is source adoption using verified borrowed public dependencies;
 fresh installation, full-profile migration and model-task acceptance stay
 separate.
 
+The first combined Linux release check exhausted its unchanged300-second unit
+budget; its retained tail showed passing controls. Windows passed. Consolidate
+the four new fixture scaffolds into one, keeping every original assertion body
+and three separate native update operations. Restore negative inputs in finally
+and require a clean predecessor between phases. The ordinary targeted run was
+20.256s versus26.877s for four fixtures on the same test host. A separate observed
+run confirmed one setup/case/scaffold; its profiler overhead is not a comparable
+timing. No production source, CI budget or native qualification was changed.
+
 ## Read an existing project through the native board - 2026-10-26
 
 Parent commit: `d188446a45d16bc97bfe6a110b8eff2c63c2f15f`.

@@ -97,7 +97,7 @@ class LabSourceUpdateTests(UpdateFixture):
         self.refresh_manifest()
         case["before"] = state.active_snapshot(case["home"])[2]
 
-    def test_exact_frontier_ordinary_refusal_and_no_other_definition_or_profile(self):
+    def check_frontier_admission(self):
         case = self.prepare_core()
         self.assertEqual(case["plan"]["core_source"]["frontier"], "agent-lab-source-v1")
         self.assertEqual(case["plan"]["apply_result"], "core_lab_pending_consumer_acceptance; not accepted")
@@ -146,9 +146,8 @@ class LabSourceUpdateTests(UpdateFixture):
         finally:
             qualification.write_bytes(previous)
 
-    @unittest.skipUnless(os.name == "posix", "Real exchange uses Linux process ownership")
-    def test_actual_old_verifier_refuses_both_new_states_then_verify_and_rollback(self):
-        case = self.prepare_core()
+    def check_old_verifier_exchange_and_rollback(self):
+        case = self.case  # Admission above already staged this exact operation.
         settings = (case["home"] / "agent/settings.json").read_bytes()
         value = update.core_source_apply(case["home"], case["operation"], case["plan"]["plan_sha256"],
                                          case["qualification"], digest(case["qualification"]), execute_qualified_runtime=True)
@@ -174,8 +173,7 @@ class LabSourceUpdateTests(UpdateFixture):
         self.assertEqual((case["home"] / "agent/settings.json").read_bytes(), settings)
         self.assertEqual(state.active_snapshot(case["home"])[2]["sha256"], case["before"]["sha256"])
 
-    @unittest.skipUnless(os.name == "posix", "Real exchange uses Linux process ownership")
-    def test_new_pending_interruption_preserves_failed_recovery_then_restores_predecessor(self):
+    def check_new_pending_interruption_and_recovery(self):
         case = self.prepare_core()
         def fault(step):
             if step == "coherent-activation-committed":
@@ -199,8 +197,7 @@ class LabSourceUpdateTests(UpdateFixture):
             self.assertTrue(update.recover(case["home"], case["operation"], digest(self.journal()))["predecessor_restored"])
         self.assertEqual(state.active_snapshot(case["home"])[2]["sha256"], case["before"]["sha256"])
 
-    @unittest.skipUnless(os.name == "posix", "Real exchange uses Linux process ownership")
-    def test_rollback_interruption_keeps_post_activation_user_data(self):
+    def check_rollback_interruption_and_user_data(self):
         case = self.prepare_core()
         update.core_source_apply(case["home"], case["operation"], case["plan"]["plan_sha256"],
                                  case["qualification"], digest(case["qualification"]), execute_qualified_runtime=True)
@@ -215,6 +212,24 @@ class LabSourceUpdateTests(UpdateFixture):
             self.assertTrue(update.recover(case["home"], case["operation"], digest(self.journal()))["predecessor_restored"])
         self.assertEqual(added.read_bytes(), b"Owned data survives rollback/recovery")
         self.assertEqual(state.active_snapshot(case["home"])[2]["sha256"], case["before"]["sha256"])
+
+    def test_released_frontier_admission_exchange_and_interrupted_recovery(self):
+        # One scaffold instead of four. Every negative restores its bytes in
+        # finally above; each subsequent transaction gets a new native operation.
+        # Stop on a failed phase rather than letting uncertain state qualify the
+        # next negative for an unrelated reason.
+        self.check_frontier_admission()
+        if os.name != "posix":
+            return  # Metadata only; no Linux exchange/ownership claim.
+        self.check_old_verifier_exchange_and_rollback()
+        for identifier, check in (("lab-frontier-recovery", self.check_new_pending_interruption_and_recovery),
+                                  ("lab-frontier-rollback", self.check_rollback_interruption_and_user_data)):
+            self.assertFalse(state.pending_operations(self.case["home"]))
+            self.assertEqual(state.active_snapshot(self.case["home"])[2]["sha256"], self.case["before"]["sha256"])
+            self.case["operation"] = identifier
+            check()
+        self.assertEqual((self.case["home"] / "context/new-personal.txt").read_text(encoding="utf-8"),
+                         "Preserve post-activation data")
 
 
 if __name__ == "__main__":
