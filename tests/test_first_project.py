@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -140,6 +141,145 @@ class FirstProjectTests(unittest.TestCase):
             ran = subprocess.run(command, cwd=project, shell=False, capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
             self.assertNotEqual(ran.returncode, 0)
             self.assertFalse((project / "hardware-report.md").exists())
+
+    def repair(self, project, result, expected, body, prefix=""):
+        template = result["repair_action_argv_template"]
+        return subprocess.run(template[:4] + [prefix + template[4], expected, body], cwd=project,
+                              shell=False, capture_output=True, stdin=subprocess.DEVNULL, timeout=10)
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
+    def test_repair_retains_failed_bytes_and_original_checker_and_inputs(self):
+        project, result = self.prepare()
+        body = self.write_report(project)
+        output = project / first_project.OUTPUT
+        old = b"Short synthetic failed report.\n"
+        output.write_bytes(old)
+        before = {name: (project / name).read_bytes() for name in (*first_project.INPUTS, first_project.MANIFEST)}
+        expected = hashlib.sha256(old).hexdigest()
+        instructions = (project / "FIRST-PROJECT.md").read_text(encoding="utf-8")
+        declared = json.loads(instructions.split("Recovery action argv TEMPLATE JSON:\n", 1)[1].split("\n", 1)[0])
+        self.assertEqual(declared, result["repair_action_argv_template"])
+        ran = self.repair(project, result, expected, body)
+        self.assertEqual(ran.returncode, 0, ran.stderr)
+        self.assertEqual(output.read_bytes(), body.encode("utf-8"))
+        self.assertEqual((project / ("hardware-report.failed-" + expected + ".md")).read_bytes(), old)
+        self.assertFalse((project / (".hardware-report.repair-" + expected + ".tmp")).exists())
+        self.assertTrue(self.check(project, result)["passed"])
+        self.assertFalse(first_project.check(self.root, result["manifest_sha256"])["passed"])
+        for name, raw in before.items():
+            self.assertEqual((project / name).read_bytes(), raw)
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
+    def test_repair_stale_preimage_and_occupied_backup_or_stage_preserve_files(self):
+        project, result = self.prepare()
+        output = project / first_project.OUTPUT
+        output.write_bytes(b"Retained failure")
+        expected = hashlib.sha256(output.read_bytes()).hexdigest()
+        self.assertNotEqual(self.repair(project, result, "0" * 64, "corrected").returncode, 0)
+        self.assertEqual(sorted(p.name for p in project.glob("*failed*")), [])
+        for name in ("hardware-report.failed-" + expected + ".md", ".hardware-report.repair-" + expected + ".tmp"):
+            with self.subTest(name=name):
+                occupied = project / name
+                occupied.write_bytes(b"Uncertain prior action; preserve")
+                before = {p.name: p.read_bytes() for p in project.iterdir() if p.is_file()}
+                self.assertNotEqual(self.repair(project, result, expected, "corrected").returncode, 0)
+                self.assertEqual({p.name: p.read_bytes() for p in project.iterdir() if p.is_file()}, before)
+                occupied.unlink()  # Owned fixture only, not a product recovery route.
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
+    def test_repair_symlink_hardlink_and_oversize_refuse_without_new_artifacts(self):
+        project, result = self.prepare()
+        output = project / first_project.OUTPUT
+        outside = self.root / "synthetic-source.md"
+        outside.write_bytes(b"Retain this source")
+        expected = hashlib.sha256(outside.read_bytes()).hexdigest()
+        for mode in ("symlink", "hardlink", "oversize"):
+            with self.subTest(mode=mode):
+                if mode == "symlink":
+                    output.symlink_to(outside)
+                elif mode == "hardlink":
+                    os.link(outside, output)
+                else:
+                    output.write_bytes(b"x" * (first_project.MAX_BYTES + 1))
+                self.assertNotEqual(self.repair(project, result, expected, "corrected").returncode, 0)
+                self.assertEqual(outside.read_bytes(), b"Retain this source")
+                self.assertFalse((project / ("hardware-report.failed-" + expected + ".md")).exists())
+                output.unlink()
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
+    def test_repair_rechecks_preimage_and_retains_staging_after_observed_drift(self):
+        project, result = self.prepare()
+        output = project / first_project.OUTPUT
+        output.write_bytes(b"original failure")
+        expected = hashlib.sha256(output.read_bytes()).hexdigest()
+        # Explicit unit-only fault: change the preimage after the stage fsync.
+        prefix = ("import os\nfrom pathlib import Path\n_real_fsync=os.fsync\n_calls=0\n"
+                  "def _fault(fd):\n    global _calls\n    _real_fsync(fd)\n    _calls+=1\n"
+                  "    if _calls==2: Path('hardware-report.md').write_bytes(b'observed drift')\n"
+                  "os.fsync=_fault\n")
+        ran = self.repair(project, result, expected, "corrected body", prefix)
+        self.assertNotEqual(ran.returncode, 0)
+        self.assertIn(b"preimage changed", ran.stderr)
+        self.assertEqual(output.read_bytes(), b"observed drift")
+        self.assertEqual((project / ("hardware-report.failed-" + expected + ".md")).read_bytes(), b"original failure")
+        self.assertEqual((project / (".hardware-report.repair-" + expected + ".tmp")).read_bytes(), b"corrected body")
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses Linux file permissions")
+    def test_repair_keeps_backup_stage_and_replacement_private_under_permissive_umask(self):
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted):
+                project, result = self.prepare("private-interrupted" if interrupted else "private-success")
+                output = project / first_project.OUTPUT
+                output.write_bytes(b"private synthetic failed report")
+                output.chmod(0o600)
+                expected = hashlib.sha256(output.read_bytes()).hexdigest()
+                prefix = "import os\nos.umask(0)\n"
+                if interrupted:
+                    prefix += ("_real_fsync=os.fsync\n_calls=0\n"
+                               "def _fault(fd):\n    global _calls\n    _real_fsync(fd)\n    _calls+=1\n"
+                               "    if _calls==2: raise OSError('controlled failure after stage fsync')\n"
+                               "os.fsync=_fault\n")
+                ran = self.repair(project, result, expected, "new private synthetic report", prefix)
+                self.assertEqual(ran.returncode == 0, not interrupted, ran.stderr)
+                backup = project / ("hardware-report.failed-" + expected + ".md")
+                self.assertEqual(backup.read_bytes(), b"private synthetic failed report")
+                for path in (output, backup):
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                stage = project / (".hardware-report.repair-" + expected + ".tmp")
+                if interrupted:
+                    self.assertEqual(output.read_bytes(), b"private synthetic failed report")
+                    self.assertEqual(stage.read_bytes(), b"new private synthetic report")
+                    self.assertEqual(stage.stat().st_mode & 0o777, 0o600)
+                else:
+                    self.assertEqual(output.read_bytes(), b"new private synthetic report")
+                    self.assertFalse(stage.exists())
+
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
+    def test_directory_lease_blocks_generated_initial_and_repair_writers(self):
+        import fcntl
+        project, result = self.prepare()
+        directory = os.open(project, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            initial = subprocess.run(result["action_argv_template"][:-1] + ["body"], cwd=project,
+                                     shell=False, capture_output=True, timeout=10)
+            self.assertNotEqual(initial.returncode, 0)
+            self.assertFalse((project / first_project.OUTPUT).exists())
+            (project / first_project.OUTPUT).write_bytes(b"failed")
+            self.assertNotEqual(self.repair(project, result, hashlib.sha256(b"failed").hexdigest(), "body").returncode, 0)
+            self.assertEqual((project / first_project.OUTPUT).read_bytes(), b"failed")
+        finally:
+            os.close(directory)
+
+    def test_repair_invalid_arguments_and_unsupported_platform_do_not_write(self):
+        project, result = self.prepare()
+        source = result["repair_action_argv_template"]
+        prefix = "import sys\nsys.platform='unsupported-fixture'\n"
+        commands = [source, source[:4] + [prefix + source[4], "0" * 64, "body"]]
+        for command in commands:
+            ran = subprocess.run(command, cwd=project, shell=False, capture_output=True, timeout=10)
+            self.assertNotEqual(ran.returncode, 0)
+        self.assertFalse((project / first_project.OUTPUT).exists())
 
     def test_generated_writer_refuses_a_dangling_symlink_without_touching_its_target(self):
         project, result = self.prepare()
