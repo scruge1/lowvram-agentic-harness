@@ -46,6 +46,17 @@ and require a clean predecessor between phases. The ordinary targeted run was
 run confirmed one setup/case/scaffold; its profiler overhead is not a comparable
 timing. No production source, CI budget or native qualification was changed.
 
+The second aggregate Linux run still exhausted 300s after passing more runtime
+update controls. Retain both failed runs. Split native unittest discovery into
+two filename groups and refuse any test file assigned to zero or multiple
+groups. Each command retains the existing 300s Linux/480s Windows deadline,
+output capture and child settlement. The 15-minute job cap is unchanged. The
+release report replaces `unit_test_command` with `unit_test_commands`; no
+repository reader consumes the old field. Actual discovery produced exactly
+the same 830 test IDs across groups of 333 and 497, with no duplicates. Ten
+release diagnostic controls and pinned Ruff passed. This changes test execution
+grouping, not the update frontier or its native qualification.
+
 ## Read an existing project through the native board - 2026-10-26
 
 Parent commit: `d188446a45d16bc97bfe6a110b8eff2c63c2f15f`.
