@@ -1,0 +1,19 @@
+@import './native-theme.css';
+@import './native-board.css';
+@source '../../node_modules/@nous-research/ui/dist';
+@source './native-board.js';
+html { color-scheme: dark; height:auto; max-height:none; overflow:auto; }
+body { margin: 0; padding: 28px; min-width: 320px; height:auto; overflow:visible; background:var(--background-base); color:var(--midground); }
+.project-header { display:flex; align-items:center; justify-content:space-between; gap:20px; border-bottom:1px solid var(--color-border); padding-bottom:20px; }
+.project-caption { margin:0 0 8px; font-size:13px; color:var(--color-muted-foreground); }
+.project-caption span { display:inline-block; margin-left:10px; padding:3px 7px; border:1px solid var(--color-border); border-radius:4px; }
+h1 { margin:0; font-size:26px; line-height:1.2; font-weight:500; }
+#project-id { margin:6px 0 0; font-size:12px; color:var(--color-muted-foreground); overflow-wrap:anywhere; }
+#reload { padding:9px 13px; border:1px solid var(--color-border); border-radius:5px; background:transparent; cursor:pointer; font:inherit; }
+.project-scope { max-width:80ch; margin:18px 0 24px; font-size:13px; line-height:1.55; color:var(--color-muted-foreground); }
+#board { min-width:0; max-width:100%; overflow-x:auto; }
+#board select { max-width:100%; }
+.hermes-kanban-card { cursor:pointer; }
+button:disabled { cursor:not-allowed; opacity:.45; }
+@media (max-width:600px) { body { padding:16px; } .project-header { align-items:flex-start; } h1 { font-size:22px; } #reload { white-space:nowrap; font-size:12px; } }
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
