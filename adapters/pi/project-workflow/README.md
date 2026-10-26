@@ -165,7 +165,13 @@ the context hook; later provider transformations remain a separate boundary.
 The everyday gate blocks raw shell, write, and edit mutations. It requires an
 actual native capability observation and exact delivered `SKILL.md` bytes before
 supervised work. A failed run must be read from its saved failure record before
-another workflow action.
+another workflow action. Refusals name the exact native
+`read` call. Omit `offset` and `limit`; partial or truncated evidence does not
+satisfy complete inspection. Inspection and prerequisite checks do not clear a
+failure. The next recovery must bind that run and concrete changed evidence;
+only its exact successful host verification resolves that inspected failure.
+Oversized diagnostics remain held; this route does not add a paged reader or
+qualify natural model-driven repair.
 
 ## Bounded board views
 

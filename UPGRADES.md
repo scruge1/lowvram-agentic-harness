@@ -5,6 +5,23 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Make failure refusals name the next supported call - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Reuse four existing recovery refusal messages in the public workflow adapter.
+Name the failed run, exact native read arguments, omitted offset/limit, installed
+skill contract and evidence-bound recovery fields. State that inspection, a
+skill read or a new prerequisite refusal does not resolve the prior failure.
+A registry observation does not establish tool health.
+
+Keep the complete-read, current-byte/hash, same-source recovery and exact
+host-verified success guards unchanged. The bounded source slice does not add
+an evidence API, replay, controller or completion ledger. Complete diagnostic
+records that fit native read are supported; oversized/truncated evidence is
+still held and is not qualified by these messages. Scripted native repair
+controls do not establish model-driven diagnosis or useful natural repair.
+
 ## Give the first-report agent an exact writing template - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
