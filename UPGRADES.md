@@ -30,6 +30,55 @@ model request. They qualify the bounded source behavior, not normal fresh
 installation. Prior failed native attempts and diagnostic-only bytes remain
 separate; another real factory or archive adoption requires reviewed execution.
 
+## Read owned resource status without reserving or releasing it - 2026-10-26
+
+Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
+
+Reuse the existing model-service status and shared home consumer behind a
+current-home-only `resource_status` tool and `/resource-status` command. Verify
+the installed helper closure, service route, process lifetime and child home
+lease before reporting a live owned process. Return a whitelist of nonsecret
+fields. Preserve recorded recovery uncertainty and existing native wait IDs.
+Status reads create no task progress or receipt authority. Release stays an
+explicit operator action through the existing service CLI, shown as argv data.
+
+Separate measured RAM/CPU snapshots from configured serving arguments. Request
+occupancy, queue length, model fit and task capability remain unknown. Attached
+endpoints establish no service ownership. No new allocator, registry, poller,
+model start, foreign service action or GPU admission is added.
+
+Validation: nine source controls cover ownership/refusal/secret projections
+and the current factory's helper/compiler source closure;
+their owned-process functions are explicitly mocked. Twelve actual native SDK
+checks cover the attached/unmanaged branch, isolated helper and command,
+Unicode/space paths, source/cancel/home refusals and unchanged intake records.
+That fixture makes no model or service request and does not qualify live owned
+service status, normal managed CLI deployment or useful model behavior.
+
+## Snapshot one owned project and verify a new export - 2026-10-26
+
+Parent commit: `dd0d49eafb3050589eeacb483d9ea762536ed7ee`.
+
+Add a standalone installed project-backup helper. Reuse the existing stable
+lifecycle guard, exclusive stopped-home boundary, installed project-identity
+validator and native SQLite backup API. Capture the explicit project, Git and
+exact per-project state with bounded copy/validation, source-drift checks and an
+exact manifest. No account, package, global-memory or session-store migration
+is added. Original project files, including untracked files, are selected.
+
+Restore into an absent owned destination, validate file membership/hashes, Git,
+SQLite integrity, board tenant and knowledge bindings, and retain failed partials.
+The result is an inactive verified export. Original path-bound identity bytes
+remain unchanged; a new active project is not silently admitted or rebound.
+See [PROJECT-BACKUP.md](PROJECT-BACKUP.md) for commands, limits and excluded routes.
+
+Eleven focused Linux controls, pinned Ruff and seven offline self-tests passed.
+They use real Git, committed SQLite WAL rows, the actual installed stable guard
+and native identity/knowledge helpers in synthetic owned fixtures. Capture and
+export CLI calls from an unrelated directory, restored queries, original path
+conservation and retained partial failures are checked. This does not establish
+full installed-home adoption, in-place recovery or Windows capture enforcement.
+
 ## Record installer-owned local board assets - 2026-10-26
 
 Parent commit: `a47dab60701bb407da8b405add0ab2163414fda8`.
