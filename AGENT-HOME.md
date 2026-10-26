@@ -379,9 +379,18 @@ does not migrate an installed full profile, add packages, render templates or
 change existing `agent/settings.json`. In particular, changing the source's
 full-profile scaffold declaration does not enable the lab extension in an
 existing home. Later source-files or interface packaging changes are outside
-this exact frontier. Its source and transaction controls are separate from the
-older native qualification above; normal native consumer adoption requires its
-own retained evidence before acceptance.
+this exact frontier.
+
+A separate isolated Linux home passed this frontier's normal stage/apply,
+stable doctor, research status, Pi health with zero generation requests, and
+exact rollback. The actual source60 verifier refused both new intermediate
+states. A controlled malformed-config consumer failure was retained; restoring
+that synthetic input allowed the normal positive check. Settings, five package
+bindings, nine personal-file controls and a post-activation file survived.
+The fixture's memory hub stopped, the exclusive lease released and all 1,399 watched
+donor files stayed unchanged. The inert endpoint received zero HTTP requests.
+This used verified borrowed public dependencies; it does not qualify a fresh
+package install, full-profile migration or model task.
 
 That native evidence uses verified borrowed dependencies. It qualifies source
 adoption and rollback for that fixture, without observer installation, memory

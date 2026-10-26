@@ -25,8 +25,17 @@ cannot accept this newly reviewed frontier merely by ignoring added metadata.
 No package, profile, settings, template, trust or personal-data migration is
 added. Existing full homes do not gain the new lab extension through this
 agent-only source update. Later interface/source-files changes require another
-reviewed frontier. Source transaction fixtures use synthetic package/consumer
-data; normal native adoption is a separate acceptance step.
+reviewed frontier.
+
+31 affected source tests, pinned Ruff and seven offline self-tests passed.
+A new isolated attached-endpoint fixture then passed normal native source
+activation/consumer verification and exact rollback. Both actual source60
+verifier refusals, a retained controlled consumer failure, unchanged package
+and settings bytes, old/new personal data, donor conservation, owned hub stop
+and exclusive lease release were checked. The endpoint received zero HTTP
+requests. This is source adoption using verified borrowed public dependencies;
+fresh installation, full-profile migration and model-task acceptance stay
+separate.
 
 ## Connect the optional deterministic component lab - 2026-10-26
 
