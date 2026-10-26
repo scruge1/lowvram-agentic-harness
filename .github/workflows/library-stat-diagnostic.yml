@@ -41,3 +41,38 @@ jobs:
           except Exception as error:
               result['actual_source_read'] = {'ok': False, 'type': type(error).__name__, 'reason': str(error)}
           print('LIBRARY_NATIVE_STAT_044=' + json.dumps(result, sort_keys=True))
+      - name: Inspect the actual existing fictional Library fixture
+        shell: python
+        run: |
+          import json, os, runpy, time
+          from pathlib import Path
+          parent = Path(os.environ['RUNNER_TEMP']) / 'library-actual-fixture-045'
+          parent.mkdir()
+          os.environ['PROJECT_LIBRARY_TEST_ROOT'] = str(parent)
+          module = runpy.run_path('tests/test_project_library.py')
+          case = module['ProjectLibraryTests']('test_import_build_query_and_bounded_original_source_agree')
+          case.setUp()
+          knowledge = module['knowledge']
+          fields = ('st_dev', 'st_ino', 'st_mode', 'st_size', 'st_mtime_ns', 'st_ctime_ns', 'st_birthtime_ns')
+          result = {'source': os.environ['GITHUB_SHA'], 'actual_current': case.query(), 'files': []}
+          try:
+              for target in (case.root / '.icm/project.json', case.root / knowledge.CONFIG_PATH,
+                             case.root / case.pointer['knowledge_manifest'], case.note, case.database):
+                  descriptor = os.open(target, os.O_RDONLY | getattr(os, 'O_BINARY', 0))
+                  try:
+                      path, opened = os.lstat(target), os.fstat(descriptor)
+                      row = {'name': target.name, 'same_file': os.path.samestat(path, opened),
+                             'path_stat': {k: getattr(path, k, None) for k in fields},
+                             'fd_stat': {k: getattr(opened, k, None) for k in fields},
+                             'different_fields': [k for k in fields if getattr(path, k, None) != getattr(opened, k, None)]}
+                  finally:
+                      os.close(descriptor)
+                  try:
+                      knowledge._current_bytes(target, 2097152, time.monotonic() + 10)
+                      row['actual_source_read'] = {'ok': True}
+                  except Exception as error:
+                      row['actual_source_read'] = {'ok': False, 'type': type(error).__name__, 'reason': str(error)}
+                  result['files'].append(row)
+          finally:
+              case.doCleanups()
+          print('LIBRARY_ACTUAL_FIXTURE_045=' + json.dumps(result, sort_keys=True))

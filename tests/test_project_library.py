@@ -48,7 +48,7 @@ class ProjectLibraryTests(unittest.TestCase):
 
     def test_import_build_query_and_bounded_original_source_agree(self):
         result = self.query()
-        self.assertTrue(result["ok"])
+        self.assertTrue(result["ok"], result)
         self.assertTrue(result["fresh"])
         self.assertEqual(result["results"][0]["path"], "docs/record.md")
         pin = hashlib.sha256(self.note.read_bytes()).hexdigest()
