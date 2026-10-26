@@ -163,6 +163,13 @@ def source_files(source):
                or not file.resolve().is_relative_to(source.resolve()) for file in (model_module, model_pins)):
             raise HomeError("The optional model service requires its canonical module and exact model-service-pins.json data.")
         paths.append(model_pins)
+    if (source / "harness/project_board.py").exists():
+        view_sources = [source / "harness/project-board-native.json", source / "scripts/build_project_board_assets.py",
+                        *[source / "adapters/project-board" / name for name in
+                          ("entry.js", "style.css", "index.html", "native-utils.ts", "NOTICE.md", "HERMES-LICENSE.txt")]]
+        if any(not file.is_file() or file.is_symlink() or not file.resolve().is_relative_to(source.resolve()) for file in view_sources):
+            raise HomeError("The project read view requires its canonical native asset policy, builder and host sources.")
+        paths.extend(view_sources)
     if not (source / "adapters/pi/project-workflow/pi_kanban.py").is_file():
         raise HomeError("Use the complete repository checkout; adapter sources are required.")
     return paths
@@ -971,6 +978,11 @@ def main(argv=None, *, bound_home=None):
     discover.add_argument("--total-timeout", type=float, default=10.0)
     new = commands.add_parser("project")
     new.add_argument("name")
+    board_view = commands.add_parser("board", help="Open a local read-only view of an existing project board")
+    board_view.add_argument("--project", required=True, type=Path)
+    board_view.add_argument("--assets", type=Path, help="Advanced: reviewed local UI asset directory")
+    board_view.add_argument("--asset-manifest-sha256", help="Advanced: exact reviewed asset manifest")
+    board_view.add_argument("--port", type=int, default=0)
     memory = commands.add_parser("memory")
     memory.add_argument("operation", choices=("start", "stop", "status", "search"))
     memory.add_argument("--query")
@@ -1052,6 +1064,14 @@ def main(argv=None, *, bound_home=None):
         if args.command == "project":
             print(json.dumps(project(args.home, args.name), indent=2))
             return 0
+        if args.command == "board":
+            from harness import project_board
+            arguments = ["--home", str(args.home), "--project", str(args.project), "--port", str(args.port)]
+            if args.assets is not None:
+                arguments.extend(["--assets", str(args.assets)])
+            if args.asset_manifest_sha256 is not None:
+                arguments.extend(["--asset-manifest-sha256", args.asset_manifest_sha256])
+            return project_board.main(arguments)
         if args.command == "research":
             from harness import home_entry, research_setup
             home, _config = load(args.home)

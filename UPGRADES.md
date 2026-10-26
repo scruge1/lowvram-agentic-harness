@@ -5,6 +5,38 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Read an existing project through the native board - 2026-10-26
+
+Parent commit: `d188446a45d16bc97bfe6a110b8eff2c63c2f15f`.
+
+Add a foreground `agent-home.py board --project PATH` read view. Reuse the
+existing home lease, project identity, Hermes database and JSON adapter. Serve
+only the explicitly selected project on loopback. Refuse effects, foreign
+selection, changed identity and changed assets. Do not create a projects registry,
+start the full Hermes dashboard, or infer checked-output acceptance from a task's
+status or result text.
+
+Build the pinned upstream Kanban component with real React/Nous primitives,
+native theme, the unchanged public utility source and retained licences. Keep
+source imports explicit. Disable unavailable orchestration, live updates,
+worker-log requests and comment entry. Preserve native cards, details and result
+summaries. See [PROJECT-BOARD.md](PROJECT-BOARD.md) for current asset flags and limits.
+
+A fresh isolated Linux component fixture exercised the actual stable entry and
+browser: three cards, a comment, a review summary, filtering, desktop/mobile
+layout and disabled effects. Seventeen browser requests stayed on its loopback
+origin and returned200. Ownership close stopped the listener; an exclusive home
+lease then succeeded. Existing board/knowledge database bytes and borrowed public
+package artifacts stayed unchanged. This uses one verified borrowed Hermes
+environment; the other four selected packages remain uninstalled in that fixture.
+
+Focused isolation/entry controls and all seven offline self-tests passed. The
+source-closure check initially refused a missing local utility; retaining its
+exact upstream source and explicit import closed that defect without relaxing
+the guard. Focused maintenance stage/plan controls then passed. Complete hosted
+checks, installer-owned asset admission, normal fresh installation, existing-home
+controller adoption, remote exposure and effect controls remain separate work.
+
 ## Explain optional provider keys and actual fallback limits - 2026-10-26
 
 Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.

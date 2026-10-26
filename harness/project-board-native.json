@@ -1,0 +1,14 @@
+{
+  "schema": "project-board-native-source/v1",
+  "commit": "866332bfb52c46e543143b2620a9aeee8bce9c77",
+  "sdk_version": "1.1.0",
+  "files": {
+    "package-lock.json": "01aefabe819f7ee17fffd7b16fb1cc846939e452a474cedcdd7b6ab772455ed7",
+    "web/package.json": "884fec6f6a1a3c4293be5192ed492a1aaac7acfe7cd9e6f8938ca5453d31a0e9",
+    "web/src/lib/utils.ts": "4e13dd449bd4aa30829e93d9f44b9dcc4b64cf31f836efc9756132c58d70b4e7",
+    "plugins/kanban/dashboard/dist/index.js": "61143313ba6ff6529f9a62cc2a615851a45c29f87db17b009392bad6f3fe1c6c",
+    "plugins/kanban/dashboard/dist/style.css": "35b4a8088f3ebd478ae7326cf476eab513d0bf40397463a16fa7c213d62269fe",
+    "plugins/kanban/dashboard/manifest.json": "2c037543d30ddee524d6a1bd38cbd2345d01f1c8bf678d4ee464da4074266e1e",
+    "web/src/index.css": "0f65b06e327494f599d59d57cd0633387a0f0bef11be2917a70cc2ffde60690b"
+  }
+}

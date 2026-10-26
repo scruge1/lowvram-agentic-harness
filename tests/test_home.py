@@ -21,6 +21,18 @@ class AgentHomeTests(unittest.TestCase):
     def create(self):
         return home.scaffold(self.root, profile="core", base_url="http://127.0.0.1:8080/v1", model="local-test", name="Test Owner", offline=True)
 
+    def test_installed_board_missing_assets_explains_next_action_before_project_access(self):
+        self.create()
+        project = self.root / "projects/not-created"
+        result = subprocess.run([sys.executable, str(self.root / "agent-home.py"), "board", "--project", str(project)],
+                                capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 1)
+        failure = json.loads(result.stderr[result.stderr.index('{'):])
+        self.assertIn("Board UI files are not installed", failure["error"])
+        self.assertIn("build_project_board_assets.py", failure["error"])
+        self.assertEqual(failure["authority"], "none")
+        self.assertFalse(project.exists())
+
     def test_installed_research_status_is_keyless_and_piped_setup_refuses_secrets(self):
         self.create()
         environment = dict(os.environ, EXA_API_KEY="synthetic-not-for-model-context")
