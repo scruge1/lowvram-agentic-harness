@@ -366,6 +366,23 @@ created after activation also survived rollback. The owned memory hub stopped,
 the exclusive lease passed, all watched donor files were preserved and the inert
 loopback endpoint received zero HTTP requests.
 
+The additional `agent-lab-source-v1` frontier uses those same core-source
+commands for the exact released source60 to source61 home definitions. It
+admits only the reviewed `environment` and `scaffold` changes; every other
+definition, import, constant and fixed support file must match. Its qualification
+must retain the exact `core_source.frontier` binding. It publishes distinct
+`core_lab_pending_consumer_acceptance` and `core_lab_verification_failed` states
+so the actual older core verifier cannot accept this generation.
+
+This frontier still requires the unchanged five-package `agent` profile. It
+does not migrate an installed full profile, add packages, render templates or
+change existing `agent/settings.json`. In particular, changing the source's
+full-profile scaffold declaration does not enable the lab extension in an
+existing home. Later source-files or interface packaging changes are outside
+this exact frontier. Its source and transaction controls are separate from the
+older native qualification above; normal native consumer adoption requires its
+own retained evidence before acceptance.
+
 That native evidence uses verified borrowed dependencies. It qualifies source
 adoption and rollback for that fixture, without observer installation, memory
 retrieval, model task quality or fresh installation claims. Other hosts and package
@@ -876,8 +893,10 @@ Actual Pi registration, demo, abort and parent-loss cleanup passed in an isolate
 component fixture without model calls. This is source adoption with copied public
 dependencies; it does not establish a fresh full install or agent quality.
 Model experiments remain held. See [the lab adapter](adapters/pi/lab/README.md).
-The new home environment wiring is outside the narrow core-source updater scope;
-do not assume an older home can adopt it through that reviewed scope.
+The new home environment wiring remains outside ordinary compatible updates.
+The exact `agent-lab-source-v1` frontier above covers source adoption for the
+five-package agent profile; it does not migrate full-profile settings or enable
+the optional lab in an existing home.
 
 Claude-mem package installation alone supplies its SDK. This installer also
 writes the explicit local-compatible endpoint/model, disables hosted quota

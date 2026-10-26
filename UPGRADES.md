@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Admit the reviewed agent lab source frontier - 2026-10-26
+
+Parent commit: `8fb72488cc9c5b2583a0b1258014d0487f00382b`.
+
+The original controller CLI prototype already shipped in PR39 and passed
+normal native verification and rollback. The later source40-to41 core update
+also shipped with separate native evidence. Preserve those paths rather than
+reimplementing them from the old prototype checkout.
+
+Extend the existing core-source route with the exact released source60-to61
+environment/scaffold AST pairs, named `agent-lab-source-v1`. All other home
+nodes and stable protocol bytes must match. The same five selected/installed
+agent packages and existing qualification/exchange/journal/pending/EX/recovery
+path remain mandatory. Ordinary compatible updates still refuse the changed
+controller. New pending/failed states ensure the actual source60 core verifier
+cannot accept this newly reviewed frontier merely by ignoring added metadata.
+
+No package, profile, settings, template, trust or personal-data migration is
+added. Existing full homes do not gain the new lab extension through this
+agent-only source update. Later interface/source-files changes require another
+reviewed frontier. Source transaction fixtures use synthetic package/consumer
+data; normal native adoption is a separate acceptance step.
+
 ## Connect the optional deterministic component lab - 2026-10-26
 
 Parent commit: `3808ec7610d3e2d083cd68124c75d381e956a74d`.
