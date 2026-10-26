@@ -28,17 +28,82 @@ MANIFEST = "first-project.json"
 OUTPUT = "hardware-report.md"
 MAX_BYTES = 64 * 1024
 REPORT_TEXT_PLACEHOLDER = "<COMPLETE_REPORT_TEXT>"
+REPORT_PREIMAGE_PLACEHOLDER = "<FAILED_REPORT_SHA256>"
 REPORT_WRITER = (
-    "import sys\n"
+    "import os, sys\n"
     "from pathlib import Path\n"
     "if len(sys.argv) != 2 or sys.argv[1] == '<COMPLETE_REPORT_TEXT>':\n"
     "    raise SystemExit('Pass the complete report text as one separate argv value')\n"
     "target = Path('hardware-report.md')\n"
     "if target.is_symlink():\n"
     "    raise SystemExit('Report path is a symlink; preserve it for inspection')\n"
+    "if sys.platform == 'linux':\n"
+    "    import fcntl\n"
+    "    directory = os.open('.', os.O_RDONLY | os.O_DIRECTORY)\n"
+    "    fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
     "with target.open('xb') as report:\n"
     "    report.write(sys.argv[1].encode('utf-8'))\n"
+    "if sys.platform == 'linux':\n"
+    "    os.close(directory)\n"
 )
+# Fixed future-task recipe, not an authorization or automatic recovery path.
+# Reuse the fsync/preimage/replace sequence used by claude_memory_patch._publish.
+# A directory flock serializes cooperating generated writers without a lockfile.
+REPORT_REPAIR_WRITER = """import hashlib, os, re, stat, sys
+from pathlib import Path
+if sys.platform != 'linux':
+    raise SystemExit('Report repair requires the qualified Linux directory-flock path')
+if len(sys.argv) != 3 or not re.fullmatch('[a-f0-9]{64}', sys.argv[1]) or sys.argv[2] == '<COMPLETE_REPORT_TEXT>':
+    raise SystemExit('Pass the inspected failed-report SHA256 and complete new body as separate argv values')
+import fcntl
+expected, body = sys.argv[1], sys.argv[2].encode('utf-8')
+if not 0 < len(body) <= 65536:
+    raise SystemExit('Replacement report must contain 1..65536 UTF-8 bytes')
+target = Path('hardware-report.md')
+backup = Path('hardware-report.failed-' + expected + '.md')
+stage = Path('.hardware-report.repair-' + expected + '.tmp')
+directory = os.open('.', os.O_RDONLY | os.O_DIRECTORY)
+fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+def stamp(info):
+    return tuple(getattr(info, field) for field in ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_nlink', 'st_size', 'st_mtime_ns', 'st_ctime_ns'))
+def snapshot(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid != os.getuid() or before.st_nlink != 1 or not 0 <= before.st_size <= 65536:
+            raise SystemExit('Failed report must be a bounded owned regular file with one link')
+        raw = b''
+        while len(raw) <= 65536:
+            part = os.read(descriptor, min(65537 - len(raw), 65536))
+            if not part:
+                break
+            raw += part
+        if len(raw) != before.st_size or stamp(before) != stamp(os.fstat(descriptor)) or stamp(before) != stamp(path.lstat()):
+            raise SystemExit('Failed report changed during inspection')
+        return raw, stamp(before)
+    finally:
+        os.close(descriptor)
+old, original = snapshot(target)
+if hashlib.sha256(old).hexdigest() != expected:
+    raise SystemExit('Failed-report preimage SHA256 drift; inspect current evidence')
+if backup.exists() or backup.is_symlink() or stage.exists() or stage.is_symlink():
+    raise SystemExit('Retained backup or stage already exists; inspect it, do not replay')
+for path, raw in ((backup, old), (stage, body)):
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'wb') as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+os.fsync(directory)
+current, checked = snapshot(target)
+if checked != original or current != old:
+    raise SystemExit('Failed-report preimage changed; retained backup/stage require inspection')
+if snapshot(backup)[0] != old or snapshot(stage)[0] != body:
+    raise SystemExit('Retained backup or stage changed; inspect without replay')
+os.replace(stage, target)
+os.fsync(directory)
+os.close(directory)
+"""
 
 
 class FirstProjectError(ValueError):
@@ -157,6 +222,8 @@ def prepare(home, name):
             if route.is_symlink() or not route.is_file() or route.resolve(strict=True) != route:
                 raise FirstProjectError("Prepared project is missing its existing normal instruction route: " + str(route))
         action_template = [sys.executable, "-I", "-B", "-c", REPORT_WRITER, REPORT_TEXT_PLACEHOLDER]
+        repair_template = [sys.executable, "-I", "-B", "-c", REPORT_REPAIR_WRITER,
+                           REPORT_PREIMAGE_PLACEHOLDER, REPORT_TEXT_PLACEHOLDER]
         instructions = (
             "# First hardware report\n\n"
             "Create hardware-report.md, a useful 250-400 word Markdown report from hardware-facts.json. "
@@ -172,7 +239,7 @@ def prepare(home, name):
             + _native_sequence(home) + "\n"
             "After compaction refresh project_context before workflow_step. Do not repeat project_admit and erase "
             "the observations just collected. Aim near300 words. Pass the COMPLETE report text in the action argv; never assume a body file exists. "
-            "Declare only hardware-report.md as output. Use the pinned check argv returned by prepare; "
+            "For initial creation declare only hardware-report.md as output. Use the pinned check argv returned by prepare; "
             "it checks files relative to cwd and returns 1 from an empty directory. "
             "Do not edit these inputs or first-project.json. A passed checker still needs semantic review. "
             "No model/server/GPU changes, tuning, downloads, cloud fallback or commits.\n\n"
@@ -190,6 +257,28 @@ def prepare(home, name):
             "first_project.py run launches an agent and prepares a new project; it is NOT a report writer. "
             "Do not nest that command inside the writing action or invent --input/--output/--manifest-sha256 flags. "
             "Use the original pinned check_argv separately as workflow_step.verify.\n"
+            "\n## Correcting a failed existing report\n\n"
+            "The initial writer remains create-only. If its checker failed after creating a report, do not "
+            "replay that writer, delete the report, change these inputs, or invent a different checker. "
+            "Use the existing explicit owner-resume and workflow_step recovery path. Read the complete saved "
+            "failure and existing report through normal native evidence reads. Diagnose the actual failed "
+            "predicate, supply the required source_run_id and concrete recovery evidence, and author the "
+            "complete corrected report. This template grants no permission and clears no hold.\n\n"
+            "On Linux only, the fixed repair action below takes the SHA256 of the inspected failed report "
+            "and the COMPLETE corrected body as separate argv values. Replace ONLY its last two strings. "
+            "Declare BOTH final outputs: hardware-report.md and hardware-report.failed-FAILED_SHA256.md, "
+            "replacing FAILED_SHA256 with that same digest. The sibling failed file retains the exact old "
+            "bytes; it is not control state. Keep the original pinned check_argv unchanged: it still grades "
+            "literal hardware-report.md. Semantic review remains separate.\n\n"
+            "The recipe verifies a bounded owned regular preimage with one link, takes a nonblocking "
+            "directory flock shared by generated Linux writers, preserves failed bytes with exclusive create, "
+            "fsyncs a same-directory temporary .hardware-report.repair-SHA256.tmp, rechecks the original "
+            "preimage and atomically replaces only the canonical report. This is cooperative serialization, "
+            "not protection from arbitrary writers ignoring that lock. A failed/interrupted action may retain "
+            "a backup or stage; inspect those and the actual saved outcome before any further action. "
+            "Do not automatically replay, overwrite retained evidence, or treat an uncertain outcome as success. "
+            "Other platforms refuse this repair recipe.\n\n"
+            "Recovery action argv TEMPLATE JSON:\n" + json.dumps(repair_template, ensure_ascii=False) + "\n"
         )
         contents = {"hardware-facts.json": json.dumps(facts, indent=2) + "\n", "FIRST-PROJECT.md": instructions}
         for relative, text in contents.items():
@@ -211,6 +300,7 @@ def prepare(home, name):
                 "admission": admission, "manifest_sha256": digest(raw),
                 "check_argv": [sys.executable, "-B", str(Path(__file__).resolve()), "check", "--expected-sha256", digest(raw)],
                 "action_argv_template": action_template,
+                "repair_action_argv_template": repair_template,
                 "model_requests": 0, "semantic_review": "required_after_real_report"}
 
 

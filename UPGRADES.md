@@ -36,6 +36,47 @@ mining failure and metadata limits. Seven self-tests and pinned Ruff pass.
 These are component checks, not a new-host package install, whole managed CLI
 adoption, complete history indexing or useful model recall acceptance.
 
+## Preserve a failed report during explicit evidence-bound repair - 2026-10-26
+
+Parent commit: `5e65ba17b94b166db65e43a671cdbaf0af8059fd`.
+
+An occupied report can outlive a failed fixed predicate. A controlled native
+counter showed that an explicit owner resume, complete saved-failure read and
+bound recovery still reached an exclusive-create collision. Earlier recovery
+fixtures failed before creating their output, so they did not establish this
+case. The original real-model failure and blocked retries remain failed evidence;
+the counter is a separate synthetic task with no model request.
+
+Keep initial creation exclusive. New report preparations include a fixed
+Linux-only repair argv template with an explicit inspected preimage hash and
+complete agent-authored replacement body. Reuse the existing stage, fsync,
+preimage-recheck and atomic-replace filesystem sequence. A directory flock
+serializes cooperating generated writers without a new lockfile. Declare the
+canonical report and exact retained failed version as outputs; transient staging
+stays outside control state. Refuse stale hashes, symlinks, multiple links,
+oversize or foreign files, occupied recovery artifacts and unsupported platforms.
+Keep failed partials inspectable and preserve the original checker and inputs.
+No new writer CLI, transaction engine, ledger, automatic resume or model call is
+added. Existing pinned tasks are unchanged.
+
+Validation:22 Linux source/file controls pass; Windows passes with seven
+platform skips. Seven offline self-tests and Ruff0.16.10 pass. The original
+native occupied-output counter passes eight controls. Eleven later scripted
+native controls exercise explicit resume, complete evidence, retained preimage,
+the original independent predicate, empty-directory negative and matching latch
+release, with zero HTTP/model/service requests. An intervening fixture assertion
+expected the engine's status label instead of the public host label; retain that
+failed receipt separately from its successful action and the corrected fixture.
+These checks do not establish model diagnosis, semantic report quality, arbitrary
+writer exclusion or repair of a previous real trial.
+
+Root source review then found that default exclusive creation could broaden a
+private report's permissions under a permissive umask. Create retained backup
+and stage with explicit mode0600 before writing. Six affected filesystem
+controls pass, including successful replacement and interrupted staging with a
+600 preimage and umask000. Prior native receipts remain bound to their earlier
+source; this correction adds filesystem evidence, not a new model/native run.
+
 ## Distinguish retained source capture from its short view - 2026-10-26
 
 Parent commit: `61600f0b73e0e1304ff0f1e96edc3e0c1a9a4bff`.
