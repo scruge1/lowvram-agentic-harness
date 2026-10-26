@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
+import re
 
-from capture import absolute_path, coverage_complete, export_path
+from capture import absolute_path, _bounded_json, catalog_signature, coverage_complete, export_path, STATUS_CATALOG_BYTES
 
 
 def verify(state: Path, palace: Path) -> dict:
@@ -20,12 +22,33 @@ def verify(state: Path, palace: Path) -> dict:
     catalog = json.loads((state / "sources.json").read_text())
     if not isinstance(catalog, dict):
         raise ValueError("Captured source catalog must be an object")
+    latest_file = state / "latest.json"
+    latest, _ = _bounded_json(latest_file, STATUS_CATALOG_BYTES) if latest_file.exists() or latest_file.is_symlink() else ({}, None)
+    if not isinstance(latest, dict):
+        raise ValueError("Capture latest receipt must be an object")
+    receipts = latest.get("source_receipts", {})
+    if not isinstance(receipts, dict):
+        raise ValueError("Invalid captured source receipt map")
     config = MempalaceConfig()
     drawers = get_collection(str(palace), create=False, read_only=True)
     closets = get_closets_collection(str(palace), create=False, read_only=True)
     exports = state / "exports"
     source_catalog = []
-    for source, signature in sorted(catalog.items()):
+    for source, supplied_signature in sorted(catalog.items()):
+        signature = catalog_signature(supplied_signature)
+        receipt = receipts.get(source)
+        matched = isinstance(receipt, dict) and catalog_signature(receipt) == signature
+        prefix = receipt.get("raw_prefix") if matched else None
+        exported = receipt.get("export") if matched else None
+        if matched and (prefix is None or not isinstance(exported, dict)
+                        or not isinstance(exported.get("sha256"), str)
+                        or re.fullmatch("[a-f0-9]{64}", exported["sha256"]) is None):
+            raise ValueError("Invalid captured export receipt")
+        if prefix is not None and (not isinstance(prefix, dict)
+                                   or type(prefix.get("bytes")) is not int or not 0 <= prefix["bytes"] <= signature[0]
+                                   or not isinstance(prefix.get("sha256"), str)
+                                   or re.fullmatch("[a-f0-9]{64}", prefix["sha256"]) is None):
+            raise ValueError("Invalid captured source-prefix receipt")
         if (
             not isinstance(source, str)
             or not Path(source).is_absolute()
@@ -41,6 +64,11 @@ def verify(state: Path, palace: Path) -> dict:
                 "signature": signature,
                 "export": expected.name,
                 "export_present": expected.is_file(),
+                "raw_prefix_receipt": {"sha256": prefix["sha256"], "bytes": prefix["bytes"]} if prefix is not None else None,
+                "source_provenance": "capture_time_prefix_only" if matched else "legacy_or_mismatched_receipt_unverifiable",
+                "receipt_known": isinstance(receipt, dict),
+                "receipt_matches_catalog": matched,
+                "export_receipt_sha256": exported["sha256"] if matched else None,
             }
         )
     expected_names = {row["export"] for row in source_catalog}
@@ -49,8 +77,9 @@ def verify(state: Path, palace: Path) -> dict:
         if source.is_symlink():
             raise ValueError("Captured export must not be a symlink")
         before = source.stat()
+        raw = source.read_bytes()
         expected = chunk_text(
-            source.read_text(encoding="utf-8").strip(),
+            raw.decode("utf-8").strip(),
             str(source),
             chunk_size=config.chunk_size,
             chunk_overlap=config.chunk_overlap,
@@ -74,11 +103,16 @@ def verify(state: Path, palace: Path) -> dict:
                 expected, stored, witnesses, before.st_mtime, NORMALIZE_VERSION
             )
         )
+        identities = [row for row in source_catalog if row["export"] == source.name]
+        identity = identities[0] if len(identities) == 1 else None
+        if identity is not None and identity["receipt_known"]:
+            complete = complete and identity["receipt_matches_catalog"] and identity["export_receipt_sha256"] == hashlib.sha256(raw).hexdigest()
         record = {
             "export": source.name,
             "expected_chunks": len(expected),
             "stored_chunks": len(stored["ids"]),
             "complete": complete,
+            "capture_receipt_matches_catalog": identity["receipt_matches_catalog"] if identity else False,
         }
         if not complete:
             wanted = {chunk["chunk_index"]: chunk["content"] for chunk in expected}
