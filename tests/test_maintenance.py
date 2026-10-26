@@ -42,6 +42,13 @@ class MaintenanceTests(unittest.TestCase):
                     target = self.source / path.relative_to(REPO)
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(path, target)
+        for relative in ("harness/project-board-native.json", "scripts/build_project_board_assets.py",
+                         "adapters/project-board/entry.js", "adapters/project-board/style.css",
+                         "adapters/project-board/index.html", "adapters/project-board/native-utils.ts",
+                         "adapters/project-board/NOTICE.md", "adapters/project-board/HERMES-LICENSE.txt"):
+            target = self.source / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / relative, target)
         self.home = self.base / "agent home"
         bootstrap.scaffold(self.home, source=self.source, profile="core",
                            base_url="http://127.0.0.1:9/v1", model="synthetic-fixture", offline=True)
