@@ -47,6 +47,11 @@ identical UI files to the component-qualified predecessor. Dependency-source
 qualification remains distinct from the Git source-tree check. The top notice
 uses plain capability language; it does not promise saved-file verification.
 
+Legacy migration fixtures reconstruct their reviewed historical definitions and
+load the actual historical home module. The new board controller is explicitly
+refused by both older migration scopes; production hashes and guards stay fixed.
+Windows fixture paths use their canonical identity, as real project selection does.
+
 ## Explain how to repair invalid intake parts - 2026-10-26
 
 Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.

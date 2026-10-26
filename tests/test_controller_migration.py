@@ -88,8 +88,27 @@ def verify(home, identifier, expected_journal):
 '''
 
 
+def reviewed_home_before_board(text):
+    """Reconstruct the legacy fixture, not a new controller admission scope."""
+    boundaries = (
+        ('    if (source / "harness/project_board.py").exists():\n',
+         '    if not (source / "adapters/pi/project-workflow/pi_kanban.py").is_file():\n'),
+        ('    board_view = commands.add_parser("board",', '    memory = commands.add_parser("memory")\n'),
+        ('        if args.command == "board":\n', '        if args.command == "research":\n'),
+    )
+    for start, following in boundaries:
+        if text.count(start) != 1 or text.count(following) != 1:
+            raise AssertionError("Published board fixture boundary changed")
+        first = text.index(start)
+        last = text.index(following, first)
+        text = text[:first] + text[last:]
+    # Existing production AST checks below still require the exact reviewed
+    # historical nodes. Current board definitions remain outside those scopes.
+    return text
+
+
 def research_cli(path, *, previous=False):
-    text = path.read_text(encoding="utf-8")
+    text = reviewed_home_before_board(path.read_text(encoding="utf-8"))
     parser = '''class CommandParser(argparse.ArgumentParser):
     def error(self, message):
         # A mistaken --api-key argument must not be copied to terminal logs.
@@ -289,6 +308,17 @@ class ControllerMigrationTests(UpdateFixture):
                 with self.assertRaisesRegex(ValueError, error):
                     update.controller_bindings(case["home"], case["source"])
         file.write_text(original)
+
+    def test_current_board_controller_is_outside_legacy_cli_scope(self):
+        case = self.prepare_controller()
+        file = case["source"] / "harness/home.py"
+        original = file.read_bytes()
+        try:
+            file.write_bytes((Path(__file__).resolve().parents[1] / "harness/home.py").read_bytes())
+            with self.assertRaisesRegex(ValueError, "Controller CLI definitions"):
+                update.controller_bindings(case["home"], case["source"])
+        finally:
+            file.write_bytes(original)
 
     @unittest.skipUnless(sys.platform == "linux", "Existing Linux EX/runtime exchange")
     def test_actual_migration_old_verify_refusal_new_verify_and_exact_rollback(self):

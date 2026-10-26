@@ -16,7 +16,8 @@ class ProjectBoardTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        # Hosted Windows TEMP can use an 8.3 alias; real selection is canonical.
+        self.root = Path(self.temporary.name).resolve()
         self.home, self.project = self.root / "home", self.root / "project with spaces"
         (self.project / ".icm").mkdir(parents=True)
         identity = self.project / ".icm/project.json"
