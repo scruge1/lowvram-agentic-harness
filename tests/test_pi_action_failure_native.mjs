@@ -13,7 +13,7 @@ for (let i = 2; i < process.argv.length; i += 2) {
   options[process.argv[i].slice(2)] = process.argv[i + 1];
 }
 for (const name of ['source', 'pi-package', 'python', 'fixture-parent']) assert.ok(options[name], `Missing --${name}`);
-if (options.case !== undefined) assert.ok(['continuity', 'recovery'].includes(options.case), 'Use only an explicit continuity or recovery development filter');
+if (options.case !== undefined) assert.ok(['continuity', 'recovery', 'report-recovery', 'report-repair'].includes(options.case), 'Use only an explicit native development case');
 assert.equal(process.platform, 'linux', 'Actual process ownership requires Linux');
 const started = Date.now(), source = fs.realpathSync(options.source);
 const piPackage = fs.realpathSync(options['pi-package']), python = path.resolve(options.python);
@@ -313,6 +313,91 @@ async function recoveryCase() {
     scope: 'Scripted native same-session evidence-bound repair, not model diagnosis or natural self-repair acceptance. Complete failure fits native read; oversized evidence remains an explicit unqualified limit.' });
   await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
 }
+async function reportRecoveryCounter(qualifyRepair = false) {
+  const p = await profile(qualifyRepair ? 'report-retained-preimage-repair' : 'report-occupied-output-counter');
+  const checker = path.join(runtime, 'harness/first_project.py');
+  const metadata = spawnSync(python, ['-B', '-c', `import json,sys;sys.path.insert(0,sys.argv[1]);from harness import first_project as f;facts={'ram_total_gb':32.5,'gpu_vram_mib':8192,'storage_total_gb':1000,'configured_model':{'context_tokens':32768,'output_tokens':4096}};text='# Synthetic report fixture\\n\\nSource: hardware-facts.json.\\n\\n| Measurement | Value | Unit |\\n| --- | --- | --- |\\n';text+=''.join('| '+r['label']+' | '+str(r['value'])+' | '+r['unit']+' |\\n' for r in f._rows(facts));text+=' inventory'*(300-f.word_count(text));print(json.dumps({'writer':f.REPORT_WRITER,'repair_writer':getattr(f,'REPORT_REPAIR_WRITER',None),'facts':facts,'rows':f._rows(facts),'valid_body':text,'words':f.word_count(text)}))`, runtime],
+    { encoding: 'utf8', timeout: 10000 });
+  assert.equal(metadata.status, 0, metadata.stderr + metadata.stdout);
+  const data = JSON.parse(metadata.stdout);
+  const inputs = { 'hardware-facts.json': JSON.stringify(data.facts) + '\n',
+    'FIRST-PROJECT.md': '# Synthetic pinned report contract\nUse the installed exclusive-create writer initially and original checker. Preserve failed bytes.\n'
+      + (qualifyRepair ? 'Future-only recovery template:\n' + JSON.stringify([python, '-I', '-B', '-c', data.repair_writer, '<FAILED_REPORT_SHA256>', '<COMPLETE_REPORT_TEXT>']) + '\n' : '') };
+  for (const [name, text] of Object.entries(inputs)) fs.writeFileSync(path.join(p.project, name), text);
+  const manifest = { schema: 'first-project/v1', inputs: Object.fromEntries(Object.keys(inputs).map(name => [name, hash(path.join(p.project, name))])),
+    output: 'hardware-report.md', words: { minimum: 250, maximum: 400 }, rows: data.rows };
+  writeJson(path.join(p.project, 'first-project.json'), manifest);
+  const pin = hash(path.join(p.project, 'first-project.json')), verify = [python, '-B', checker, 'check', '--expected-sha256', pin];
+  const inputPins = Object.fromEntries([...Object.keys(inputs), 'first-project.json'].map(name => [name, hash(path.join(p.project, name))]));
+  // A separate owned fixture directory proves that the proposed body satisfies
+  // the ORIGINAL checker. It is synthetic test data, never a real report rescue.
+  const candidate = path.join(p.base, 'synthetic-valid-candidate'); fs.mkdirSync(candidate);
+  for (const name of Object.keys(inputPins)) fs.copyFileSync(path.join(p.project, name), path.join(candidate, name));
+  fs.writeFileSync(path.join(candidate, 'hardware-report.md'), data.valid_body);
+  const candidateCheck = spawnSync(verify[0], verify.slice(1), { cwd: candidate, encoding: 'utf8', timeout: 10000 });
+  check('report-counter-valid-synthetic-body-passes-original-pinned-checker', candidateCheck.status === 0
+    && JSON.parse(candidateCheck.stdout).passed === true && data.words === 300);
+  const request = { objective: 'Qualify only an occupied failed report and its existing evidence-bound recovery route', cwd: p.project,
+    action: [python, '-I', '-B', '-c', data.writer, '# Intentionally incomplete synthetic report.\n'], verify, outputs: ['hardware-report.md'] };
+  await tool(p, 'read', { path: path.join(p.project, 'FIRST-PROJECT.md') });
+  const failed = await tool(p, 'workflow_step', request, true);
+  const finalPath = path.join(p.project, '.enforcement/runs', failed.details.host.run_id, 'final.json');
+  const finalPin = hash(finalPath), reportPath = path.join(p.project, 'hardware-report.md'), reportPin = hash(reportPath);
+  check('report-counter-original-writer-created-file-before-checker-rejected-it', failed.isError === true
+    && readJson(finalPath).status === 'failed' && /independent verifier rejected/.test(failed.details.host.reason));
+  await p.session.extensionRunner.emitInput('The fixture owner requests a scoped diagnosis and evidence-bound correction of this same task. Preserve the failed report and original checker; do not replay uncertain effects.', undefined, 'interactive');
+  const status = (await tool(p, 'kanban_intake_status', {})).details.result;
+  await tool(p, 'kanban_intake_route', { source_id: status.pending.at(-1).id, control: 'resume',
+    parts: [{ kind: 'amend', task_id: status.queue[0].task, summary: 'Resume only the existing report scope after inspecting its saved failure', execute: true }] });
+  const complete = await tool(p, 'read', { path: finalPath });
+  check('report-counter-complete-original-failure-actually-read', !complete.details?.truncation
+    && complete.content[0].text === fs.readFileSync(finalPath, 'utf8'));
+  await tool(p, 'read', { path: reportPath });
+  const repair = { ...request, action: [python, '-I', '-B', '-c', data.writer, data.valid_body],
+    recovery: { source_run_id: failed.details.host.run_id, failure_class: 'verification_failure',
+      changed_assumption: 'The saved output is an incomplete draft, not a valid report; the create-only writer cannot replace occupied output.',
+      new_evidence: 'The complete saved final and report bytes show a failed original predicate; a separate synthetic300-word candidate passes that exact pinned checker.',
+      expected_observation: 'The unchanged exclusive-create writer must refuse the occupied path before changing any bytes.',
+      stop_condition: 'Stop at the create-only collision and preserve both failed records, original output, inputs and checker; no rescue or automatic replay.' } };
+  const backup = 'hardware-report.failed-' + reportPin + '.md';
+  if (qualifyRepair) {
+    repair.action = [python, '-I', '-B', '-c', data.repair_writer, reportPin, data.valid_body];
+    repair.outputs = ['hardware-report.md', backup];
+    repair.recovery.changed_assumption = 'The initial create-only recipe cannot correct an occupied failed report. The prepared future task includes a preimage-bound retained-version repair.';
+    repair.recovery.expected_observation = 'The exact inspected failed SHA must be retained in the declared sibling output, the complete replacement must pass the original pinned checker and empty-directory negative.';
+    repair.recovery.stop_condition = 'Stop on preimage drift, occupied backup/stage, unavailable directory flock or failed original predicate; retain uncertain effects and do not replay.';
+  }
+  const repaired = await tool(p, 'workflow_step', repair, true);
+  check('report-counter-proper-resume-and-recovery-reaches-real-supervisor', typeof repaired.details?.host?.run_id === 'string'
+    && repaired.details.host.run_id !== failed.details.host.run_id);
+  const repairedFinal = path.join(p.project, '.enforcement/runs', repaired.details.host.run_id, 'final.json');
+  const actual = readJson(repairedFinal), process = readJson(path.join(p.project, actual.attempts[0].process_trace));
+  if (qualifyRepair) {
+    check('report-repair-actual-action-and-original-independent-check-pass', repaired.isError !== true && actual.status === 'accepted'
+      && process.exit_code === 0 && repaired.details.host.status === 'supplied_predicate_passed');
+    check('report-repair-old-bytes-retained-and-new-canonical-body-exact', hash(path.join(p.project, backup)) === reportPin
+      && fs.readFileSync(reportPath, 'utf8') === data.valid_body
+      && !fs.existsSync(path.join(p.project, '.hardware-report.repair-' + reportPin + '.tmp')));
+    check('report-repair-both-final-outputs-declared-and-empty-directory-check-rejected', actual.outputs.length === 2
+      && actual.outputs.some(row => row.path === backup) && actual.outputs.some(row => row.path === 'hardware-report.md')
+      && actual.attempts[0].negative_control_exit_code === 0 && actual.attempts[0].verifier_exit_code === 0);
+    check('report-repair-bound-success-releases-existing-failure-hold', (await p.session.extensionRunner.emitToolCall({ type: 'tool_call',
+      toolName: 'workflow_step', toolCallId: 'repair-postcondition', input: request }))?.block !== true);
+  } else {
+    check('report-counter-create-only-collision-confirmed-after-proper-recovery', repaired.isError === true && actual.status === 'failed'
+      && process.exit_code !== 0 && /FileExistsError/.test(process.stderr));
+  }
+  check('report-counter-original-report-failure-inputs-and-checker-preserved', (qualifyRepair || hash(reportPath) === reportPin) && hash(finalPath) === finalPin
+    && Object.entries(inputPins).every(([name, pin]) => hash(path.join(p.project, name)) === pin)
+    && hash(checker) === hash(path.join(source, 'harness/first_project.py')));
+  check('report-counter-no-native-extension-errors', p.errors.length === 0);
+  cases.push({ label: p.label, kind: qualifyRepair ? 'scripted_future_task_retained_preimage_repair' : 'expected_gap_reproduction_not_recovery_acceptance', original_final: finalPath,
+    original_final_sha256: finalPin, original_report_sha256: reportPin, attempted_recovery_final: repairedFinal,
+    attempted_recovery_final_sha256: hash(repairedFinal), original_check_argv: verify, candidate_check: JSON.parse(candidateCheck.stdout),
+    scope: qualifyRepair ? 'Synthetic future task, actual native owner resume/full failure read/supervised preimage repair and original checker; no model diagnosis or semantic acceptance. Original real trial/home never accessed.'
+      : 'Synthetic public facts and scripted fixture bodies, no model. Proper owner resume/full failure read/bound recovery confirms occupied-path refusal; no corrected report published. Original real trial/home never accessed.' });
+  await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
+}
 async function continuityCase() {
   const p = await profile('wrong-summary-continuity', true);
   const facts = { ram_total_gb: 32.5, gpu_vram_mib: null, storage_total_gb: 1000,
@@ -398,9 +483,13 @@ try {
     await executeCase('ordinary-success', 0, 'accepted fixture\n', true);
     await executeCase('predicate-fails', 0, 'rejected fixture\n', false);
   }
-  if (options.case !== 'recovery') await continuityCase();
-  if (options.case !== 'continuity') await recoveryCase();
-  check('native-zero-http-and-declared-synthetic-summary-count', networkRequests === 0 && syntheticSummaries === (options.case === 'recovery' ? 0 : 1));
+  if (options.case === 'report-recovery' || options.case === 'report-repair') await reportRecoveryCounter(options.case === 'report-repair');
+  else {
+    if (options.case !== 'recovery') await continuityCase();
+    if (options.case !== 'continuity') await recoveryCase();
+  }
+  check('native-zero-http-and-declared-synthetic-summary-count', networkRequests === 0
+    && syntheticSummaries === (!options.case || options.case === 'continuity' ? 1 : 0));
 } catch (error) {
   checks.push({ name: 'qualification-execution', passed: false, error: String(error?.stack || error) });
 } finally {
