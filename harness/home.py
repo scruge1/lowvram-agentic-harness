@@ -1030,6 +1030,16 @@ def main(argv=None, *, bound_home=None):
     board_view.add_argument("--assets", type=Path, help="Advanced: reviewed local UI asset directory")
     board_view.add_argument("--asset-manifest-sha256", help="Advanced: exact reviewed asset manifest")
     board_view.add_argument("--port", type=int, default=0)
+    schedule = commands.add_parser("schedule", help="Inspect this home's native scheduled jobs, history and local results")
+    schedule_commands = schedule.add_subparsers(dest="schedule_operation", required=True)
+    schedule_list = schedule_commands.add_parser("list")
+    schedule_list.add_argument("--limit", type=int, default=20)
+    schedule_runs = schedule_commands.add_parser("runs")
+    schedule_runs.add_argument("--job")
+    schedule_runs.add_argument("--limit", type=int, default=20)
+    schedule_result = schedule_commands.add_parser("result")
+    schedule_result.add_argument("job")
+    schedule_result.add_argument("filename", nargs="?")
     memory = commands.add_parser("memory")
     memory.add_argument("operation", choices=("start", "stop", "status", "search"))
     memory.add_argument("--query")
@@ -1119,6 +1129,18 @@ def main(argv=None, *, bound_home=None):
             if args.asset_manifest_sha256 is not None:
                 arguments.extend(["--asset-manifest-sha256", args.asset_manifest_sha256])
             return project_board.main(arguments)
+        if args.command == "schedule":
+            from harness import scheduling
+            arguments = ["--home", str(args.home), args.schedule_operation]
+            if args.schedule_operation in {"list", "runs"}:
+                arguments.extend(["--limit", str(args.limit)])
+            if args.schedule_operation == "runs" and args.job is not None:
+                arguments.extend(["--job", args.job])
+            if args.schedule_operation == "result":
+                arguments.append(args.job)
+                if args.filename is not None:
+                    arguments.append(args.filename)
+            return scheduling.main(arguments)
         if args.command == "research":
             from harness import home_entry, research_setup
             home, _config = load(args.home)

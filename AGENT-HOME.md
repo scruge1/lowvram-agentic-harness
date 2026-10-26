@@ -489,6 +489,40 @@ isolated pi-profile homes and exact borrowed dependencies without package
 installation, provider HTTP or model calls. Real model continuation remains
 separate acceptance.
 
+## Inspect scheduled work and saved results
+
+For a home with the pinned Hermes package installed:
+
+```bash
+python /chosen/agent-home/agent-home.py schedule list
+python /chosen/agent-home/agent-home.py schedule runs --job JOB_ID --limit 20
+python /chosen/agent-home/agent-home.py schedule result JOB_ID
+python /chosen/agent-home/agent-home.py schedule result JOB_ID 2026-01-01_09-00-00.md
+```
+
+These commands return bounded JSON from that home's existing native job store,
+execution history and local Markdown output. Missing stores remain missing.
+Legacy or incompatible data requires explicit native inspection or repair; the
+reader does not initialize, migrate or repair it. SQLite read transactions can
+use coordination sidecars. Existing user rows and saved output are not changed.
+
+`list` preserves enabled, paused and last-outcome fields. `runs` preserves native
+completed, failed and unknown outcomes. A saved schedule does not prove that a
+ticker is running or that an asleep/offline computer executed work. Native job
+and missed-run records can exist without an execution row.
+
+`result` reads the latest retained native output, or the exact filename supplied.
+It reports the file hash and whether the returned text is a prefix. Saved output
+is not checked-file acceptance, and a timestamp filename does not establish a
+link to a specific execution attempt. Native output retention can remove older
+files while other history remains.
+
+This inspection front door does not create, resume or run jobs, start a ticker,
+send notifications or invoke a model. Deliberately approved managed recurrence,
+its original-source handoff and live-agent qualification remain open. Existing
+homes still need normal reviewed source adoption; this command does not bypass
+controller or dependency admission.
+
 ## What the home contains
 
 | Location | Purpose |
