@@ -171,12 +171,17 @@ OLD40_VERIFY = r'''def _verify(home, identifier, expected_journal, *, controller
 
 
 def old40_verify():
+    # Provider expansion changes the current redacted contract. Execute the
+    # exact historical helper, rather than weakening its retained source pin.
+    historical_status = (Path(__file__).parent / "fixtures/runtime-update-source40-research-status.txt").read_text(encoding="utf-8").strip()
     for name, pin in OLD40_HELPERS.items():
-        if hashlib.sha256(inspect.getsource(getattr(update, name)).strip().encode()).hexdigest() != pin:
+        source = historical_status if name == "validate_research_status" else inspect.getsource(getattr(update, name)).strip()
+        if hashlib.sha256(source.encode()).hexdigest() != pin:
             raise AssertionError("Retained old verifier helper drift: " + name)
     if hashlib.sha256(OLD40_VERIFY.encode()).hexdigest() != OLD40_VERIFY_SHA256:
         raise AssertionError("Retained old verifier source drift")
     namespace = dict(vars(update))
+    exec(compile(historical_status, "<public-source40-research-status>", "exec"), namespace)
     exec(compile(OLD40_VERIFY, "<public-source40-verifier>", "exec"), namespace)
     return namespace["_verify"]
 

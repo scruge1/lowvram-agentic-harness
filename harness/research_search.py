@@ -19,9 +19,11 @@ import time
 import urllib.parse
 
 from . import web_research as web
+from .research_config import ORDER
 
 
 SOURCE_SHA256 = "9811a8c9442d6d3860972ef29f0d3fcfbbe45bc3228b9a3cadff19a0bbbb65d8"
+ADAPTER_SOURCE_SHA256 = "0b2417dffde0a85d87a1b38c4b5f1fac7ea242748a84daacf3f863bebb92e3e7"
 COOLDOWN_S = 6 * 3600
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_STATE_BYTES = 65536
@@ -42,7 +44,7 @@ def _is_relevant(result, required_tokens):
 def policy(value, limit):
     """Canonical coverage policy; None explicitly selects first-success mode."""
     if value is None:
-        return {"provider_budget": 5, "minimum_providers": 1, "minimum_unique_domains": 1,
+        return {"provider_budget": len(ORDER), "minimum_providers": 1, "minimum_unique_domains": 1,
                 "required_tokens": [], "results_per_provider": limit, "mode": "first_success"}
     if not isinstance(value, dict):
         raise ValueError("policy must be an object")
@@ -52,7 +54,7 @@ def policy(value, limit):
     numeric = {}
     for field in ("provider_budget", "minimum_providers", "minimum_unique_domains"):
         item = value[field]
-        if type(item) is not int or not 1 <= item <= (5 if field != "minimum_unique_domains" else 100):
+        if type(item) is not int or not 1 <= item <= (len(ORDER) if field != "minimum_unique_domains" else 100):
             raise ValueError("Invalid " + field)
         numeric[field] = item
     if not 2 <= numeric["minimum_providers"] <= numeric["provider_budget"]:
@@ -90,7 +92,9 @@ def contains_credentials(value, selected):
     secrets = [item["credential"] for item in selected if item.get("credential")]
     def contains(item):
         if isinstance(item, str):
-            return any(secret in item for secret in secrets)
+            # A query-key provider can echo a percent-encoded request URL.
+            # Inspect decoded strings too; retain neither form of the key.
+            return any(secret in item or secret in urllib.parse.unquote_plus(item) for secret in secrets)
         if isinstance(item, dict):
             return any(contains(key) or contains(val) for key, val in item.items())
         if isinstance(item, (list, tuple)):
@@ -251,6 +255,16 @@ def _request(name, selected, query, count, deadline):
         headers["Authorization"] = "Bearer " + credential
         body = {"query": query, "max_results": count, "search_depth": "basic", "include_answer": False,
                 "include_raw_content": False, "auto_parameters": False}
+    elif name == "serper":
+        url, method = "https://google.serper.dev/search", "POST"
+        headers["X-API-KEY"] = credential
+        body = {"q": query, "num": count}
+    elif name == "jina":
+        url = "https://s.jina.ai/" + urllib.parse.quote(query, safe="")
+        headers.update({"Authorization": "Bearer " + credential, "X-Respond-With": "no-content"})
+    elif name == "serpapi":
+        url = "https://serpapi.com/search?" + urllib.parse.urlencode(
+            {"q": query, "num": count, "engine": "google", "api_key": credential})
     else:
         raise ValueError("Unknown native provider")
     parts, host, address = _searx_target(url) if name == "searxng" else web._resolved_target(url)
@@ -261,7 +275,7 @@ def _request(name, selected, query, count, deadline):
     headers.update({"Host": parts.netloc, "User-Agent": web._UA})
     with httpx.Client(trust_env=False, follow_redirects=False, timeout=min(remaining, 25)) as client:
         with client.stream(method, target, headers=headers, json=body, extensions={"sni_hostname": host}) as response:
-            if response.status_code == 429:
+            if response.status_code == 429 or (name in {"serper", "jina", "serpapi"} and response.status_code == 402):
                 return [], "rate_limited"
             if not 200 <= response.status_code < 300:
                 return [], "http_" + str(response.status_code)
@@ -272,16 +286,40 @@ def _request(name, selected, query, count, deadline):
                 raw.extend(chunk)
                 if time.monotonic() >= deadline:
                     raise TimeoutError("Total search deadline")
-            data = json.loads(bytes(raw))
+            try:
+                data = json.loads(bytes(raw))
+            except (ValueError, UnicodeError):
+                return [], "invalid_response"
     if not isinstance(data, dict):
         return [], "invalid_response"
-    rows = data.get("web", {}).get("results", []) if name == "brave" else data.get("results", [])
+    if "error" in data or "errors" in data:
+        return [], "semantic_error"
+    if name == "jina" and "code" in data and (type(data["code"]) is not int or data["code"] != 200):
+        return [], "semantic_error"
+    if name == "serper" and "statusCode" in data and data["statusCode"] != 200:
+        return [], "semantic_error"
+    if name == "serpapi" and "search_metadata" in data:
+        metadata = data["search_metadata"]
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("status"), str) \
+                or metadata["status"] not in {"Success", "Error", "Processing"}:
+            return [], "invalid_response"
+        if metadata["status"] != "Success":
+            return [], "semantic_error"
+    if name == "brave":
+        rows = data.get("web", {}).get("results") if isinstance(data.get("web"), dict) else None
+    else:
+        rows = data.get({"serper": "organic", "jina": "data", "serpapi": "organic_results"}.get(name, "results"))
     if not isinstance(rows, list):
         return [], "invalid_response"
-    key = "text" if name == "exa" else "description" if name == "brave" else "content"
-    hits = [{"t": row.get("title", ""), "u": row.get("url", ""),
-             "s": " ".join(str(row.get(key, "") or "").split())[:2000]}
-            for row in rows[:count] if isinstance(row, dict)]
+    key = "text" if name == "exa" else "description" if name in {"brave", "jina"} else "snippet" if name in {"serper", "serpapi"} else "content"
+    url_key = "link" if name in {"serper", "serpapi"} else "url"
+    hits = []
+    for row in rows[:count]:
+        if not isinstance(row, dict) or not isinstance(row.get(url_key), str) or not row[url_key] \
+                or not isinstance(row.get("title", ""), str) or not isinstance(row.get(key, ""), (str, type(None))):
+            return [], "invalid_response"
+        hits.append({"t": row.get("title", ""), "u": row[url_key],
+                     "s": " ".join((row.get(key) or "").split())[:2000]})
     return hits, "ok" if hits else "empty"
 
 
@@ -291,8 +329,7 @@ def execute(query, timeout, limit, home, selected, selected_policy=None):
     deadline = time.monotonic() + timeout
     names = [item["provider"] for item in selected]
     state = _state(home, names, deadline)
-    secrets = [item["credential"] for item in selected if item.get("credential")]
-    if any(secret in query for secret in secrets):
+    if contains_credentials(query, selected):
         return web._failure("search", "[redacted]", "sensitive_query")
     attempted, considered, attempts, by_url, contributing = 0, 0, [], {}, []
     met, expired = False, False
@@ -337,7 +374,7 @@ def execute(query, timeout, limit, home, selected, selected_policy=None):
             if not isinstance(raw, dict):
                 invalid += 1
                 continue
-            if any(secret in str(raw.get(key, "")) for secret in secrets for key in ("t", "u", "s")):
+            if contains_credentials(raw, selected):
                 withheld += 1
                 continue
             normalized = {key: str(raw.get(key, "") or "")[:4096] for key in ("t", "u", "s")}

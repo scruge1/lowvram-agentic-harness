@@ -100,7 +100,7 @@ class CascadeTests(unittest.TestCase):
         result = web.search("synthetic query", home=self.home, timeout=3)
         self.assertEqual(result["status"], "providers_unavailable", result)
         self.assertEqual(result["coverage"]["attempted_providers"], 0)
-        self.assertEqual(len(result["attempts"]), 5)
+        self.assertEqual(len(result["attempts"]), len(research_config.ORDER))
         self.assertEqual(research_config.provider_status(self.home)["providers"]["ddg"]["state"], "skipped")
 
     def test_brave_unsupported_query_is_skipped_without_spending_request_budget(self):
@@ -203,6 +203,42 @@ class CascadeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.execute([], bad)
 
+    def test_default_budget_reaches_eighth_provider_without_resetting_deadline(self):
+        from harness import research_config
+        selected = [provider(name, credential="synthetic-token") for name in research_config.ORDER]
+        with mock.patch.object(search, "_request", return_value=([], "semantic_error")) as request, \
+             mock.patch.object(web, "_search_native", return_value=ddg_result()):
+            result = self.execute(selected)
+        self.assertTrue(result["ok"])
+        self.assertEqual(request.call_count, 7)
+        self.assertEqual(result["coverage"]["attempted_providers"], 8)
+        self.assertEqual(result["coverage"]["contributing_providers"], ["ddg"])
+        policy = {**self.coverage, "provider_budget": 8, "minimum_providers": 8}
+        self.assertEqual(search.policy(policy, 5)["provider_budget"], 8)
+        with self.assertRaises(ValueError):
+            search.policy({**policy, "provider_budget": 9}, 5)
+
+    def test_optional_new_holds_and_encoded_query_keys_never_become_evidence(self):
+        selected = [provider(name, "retention_hold") for name in ("serper", "jina", "serpapi")]
+        with mock.patch.object(search, "_request") as request:
+            self.assertEqual(self.execute(selected)["status"], "providers_unavailable")
+        request.assert_not_called()
+        token = "synthetic+query/key=secret"
+        encoded = search.urllib.parse.quote(token, safe="")
+        selected = [provider("serpapi", credential=token), provider("ddg")]
+        rows = [hit() | {"u": "https://serpapi.com/search?api_key=" + encoded}]
+        with mock.patch.object(search, "_request", return_value=(rows, "ok")), \
+             mock.patch.object(web, "_search_native", return_value=ddg_result()):
+            result = self.execute(selected)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["attempts"][0]["withheld_result_count"], 1)
+        self.assertNotIn(token, json.dumps(result))
+        self.assertNotIn(encoded, json.dumps(result))
+        with mock.patch.object(search, "_request", side_effect=RuntimeError("https://serpapi.com/?api_key=" + encoded)):
+            failed = self.execute(selected[:1])
+        self.assertEqual(failed["attempts"][0]["status"], "provider_error")
+        self.assertNotIn(encoded, json.dumps(failed))
+
 
 @unittest.skipUnless(httpx, "HTTPX native MockTransport dependency")
 class NativeProviderTransportTests(unittest.TestCase):
@@ -254,6 +290,60 @@ class NativeProviderTransportTests(unittest.TestCase):
                                          lambda _r: httpx.Response(429)), ([], "rate_limited"))
         self.assertEqual(self.run_request("exa", provider("exa", credential="synthetic-token"),
                                          lambda _r: httpx.Response(200, content=b"x" * (search.MAX_RESPONSE_BYTES + 1))), ([], "too_large"))
+
+    def test_three_added_native_contracts_use_fixed_host_and_metadata_only_jina(self):
+        for name, host, path, method, result_key in (
+            ("serper", "google.serper.dev", "/search", "POST", "organic"),
+            ("jina", "s.jina.ai", "/Python CSV", "GET", "data"),
+            ("serpapi", "serpapi.com", "/search", "GET", "organic_results"),
+        ):
+            with self.subTest(provider=name):
+                seen = []
+                def respond(request):
+                    seen.append(request)
+                    row = {"title": "Python CSV", "url": "https://docs.python.org/csv", "link": "https://docs.python.org/csv",
+                           "snippet": "search metadata", "description": "search metadata", "content": "page content must not be used"}
+                    return httpx.Response(200, json={result_key: [row], "code": 200})
+                result = self.run_request(name, provider(name, credential="synthetic-token", endpoint="https://ignored.invalid"), respond)
+                self.assertEqual(result, ([{"t": "Python CSV", "u": "https://docs.python.org/csv", "s": "search metadata"}], "ok"))
+                request = seen[0]
+                self.assertEqual((request.method, request.headers["host"], request.url.path), (method, host, path))
+                self.assertEqual((request.url.host, request.extensions["sni_hostname"]), ("8.8.8.8", host))
+                if name == "serper":
+                    self.assertEqual(request.headers["X-API-KEY"], "synthetic-token")
+                    self.assertEqual(json.loads(request.content), {"q": "Python CSV", "num": 5})
+                elif name == "jina":
+                    self.assertEqual(request.headers["Authorization"], "Bearer synthetic-token")
+                    self.assertEqual(request.headers["X-Respond-With"], "no-content")
+                    self.assertEqual(request.headers["Accept"], "application/json")
+                    self.assertEqual(request.content, b"")
+                else:
+                    self.assertEqual(dict(request.url.params), {"q": "Python CSV", "num": "5", "engine": "google", "api_key": "synthetic-token"})
+
+    def test_added_provider_semantic_malformed_and_valid_empty_are_distinct(self):
+        for name, result_key in (("serper", "organic"), ("jina", "data"), ("serpapi", "organic_results")):
+            selected = provider(name, credential="synthetic-token")
+            cases = [({result_key: []}, "empty"), ({"error": "synthetic-token", result_key: []}, "semantic_error"),
+                     ({"errors": [], result_key: []}, "semantic_error"), ({}, "invalid_response"),
+                     ({result_key: None}, "invalid_response"), ({result_key: [None]}, "invalid_response"),
+                     ({result_key: [{"title": "bad"}]}, "invalid_response"),
+                     ({result_key: [{"title": {}, "url": "https://example.com", "link": "https://example.com"}]}, "invalid_response")]
+            if name == "jina":
+                cases.append(({"code": 401, "data": []}, "semantic_error"))
+            if name == "serper":
+                cases.append(({"statusCode": 401, "organic": []}, "semantic_error"))
+            if name == "serpapi":
+                cases.extend([({"search_metadata": {"status": "Error"}, result_key: []}, "semantic_error"),
+                              ({"search_metadata": {"status": "Processing"}, result_key: []}, "semantic_error"),
+                              ({"search_metadata": {"status": "Success"}, result_key: []}, "empty"),
+                              ({"search_metadata": {}, result_key: []}, "invalid_response")])
+            for body, status in cases:
+                with self.subTest(provider=name, body=body):
+                    self.assertEqual(self.run_request(name, selected, lambda _r: httpx.Response(200, json=body)), ([], status))
+            self.assertEqual(self.run_request(name, selected, lambda _r: httpx.Response(200, content=b"not-json")), ([], "invalid_response"))
+            for status in (402, 429):
+                self.assertEqual(self.run_request(name, selected, lambda _r: httpx.Response(status)), ([], "rate_limited"))
+            self.assertEqual(self.run_request(name, selected, lambda _r: httpx.Response(302, headers={"location": "https://foreign.invalid"})), ([], "http_302"))
 
     def test_explicit_owned_searx_endpoint_uses_local_route_without_widening_fetch(self):
         original = httpx.Client

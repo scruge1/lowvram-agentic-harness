@@ -152,7 +152,15 @@ class ResearchStatusContractTests(unittest.TestCase):
         value = redacted_status()
         update.validate_research_status(value)
         from harness import research_config
-        self.assertEqual(set(value["providers"]), set(research_config.ORDER))
+        self.assertEqual(set(value["providers"]), set(research_config.LEGACY_ORDER))
+        expanded = copy.deepcopy(value)
+        expanded["providers"] = {name: copy.deepcopy(value["providers"]["exa"]) for name in research_config.ORDER}
+        update.validate_research_status(expanded)
+        for name in ("serper", "jina", "serpapi"):
+            candidate = copy.deepcopy(expanded)
+            candidate["providers"][name]["api_key"] = "synthetic-private-value"
+            with self.subTest(provider=name), self.assertRaises(ValueError):
+                update.validate_research_status(candidate)
         for guidance in (research_config.GUIDANCE_CHECKED, "2026-10-26", "2028-02-29"):
             candidate = copy.deepcopy(value)
             candidate["guidance_checked"] = guidance
