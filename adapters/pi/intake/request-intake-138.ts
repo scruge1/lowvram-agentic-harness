@@ -378,8 +378,8 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     for (const part of params.parts as Part[]) {
       if (['task', 'held'].includes(part.kind) && !boardTitle(part.summary)) throw new Error('Task summary must contain readable text');
       if (capture.source === 'historical-unverified' && part.execute) throw new Error('Historical import cannot grant execution authority. Route as held/amend-only; bind any authorized execution to a fresh owner request.');
-      if (part.execute && !['task', 'amend'].includes(part.kind)) throw new Error('Only tasks/amendments can be executable');
-      if (['task', 'held', 'question', 'control'].includes(part.kind) && part.task_id) throw new Error('Use amend for an existing card');
+      if (part.execute && !['task', 'amend'].includes(part.kind)) throw new Error('Only task/amend parts can use execute=true. For held/question/control parts omit execute or set it to false.');
+      if (['task', 'held', 'question', 'control'].includes(part.kind) && part.task_id) throw new Error('For a new task omit task_id; normal routing creates its card. Use amend with task_id only for an actual existing card.');
       if (part.kind === 'amend') {
         if (!part.task_id) throw new Error('Amendment requires an existing task_id');
         await projectCall(current!, { action: 'show', task_id: part.task_id }, signal);
@@ -393,11 +393,11 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     const work: Work[] = [];
     const bound: any[] = [];
     for (const [index, part] of (params.parts as Part[]).entries()) {
-      if (part.execute && !['task', 'amend'].includes(part.kind)) throw new Error('Only tasks/amendments can be executable');
+      if (part.execute && !['task', 'amend'].includes(part.kind)) throw new Error('Only task/amend parts can use execute=true. For held/question/control parts omit execute or set it to false.');
       let card = part.task_id;
       const marker = `Pi request ${capture.session}/${capture.id}/${index}`;
       if (part.kind === 'task' || part.kind === 'held') {
-        if (card) throw new Error('Use amend for an existing card');
+        if (card) throw new Error('For a new task omit task_id; normal routing creates its card. Use amend with task_id only for an actual existing card.');
         if (recovered.has(index)) {
           card = recovered.get(index);
           const shown = await projectCall(current!, { action: 'show', task_id: card }, signal);
@@ -452,7 +452,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       recover_existing: Type.Optional(Type.Array(Type.Object({ part_index: Type.Integer({ minimum: 0, maximum: 29 }), task_id: Type.String({ minLength: 1 }) }, { additionalProperties: false }), { maxItems: 30, description: 'Recover cards already created manually for this frozen source, without duplicate creation. Each card must cite this source ID and SHA256; held parts must remain triage. Original parts and authority remain unchanged.' })),
       cancel_task_ids: Type.Optional(Type.Array(Type.String(), { maxItems: 30, description: 'Only explicit owner cancellation. Stop retaining these session-owned cards; record cancellation and block runnable cards without deleting workspaces.' })),
       parts: Type.Array(Type.Object({ kind: Type.Union(['task', 'amend', 'held', 'question', 'control'].map(Type.Literal)),
-        summary: Type.String({ minLength: 1, maxLength: 4000 }), task_id: Type.Optional(Type.String()),
+        summary: Type.String({ minLength: 1, maxLength: 4000 }), task_id: Type.Optional(Type.String({ description: 'Existing card ID for amend only. Omit for task/held/question/control; routing creates new task cards.' })),
         execute: Type.Optional(Type.Boolean()), priority: Type.Optional(Type.Integer({ minimum: -100, maximum: 100 })),
         expandable: Type.Optional(Type.Boolean({ description: 'For an authorized compound task, retain its execution scope but create it in triage so kanban_decompose can build the persistent recursive hierarchy. Select ready leaves before execution.' })) },
       { additionalProperties: false }), { minItems: 1, maxItems: 30 }) }, { additionalProperties: false }),
