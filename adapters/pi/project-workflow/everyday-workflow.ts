@@ -236,7 +236,7 @@ export default function (pi: ExtensionAPI) {
   });
   pi.on('tool_call', async (event) => {
     if (pendingFailure && ['workflow_step', 'run_step', 'run_ledger'].includes(event.toolName)) {
-      return { block: true, reason: 'Inspect the complete saved failure record before another workflow action: ' + pendingFailure + '. Preserve the failed attempt; a changed command is not automatic recovery.' };
+      return { block: true, reason: 'Prerequisite not satisfied: inspect the complete saved failure record. Next native call: read ' + JSON.stringify({ path: pendingFailure }) + '. Omit offset and limit; partial or truncated reads do not count. Failed run: ' + path.basename(path.dirname(pendingFailure)) + '. Then use workflow_step with evidence-bound recovery; read the contract at ' + path.join(skillRoot, 'supervised-tasks', 'SKILL.md') + '. Inspection does not clear this failure. Preserve the failed attempt; do not replay it.' };
     }
     if (event.toolName === 'workflow_step' && inspectedFailure) {
       try {
@@ -251,7 +251,7 @@ export default function (pi: ExtensionAPI) {
       }
       const recovery = event.input?.recovery;
       if (!recovery || recovery.source_run_id !== inspectedFailure.runId) {
-        return { block: true, reason: 'The prior failure was inspected, but recovery is not evidence-bound. Supply recovery.source_run_id for ' + inspectedFailure.runId + ' plus failure_class, changed_assumption, new_evidence, expected_observation and stop_condition.' };
+        return { block: true, reason: 'The complete failure record was inspected; recovery is still pending. Use workflow_step with recovery.source_run_id=' + inspectedFailure.runId + ' and failure_class, changed_assumption, new_evidence, expected_observation, stop_condition. Use the allowed failure_class values in the tool schema and concrete evidence fields of at least 12 characters. Contract: ' + path.join(skillRoot, 'supervised-tasks', 'SKILL.md') + '. Only the exact successful host-verified recovery resolves this failure.' };
       }
       const fields = ['changed_assumption', 'new_evidence', 'expected_observation', 'stop_condition'];
       if (fields.some((name) => typeof recovery[name] !== 'string' || recovery[name].trim().length < 12)) {
@@ -259,13 +259,13 @@ export default function (pi: ExtensionAPI) {
       }
     }
     if (event.toolName === 'workflow_step' && !nativeDiscoveryReady) {
-      return { block: true, reason: 'Call native agent_capabilities first. A successful native registry result is required; shell commands and remembered tools do not establish readiness.' };
+      return { block: true, reason: 'Prerequisite not satisfied: call native agent_capabilities first. A successful native registry result is required; shell commands and remembered tools do not establish readiness. This refusal does not clear any prior failure or prove tool health.' };
     }
     if (event.toolName === 'workflow_step') {
       try { timeoutBudget(event.input); }
       catch (error) { return { block: true, reason: String(error) }; }
       const missing = missingSkills(event.input);
-      if (missing.length) return { block: true, reason: 'Read the complete installed SKILL.md for: ' + missing.join(', ') + '. Missing, partial or changed skill bytes do not satisfy workflow admission.' };
+      if (missing.length) return { block: true, reason: 'Prerequisite not satisfied: read the complete installed SKILL.md for: ' + missing.join(', ') + '. Next native read: ' + JSON.stringify({ path: path.join(skillRoot, missing[0], 'SKILL.md') }) + '. Omit offset and limit; missing, partial, truncated or changed bytes do not satisfy admission. This refusal or a skill read does not clear a prior failure.' };
       const checkpointError = checkpointPlanError(event.input);
       if (checkpointError) return { block: true, reason: checkpointError };
       if (inspectedFailure) recoveryInFlight = { toolCallId: event.toolCallId, sourceRunId: inspectedFailure.runId };
