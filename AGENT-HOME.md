@@ -480,6 +480,13 @@ The `agent` and `full` profiles install the single native `web_research` tool.
 Admit/select the project through the existing coordinator first. Use `search`
 for the home-configured provider cascade, `fetch` for public HTTP extraction, `render`
 for a clean read-only Chromium context and `read` for saved evidence windows.
+New search/fetch/render evidence can advance retained-work progress after its
+actual committed result window matches the saved artifact and current native
+source binding. Cached reads, duplicate content, failed or empty results do not
+count. Successful bounded browser text remains partial evidence. Credits stay
+in native intake history; the 256-entry recent cache is not a session limit.
+This neither completes a task nor changes execution permission. Mining and
+consensus progress accounting remain outside this first slice.
 DuckDuckGo works without a key. [Optional provider setup](RESEARCH-SETUP.md)
 provides official signup links and hidden terminal entry:
 

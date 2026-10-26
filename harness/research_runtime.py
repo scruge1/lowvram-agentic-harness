@@ -301,6 +301,8 @@ class ResearchRuntime:
         return binding, identity, digest((root / ".icm/project.json").read_bytes())
 
     def execute(self, request):
+        if isinstance(request, dict) and request.get("action") == "_progress_validate":
+            return self.progress_validation(request)
         if isinstance(request, dict) and request.get("action") in {"mine_prepare", "mine_finish"}:
             return self.mining(request)
         if isinstance(request, dict) and request.get("action") == "consensus":
@@ -346,6 +348,69 @@ class ResearchRuntime:
                   "observed_at": datetime.now(timezone.utc).isoformat(), "authority": AUTHORITY, "payload": payload}
         artifact_id = store.put(record)
         return projection(record, artifact_id, limit=request.get("limit", 8192))
+
+    def progress_validation(self, request):
+        """Read-only host validation, never exposed in the model action schema."""
+        require(not set(request) - {"action", "selection", "session_id", "delivery"}, "Unexpected progress validation fields")
+        delivered = request.get("delivery")
+        require(isinstance(delivered, dict), "Missing delivered research result")
+        binding, identity, before = self.selection(request)
+        record = ArtifactStore(Path(identity["state_root"]), binding).get(delivered.get("artifact_id"))
+        require(record.get("session_id") == request.get("session_id") and bool(request.get("session_id")),
+                "Research belongs to another native session")
+        require(record.get("identity_sha256") == before, "Research project source changed")
+        payload, action = record["payload"], record["action"]
+        abstain = {"schema": "research-result/v1", "ok": True, "authority": AUTHORITY,
+                   "action": "_progress_validate", "credit": False, "status": "no_new_evidence"}
+        if (action not in {"search", "fetch", "render"} or delivered.get("action") != action
+                or delivered.get("ok") is not True or delivered.get("cached") is not False
+                or delivered.get("view") != "text" or delivered.get("authority") != AUTHORITY
+                or payload.get("ok") is not True or payload.get("status") not in {"ok", "partial"}):
+            return abstain
+        text, scope = text_view(record, "text")
+        if not isinstance(text, str) or not text.strip():
+            return abstain
+        offset, count = delivered.get("offset"), delivered.get("returned_chars")
+        require(type(offset) is int and type(count) is int and offset >= 0 and 0 < count <= 8192,
+                "No delivered evidence window")
+        window = text[offset:offset + count]
+        require(count == len(window) and bool(window.strip()), "No nonempty delivered source window")
+        require(delivered.get("schema") == "research-result/v1"
+                and delivered.get("status") == payload.get("status") and delivered.get("content_scope") == scope
+                and delivered.get("project_id") == binding["project_id"]
+                and delivered.get("artifact_sha256") == delivered["artifact_id"][7:]
+                and delivered.get("source_status") == payload.get("status")
+                and delivered.get("text_sha256") == digest(text.encode())
+                and delivered.get("text") == window and delivered.get("window_sha256") == digest(window.encode()),
+                "Delivered research differs from its saved source")
+        if action == "search":
+            # Rank, provider order, timestamps and duplicate hits are not new
+            # evidence. Normalize the actual returned source observations.
+            hits = payload.get("hits")
+            if not isinstance(hits, list) or not 0 < len(hits) <= 100:
+                return abstain
+            meaningful = set()
+            for hit in hits:
+                if not isinstance(hit, dict):
+                    continue
+                url = hit.get("canonical_url") or hit.get("url")
+                title, snippet = hit.get("title"), hit.get("snippet")
+                if isinstance(url, str) and url and isinstance(title, str) and isinstance(snippet, str) and (title.strip() or snippet.strip()):
+                    meaningful.add((url, " ".join(title.split()), " ".join(snippet.split())))
+            if not meaningful:
+                return abstain
+            evidence = wire(sorted(meaningful))
+        else:
+            if not isinstance(text, str) or not text.strip():
+                return abstain
+            evidence = " ".join(text.split()).encode()
+        require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
+                "Research project source changed during validation")
+        return {**abstain, "credit": True, "status": "validated_source_evidence",
+                "fingerprint": digest(evidence), "project_id": binding["project_id"],
+                "artifact_id": delivered["artifact_id"], "content_scope": scope,
+                "coverage": "captured_partial_evidence" if action == "render" or payload.get("status") == "partial" else "stored_source_evidence",
+                "authority": AUTHORITY}
 
     def mining_model(self, value):
         from harness.home import endpoint

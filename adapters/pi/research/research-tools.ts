@@ -114,6 +114,12 @@ function invoke(runtime: ReturnType<typeof binding>, request: object, timeout: n
   });
 }
 
+/** Host-only readback for intake accounting; never a model tool action. */
+export async function validateResearchProgress(delivery: any, ctx: any) {
+  return invoke(binding(), { action: '_progress_validate', delivery, selection: selected(ctx),
+    session_id: ctx.sessionManager.getSessionId() }, 30000, ctx.signal, true);
+}
+
 function miningModel(ctx: any, runtime: ReturnType<typeof binding>) {
   const model = ctx.model;
   const file = path.join(runtime.home, 'agent', 'models.json');
