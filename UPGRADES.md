@@ -5,6 +5,34 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Inspect native scheduled work without activating it - 2026-10-26
+
+Parent commit: `ca520c1a818afa90c7c5c5cdeef7e8cd5a52d0b1`.
+
+Connect the installed `schedule list|runs|result` entry to the selected home's
+existing pinned Hermes job JSON, execution ledger and local output. Reuse the
+home lifecycle and native Git/package binding. Bound data and output sizes;
+recheck home/source binding before delivery. Preserve native failed and unknown
+outcomes, distinguish missing history from no matching rows, and label saved
+output separately from checked-file or execution acceptance.
+
+Native list/history APIs can initialize stores, migrate schema or repair job
+JSON. This reader uses their pinned existing schemas without invoking those
+operations. Missing stores remain absent; incompatible data is retained and
+refused. SQLite can use coordination sidecars during a read transaction.
+No second job store, ticker, registered job, model dispatch or permission grant
+is introduced.
+
+Validation includes source/home drift, missing and malformed stores, bounded
+output, native completed/failed/unknown preservation and unrelated-data
+conservation. An actual pinned native ledger/output fixture uses isolated
+execution records, abandoned-attempt recovery and native saved output with no
+registered job, ticker or network/model request. It qualifies native schema
+compatibility only. A Windows fixture initially retained a SQLite handle during
+cleanup; explicit fixture close fixes that control. Positive installed-home
+adoption, recurrence source handoff, local notification delivery and live-agent
+scheduled work remain separate.
+
 ## Preserve a failed report during explicit evidence-bound repair - 2026-10-26
 
 Parent commit: `5e65ba17b94b166db65e43a671cdbaf0af8059fd`.
