@@ -20,6 +20,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 
 MODEL_BYTES = 12 * 1024
@@ -32,6 +33,15 @@ AUTHORITY = "untrusted_source_evidence"
 
 class ResearchError(ValueError):
     pass
+
+
+class ResearchDeadline(ResearchError):
+    research_status = "deadline"
+
+
+def check_deadline(deadline):
+    if deadline is not None and time.monotonic() >= deadline:
+        raise ResearchDeadline("Research productive deadline reached; delivery held; inspect retained bound artifacts")
 
 
 def wire(value):
@@ -106,16 +116,20 @@ class ArtifactStore:
                 else:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
-    def put(self, record):
+    def put(self, record, *, deadline=None):
+        check_deadline(deadline)
         require(record.get("project") == self.project, "Artifact project binding differs")
         raw = wire(record)
+        check_deadline(deadline)
         sha = digest(raw)
         target = self.directory / (sha + ".json")
         with self.locked():
+            check_deadline(deadline)
             if target.exists():
                 require(read_json(target)[1] == raw, "Immutable artifact byte drift")
                 return "sha256:" + sha
             self.quota(len(raw))
+            check_deadline(deadline)
             fd, temporary = tempfile.mkstemp(prefix=".artifact-", dir=self.directory)
             candidate = Path(temporary)
             try:
@@ -123,6 +137,7 @@ class ArtifactStore:
                     stream.write(raw)
                     stream.flush()
                     os.fsync(stream.fileno())
+                check_deadline(deadline)
                 os.link(candidate, target)  # Atomic publication without overwrite.
             finally:
                 candidate.unlink(missing_ok=True)
@@ -165,6 +180,10 @@ def text_view(record, view):
         return payload.get("document", {}).get("text", ""), "captured_browser_window"
     if action == "mine":
         return wire(payload).decode(), "source_bound_claims_not_consensus"
+    if action == "consensus":
+        return wire(payload).decode(), "deterministic_scoring_not_truth_or_editorial_independence"
+    if action in {"plan", "retrieval_plan"}:
+        return wire(payload).decode(), "main_agent_plan_data_not_permission"
     return wire(payload.get("hits", [])).decode(), "search_metadata"
 
 
@@ -196,6 +215,18 @@ def projection(record, artifact_id, *, view="text", offset=0, limit=8192, cached
                     attempted_shards=payload["attempted_shards"], analysed_shards=payload["analysed_shards"],
                     expected_shards=payload["expected_shards"], analysed_rate=payload["analysed_rate"],
                     claim_count=len(payload["claims"]), failure_count=len(payload["failure_ledger"]))
+    if record["action"] == "consensus":
+        base.update(run_identity_sha256=payload["run_identity_sha256"], complete=payload["complete"],
+                    coverage_complete=payload["coverage_complete"], consensus_established=False, cluster_count=len(payload["clusters"]),
+                    input_claims=payload["input_claims"], input_count=len(payload["inputs"]))
+        if "requested_coverage" in payload:
+            base.update(requested_count=len(payload["requested_coverage"]["requests"]),
+                        research_plan_id=payload["requested_coverage"]["research_plan_id"],
+                        retrieval_plan_id=payload["requested_coverage"]["retrieval_plan_id"])
+    if record["action"] in {"plan", "retrieval_plan"}:
+        base.update(plan_data_only=True)
+    if "research_binding" in record:
+        base["research_binding"] = record["research_binding"]
     remaining = limit
     while True:
         window = text[offset:offset + remaining].encode()[:remaining].decode("utf-8", errors="ignore")
@@ -280,10 +311,15 @@ class ResearchRuntime:
         return binding, identity, digest((root / ".icm/project.json").read_bytes())
 
     def execute(self, request):
+        if isinstance(request, dict) and request.get("action") in {"plan", "retrieval_plan"}:
+            return self.planning(request)
         if isinstance(request, dict) and request.get("action") in {"mine_prepare", "mine_finish"}:
             return self.mining(request)
+        if isinstance(request, dict) and request.get("action") == "consensus":
+            return self.consensus(request)
         allowed = {"action", "query", "url", "max_results", "timeout", "artifact_id", "view", "offset", "limit",
-                   "wait_selector", "click_selectors", "download_selector", "allow_archive", "selection", "session_id"}
+                   "wait_selector", "click_selectors", "download_selector", "allow_archive", "selection", "session_id",
+                   "research_plan_id", "retrieval_plan_id", "angle_id", "request_id"}
         require(isinstance(request, dict) and not set(request) - allowed, "Unexpected research request fields")
         action = request.get("action")
         require(action in {"search", "fetch", "render", "read"}, "Unsupported research action")
@@ -295,6 +331,11 @@ class ResearchRuntime:
         state = Path(identity["state_root"])
         require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project research storage escaped this home")
         store = ArtifactStore(state, binding)
+        research_binding = None
+        if {"research_plan_id", "retrieval_plan_id", "angle_id", "request_id"} & set(request):
+            from harness import research_plan
+            require(action in {"search", "fetch", "render"}, "Cached reads do not create request bindings")
+            research_binding = research_plan.acquisition_binding(store, request, before)
         if action == "read":
             record = store.get(request.get("artifact_id"))
             return projection(record, request["artifact_id"], view=request.get("view", "text"),
@@ -321,8 +362,34 @@ class ResearchRuntime:
         record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
                   "session_id": str(request.get("session_id", ""))[:256], "action": action,
                   "observed_at": datetime.now(timezone.utc).isoformat(), "authority": AUTHORITY, "payload": payload}
+        if research_binding is not None:
+            record["research_binding"] = research_binding
         artifact_id = store.put(record)
         return projection(record, artifact_id, limit=request.get("limit", 8192))
+
+    def planning(self, request):
+        from harness import research_plan
+        fields = {"action", "timeout", "selection", "session_id", "limit"}
+        fields |= ({"query", "extraction_schema", "angles", "source_priorities", "recall_bias"} if request["action"] == "plan"
+                   else {"research_plan_id", "requests"})
+        require(not set(request) - fields, "Unexpected planning fields")
+        timeout = request.get("timeout", 30)
+        require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research plan timeout must be 2 through 60 seconds")
+        deadline = time.monotonic() + timeout
+        binding, identity, before = self.selection(request)
+        state = Path(identity["state_root"])
+        require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project planning storage escaped this home")
+        store = ArtifactStore(state, binding)
+        payload = (research_plan.plan(request) if request["action"] == "plan"
+                   else research_plan.retrieval_plan(store, request, before, deadline))
+        check_deadline(deadline)
+        require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before, "Project identity changed during planning")
+        record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
+                  "session_id": str(request.get("session_id", ""))[:256], "action": request["action"], "authority": AUTHORITY, "payload": payload}
+        key = store.put(record, deadline=deadline)
+        result = projection(record, key, limit=request.get("limit", 8192))
+        check_deadline(deadline)
+        return result
 
     def mining_model(self, value):
         from harness.home import endpoint
@@ -353,7 +420,8 @@ class ResearchRuntime:
     def mining(self, request):
         from harness import research_mining as mining
         common = {"action", "selection", "session_id", "model_binding"}
-        prepare_fields = {"query", "extraction_schema", "artifact_ids", "recall_bias", "resume_artifact_id", "mine_timeout_seconds"}
+        prepare_fields = {"query", "extraction_schema", "artifact_ids", "recall_bias", "resume_artifact_id", "mine_timeout_seconds",
+                          "research_plan_id", "retrieval_plan_id"}
         finish_fields = {"plan_artifact_id", "responses", "cancelled", "timed_out"}
         preparing = request["action"] == "mine_prepare"
         require(not set(request) - common - (prepare_fields if preparing else finish_fields), "Unexpected mining request fields")
@@ -363,7 +431,7 @@ class ResearchRuntime:
         require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project mining storage escaped this home")
         store = ArtifactStore(state, binding)
         if preparing:
-            plan = mining.prepare(request, store, model, text_view, wire, digest)
+            plan = mining.prepare({**request, "identity_sha256": before}, store, model, text_view, wire, digest)
             resume = request.get("resume_artifact_id")
             if resume is not None:
                 prior = store.get(resume)
@@ -384,7 +452,9 @@ class ResearchRuntime:
             rebuilt = mining.prepare({"query": spec["question"], "extraction_schema": spec["extraction_schema"],
                                       "artifact_ids": [s["artifact_id"] for s in spec["sources"]],
                                       "recall_bias": "HIGH" if spec["recall_floor"] == 1 else "MEDIUM",
-                                      "mine_timeout_seconds": spec["mine_timeout_seconds"]},
+                                      "mine_timeout_seconds": spec["mine_timeout_seconds"],
+                                      **({k: spec["research_binding"][k] for k in ("research_plan_id", "retrieval_plan_id")}
+                                         | {"identity_sha256": before} if "research_binding" in spec else {})},
                                      store, model, text_view, wire, digest)
             require(rebuilt["run_identity_sha256"] == plan["run_identity_sha256"], "Mining source/prompt/schema/model identity changed")
             require(type(request.get("cancelled", False)) is bool and type(request.get("timed_out", False)) is bool, "Invalid mining cancellation state")
@@ -403,6 +473,36 @@ class ResearchRuntime:
                     "sources": [{k: v for k, v in source.items() if k != "text"} for source in plan["sources"]]}
         return projection(record, key)
 
+    def consensus(self, request):
+        from harness import research_consensus
+        require(not set(request) - {"action", "artifact_ids", "query", "extraction_schema", "timeout", "limit", "selection", "session_id",
+                                   "research_plan_id", "retrieval_plan_id", "acquisition_artifact_ids", "fulfillments", "search_fulfillments"},
+                "Unexpected consensus request fields")
+        timeout = request.get("timeout", 30)
+        require(type(timeout) in (int, float) and 2 <= timeout <= 60, "Research consensus timeout must be 2 through 60 seconds")
+        deadline = time.monotonic() + timeout
+        binding, identity, before = self.selection(request)
+        state = Path(identity["state_root"])
+        require(state.resolve() == state and state.is_relative_to(self.home / "state/projects"), "Project consensus storage escaped this home")
+        store = ArtifactStore(state, binding)
+        if {"research_plan_id", "retrieval_plan_id", "acquisition_artifact_ids", "fulfillments", "search_fulfillments"} & set(request):
+            from harness import research_plan
+            payload = research_plan.requested_score(store, request, before, deadline)
+        else:
+            payload = research_consensus.score(store, request.get("artifact_ids"), before, query=request.get("query"),
+                                               extraction_schema=request.get("extraction_schema"), deadline=deadline)
+        check_deadline(deadline)
+        require(digest((Path(binding["canonical_root"]) / ".icm/project.json").read_bytes()) == before,
+                "Project identity changed during scoring; result was not published")
+        record = {"schema": "project-research-artifact/v1", "project": binding, "identity_sha256": before,
+                  "session_id": str(request.get("session_id", ""))[:256], "action": "consensus", "authority": AUTHORITY,
+                  "payload": payload}
+        key = store.put(record, deadline=deadline)
+        check_deadline(deadline)
+        result = projection(record, key, limit=request.get("limit", 8192))
+        check_deadline(deadline)
+        return result
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -418,7 +518,8 @@ def main():
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 0
     except (Exception, KeyboardInterrupt) as error:
-        result = {"schema": "research-result/v1", "ok": False, "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "runtime_error",
+        result = {"schema": "research-result/v1", "ok": False,
+                  "status": "cancelled" if isinstance(error, KeyboardInterrupt) else "deadline" if getattr(error, "research_status", None) == "deadline" else "runtime_error",
                   "reason": str(error)[:1000], "authority": AUTHORITY}
         sys.stdout.buffer.write(wire(result) + b"\n")
         return 1

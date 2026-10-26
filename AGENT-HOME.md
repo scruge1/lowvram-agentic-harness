@@ -521,6 +521,7 @@ The source port is deliberately identified by what it contains:
 |---|---|---|
 | `scripts/rig/search_core.py` | URL identity/domain grouping and configured provider request, cooldown, relevance and coverage policy | Search coverage does not establish factual corroboration |
 | `scripts/rig/godmode_miner.py` | HTML/redirect provenance and source-bound schema-shard claim mining | Question-to-consensus orchestration remains separate |
+| `scripts/godmode_research.py` and `img_consensus.py` | Deterministic source scoring, lexical grouping and separate numeric evidence over cached mining | No semantic truth, editorial-independence or narrative-model acceptance claim |
 | Existing browser workflow | New guarded Playwright adapter and project evidence cache/pager | The complete private browser service is not bundled |
 
 Raw session calls and failures are reviewed privately. Public regressions use
@@ -590,6 +591,99 @@ authority. Do not automatically resume or replay an uncertain operation.
 Offline schema/span/identity tests and a native Pi serializer probe with
 synthetic responses qualify the source path. They do not establish local model
 quality or the complete question-to-consensus research journey.
+
+Use `consensus` to score1–32 cached mining results for the same exact question and
+extraction schema. It makes no model, embedding, search or fetch request. Every
+input plan, source window, quote offset, hash and health record is revalidated.
+Mixed topics, foreign projects and altered evidence refuse the operation.
+
+```json
+{"action":"consensus","artifact_ids":["sha256:MINING_RESULT_64_HEX_DIGEST"]}
+```
+
+The inherited scoring formula combines domain priors, model relevance/confidence,
+domain coverage, quoted evidence and a fixed freshness-policy coefficient. These
+are policy inputs, not measured truth or document age. Lexical Jaccard grouping
+is explicit; no qualified generic embedding route is selected. Requested-source
+URL and identical-snapshot deduplication prevent repeated representations from
+inflating scoring when those identities match. Other correlations still require
+review. All original claims remain in `claim_rows`; clusters and
+numeric values cite their `claim_indices`. Background and failed/partial input
+coverage remain visible. No source or failure row is silently dropped.
+
+Numeric literals and their quotes stay separate; different numeric signatures
+cannot merge into one lexical cluster. Written units are not converted or
+averaged. `CONTESTED_LITERALS` means written values differ, not that a factual
+contradiction is proved. Domain counts are coverage proxies. The inherited
+`CANONICAL` and `CORROBORATED` tiers are scoring labels, not established editorial
+independence or semantic agreement. `consensus_established` remains false.
+`complete` and `coverage_complete` describe only the supplied cached computation;
+all-failed, partial and background-only corpora do not report success. Fully
+analysed batches with no relevant claims remain explicit `no_relevant_claims`
+inputs. They can combine with useful healthy batches without being called dead
+miners or proof that the whole web is empty. Mining's successful-only seen/resume
+rule stays unchanged: a zero-claim mining result still cannot act as a successful
+resume receipt. Full batch orchestration must handle that remaining limitation.
+The existing32MiB artifact byte budget applies; oversized batches refuse without
+silently dropping rows. The bound supports combining multiple mining batches;
+synthetic source controls cover32 batches with96 pages, not a live throughput claim.
+Consensus defaults to30 productive seconds and accepts2–60. The helper/direct
+entry checks one monotonic deadline during validation, grouping and before atomic
+publication. Native cancellation/cleanup grace cannot extend productive scoring.
+Expiry observed before publication cannot create a successful artifact. A late
+abort or expiry after publication holds delivery while the old bound immutable
+artifact remains for inspection; it is not rolled back or automatically replayed.
+Use `read` and its offsets to inspect the complete result. The full question-to-
+consensus research journey and useful model-driven acceptance remain open.
+
+### Bind research to a question and requested URLs
+
+The main agent can compose the existing tool calls around immutable plan data.
+`plan` records its question, extraction fields and1–12 angle queries. It performs
+no inference and grants no permission. The question/schema must stay identical
+through the bound chain. Existing unbound research calls remain available.
+
+```json
+{"action":"plan","query":"How does the method work?","extraction_schema":["mechanism"],"angles":[{"id":"mechanism","query":"method mechanism official documentation"}]}
+```
+
+Use the returned artifact ID as `research_plan_id` on `search`, with the exact
+`angle_id` and planned query. Then call `retrieval_plan` with that plan ID and
+`requests`: each row has a short `id`, `angle_id` and exact `url`. A URL chosen
+from search also has its `search_artifact_id` and zero-based `hit_index`; the URL
+must match the actual cached hit. Direct URLs are agent declarations. Declare
+the manifest before acquisition. It accepts1–128 requests within64KiB; the root
+plan accepts32KiB. Queries are at most1000 characters and URLs at most4096.
+
+Pass `retrieval_plan_id`, `request_id` and the exact URL to `fetch` or `render`.
+Failed outcomes keep the same binding and remain readable. Bound `mine` takes
+both plan IDs and1–4 successful source artifact IDs; it derives question/schema
+and recall bias from the plan. Supplied overrides must match. Its selected local
+model, source-window, exact-span, cancellation and successful-only resume rules
+remain in force. A failed/zero-claim result is never a successful seen receipt.
+
+Bound `consensus` takes both plan IDs, up to32 mining IDs in `artifact_ids` and
+the supplied search/fetch/render audit IDs in `acquisition_artifact_ids` (at most
+268 IDs and32MiB of acquisition data). Include search parents of declared hits.
+It reports every declared URL and angle. A uniquely eligible complete capture
+with healthy mining fulfills a URL automatically, and the result records that
+choice. Earlier supplied failed or partial attempts remain in its audit. A failed
+fetch followed by a complete rendered capture and healthy mining can fulfill the
+same request. Multiple eligible choices stay held until optional `fulfillments`
+selects `{request_id, acquisition_artifact_id, mining_artifact_id}`. Search
+ambiguity similarly accepts `search_fulfillments` rows `{angle_id, artifact_id}`.
+Missing, partial, failed or unmined fulfillment cannot report complete accounting.
+
+Here `coverage_complete` means complete declared request/window accounting. Each
+fulfilled row retains `content_scope`, `input_chars`, `source_chars` and
+`input_truncated`; mining can still analyse only its existing14000-character
+prefix. This is no whole-page, whole-web or semantic-completeness claim. The
+audit covers supplied outcomes, not proof that every ever-issued attempt was
+provided. Healthy no-relevance coverage remains a non-successful result. Plans,
+manifests and consensus use declared2–60-second productive deadlines; native
+cleanup is separate. Late cancellation can hold delivery while committed bound
+data survives. No automatic replay, task completion or execution authority is
+created. Useful model-driven question-to-report acceptance remains separate.
 
 Full source bytes, complete permitted static extraction, provenance and download
 bytes stay in content-addressed project-state artifacts. Model replies remain
@@ -1011,6 +1105,18 @@ unknown. It writes `FIRST-PROJECT.md`, `hardware-facts.json` and a pinned
 `check_argv`; use that argv as the read-only `workflow_step` verifier. The checker
 reads relative to the project cwd, so an empty-directory negative control fails.
 Do not recompute a replacement pin after inputs change.
+
+Preparation also returns `action_argv_template`. Its fixed installed-Python
+`-I -B -c` program writes only `hardware-report.md` in the project cwd. The agent
+replaces only its final argv string with the complete model-authored report;
+quotes, newlines, dollar signs and Unicode remain data, without a shell. The
+writer refuses an occupied file or symlink. Preserve any existing output and
+inspect its failure before proposing a correction. `first_project.py run` is
+the outer agent launcher, not a report writer or a nested workflow action.
+The complete task instructions/template also appear in the fresh project's
+existing `PROJECT-SSOT.md`, which normal `project_context` already delivers.
+`AGENTS.md` keeps only a short route. The original task input/pin and checker
+remain unchanged in purpose; a writer execution does not prove report quality.
 
 Open the prepared project with the managed agent and request its report. The
 checker requires exact facts and units, unchanged inputs and250–400 Unicode word

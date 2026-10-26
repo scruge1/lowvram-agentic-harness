@@ -81,6 +81,115 @@ unsupported-full refusal; a new Unicode fixture's default-encoding mistake was
 corrected to UTF-8, and its exact case plus the new compatibility control passed.
 These fixtures isolate packages/services or use owned temporary lifecycle
 controls. They do not establish complete native full-bundle acceptance.
+## Give the first-report agent an exact writing template - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+A real failed report run repeatedly treated the first-project agent launcher
+as a report writer and supplied no report body. Give each newly prepared task
+a reviewed action argv template and put the same required instructions on its
+existing `PROJECT-SSOT.md` context surface. Keep `AGENTS.md` short and preserve
+the generated workspace text. A missing normal workspace refuses; preparation
+does not invent a replacement route or alter an existing failed project.
+
+The installed Python runs a fixed isolated program for only the relative
+`hardware-report.md`. The agent passes its complete report as a separate argv
+string; exclusive create mode refuses occupied files/symlinks and UTF-8 preserves
+literal text. This is no new writer CLI, controller, canned report or automatic
+execution. Keep the pinned checker, empty-directory negative control, project
+discovery/intake/context gates and separate semantic review.
+
+Source controls execute the generated template with quotes, newlines, dollar
+signs, backticks and Unicode, check exact bytes and unchanged inputs, and refuse
+missing/placeholder text, occupied outputs and dangling symlinks. Native context
+delivery and useful actual model output remain separate acceptance evidence.
+The first exact hosted Windows gate then exposed that Python3.13 exclusive open
+could follow a dangling symlink. Retain that failure and the native negative;
+the fixed writer explicitly refuses a symlink before its exclusive open.
+
+## Bind declared research requests to immutable outcomes - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+Extend the existing `web_research` tool and ArtifactStore with the main agent's
+question/schema/angle plan and an immutable requested-URL manifest. Reuse the
+canonical topic-specific planning fields, without its private CLI invocation.
+The same main-agent tool loop composes search, acquisition, selected-model claim
+mining and deterministic consensus. No new inference call, router, registry,
+store, scheduler, daemon, home controller or dependency is introduced. Existing
+unbound APIs remain available; planning data grants no permissions.
+
+Validate exact search queries/hits, requested URLs, project identity and plan
+bindings before acquisition. Preserve failed attempts, unattempted requests,
+healthy zero-relevance and failed/partial mining. Uniquely eligible healthy
+fulfillment is recorded automatically; ambiguous choices need an explicit
+override. Recovery can fulfill the same requested URL with a complete rendered
+capture after a failed fetch while keeping the failure in its audit. Keep
+supplied-attempt audit, requested fulfillment and policy scoring distinct.
+Coverage describes declared request/window accounting. Existing prefix bounds
+and truncation remain explicit; it does not establish whole-page analysis,
+editorial independence, truth or every ever-issued attempt. Keep mining's
+successful-only seen/resume contract and all existing source-span checks.
+
+Bound text/count/serialized-byte inputs and reuse the accepted productive
+deadline/publication checks for new local actions. An88-source/22-mining-batch
+control exposed repeated immutable-manifest reads and a duplicate complete
+validation pass; retain both failures and reuse each operation's validated
+manifest/scorer output instead of increasing the deadline or adding a cache.
+Source/native fixtures cover the normal chain, isolation, recovery, ambiguity,
+window scope, cancellation and deadlines using synthetic acquisition/model
+transports. They do not accept the useful normal model-driven research journey.
+Research-progress accounting is a separate reproduced feature.
+
+## Score complete cached mining inputs without inference - 2026-10-25
+
+Parent commit: `fd096f30bf027f8fb26b0278007ba5d1f25d8c3a`.
+
+Extend the same `web_research` tool and ArtifactStore with deterministic
+`consensus` over cached mining artifacts. Reuse the canonical authority, claim
+weight, domain-count component, cluster-score formula and hard tier floors.
+Reuse explicit lexical Jaccard grouping and the separate numeric-distribution
+method. No model/embedding/fetch request, home-controller change, model router,
+store, daemon or new dependency is added.
+
+Rebuild mining plans against their actual cached sources and validate quote
+offsets, prompt/schema/model identity, project scope and complete health/failure
+coverage. Refuse mixed questions/schemas and altered or incomplete records.
+Keep every validated input claim and all failed/partial ledgers. Empty,
+all-failed, partial and background-only corpora cannot report successful scoring.
+Accept up to32 cached mining batches within the existing artifact byte budgets,
+so multi-batch research is not limited to a small handful of pages. Distinguish
+fully analysed zero-relevance batches from dead/malformed/partial miners; retain
+them as no-relevant-claims coverage without a claim about the whole web. Keep the
+miner's successful-only seen/resume contract unchanged; automatic zero-result
+batch resume remains a separate orchestration limitation.
+The existing post-await admission check also holds consensus delivery after a
+changed native input epoch; an old bound immutable artifact can remain.
+
+A final-boundary regression then reproduced successful delivery after helper-
+close cancellation and successful publication after a declared2-second budget
+with2.2 seconds of injected productive delay. Recheck cancellation immediately
+before delivery and return typed cancellation. Enforce a single productive
+deadline in the native caller and helper/direct entry, including validation,
+grouping, serialization and the existing ArtifactStore's pre-publication check.
+Keep cleanup grace separate. Late cancellation can preserve an already committed
+bound artifact while holding delivery; no rollback or automatic replay is claimed.
+
+Necessary adaptations are explicit: use the existing public URL/domain helpers;
+anchor intended PubMed/ReadTheDocs priors instead of trusting unrelated host
+substrings; deduplicate requested URLs and identical snapshots for scoring while
+retaining attribution. Partition lexical groups by extraction field and written
+numeric signature. Preserve numeric values/units/quotes without averaging or a
+claim of proved contradiction. Store claims once and refer to their indices.
+Domain counts remain coverage proxies and inherited tier names remain policy
+labels. No qualified generic embedding route is used and no partial embedding
+set or silent semantic fallback is accepted.
+
+Source controls cover legacy math/tier examples, repeated sources, subdomains,
+copies, numeric variants, complete failure coverage, empty corpora, two-topic
+isolation and source/plan/span/health drift. Native qualification is separate
+from useful model-driven research acceptance. Question planning, narrative
+grounding and the complete research journey remain open.
 
 ## Deliver existing project discovery through one native tool - 2026-10-25
 
