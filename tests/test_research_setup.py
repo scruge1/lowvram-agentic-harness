@@ -39,6 +39,48 @@ class ResearchSetupTests(unittest.TestCase):
             self.assertEqual(view["providers"][name]["state"], "unconfigured")
         self.assertFalse((self.home / "state/research").exists())
 
+    def test_legacy_five_settings_normalize_without_writes_or_new_credential_consent(self):
+        self.enable(credential=self.secret)
+        path = self.home / "state/research/providers.json"
+        legacy = json.loads(path.read_bytes())
+        legacy["providers"] = {name: legacy["providers"][name] for name in config.LEGACY_ORDER}
+        path.write_text(json.dumps(legacy))
+        auth = self.home / "state/research/auth.json"
+        before = (path.read_bytes(), auth.read_bytes(), path.stat().st_mtime_ns, auth.stat().st_mtime_ns)
+        env = {config.CATALOG[name]["environment"]: self.secret for name in ("serper", "jina", "serpapi")}
+        status = config.provider_status(self.home, env)
+        self.assertEqual(tuple(status["providers"]), config.ORDER)
+        self.assertEqual(tuple(name for name in config.ORDER if name in config.LEGACY_ORDER), config.LEGACY_ORDER)
+        for name in ("serper", "jina", "serpapi"):
+            self.assertEqual(status["providers"][name]["state"], "unconfigured")
+            self.assertFalse(status["providers"][name]["credential_present"])
+        self.assertEqual(before, (path.read_bytes(), auth.read_bytes(), path.stat().st_mtime_ns, auth.stat().st_mtime_ns))
+        legacy["providers"]["unknown"] = legacy["providers"]["exa"]
+        path.write_text(json.dumps(legacy))
+        with self.assertRaises(config.ConfigError):
+            config.load_settings(self.home)
+
+    def test_added_providers_use_existing_hidden_entry_and_explicit_revocable_consent(self):
+        for name in ("serper", "jina", "serpapi"):
+            with self.subTest(provider=name):
+                output = io.StringIO()
+                with patch.object(setup, "_terminal"), patch("builtins.input", side_effect=["e", ""]), \
+                     patch.object(setup.getpass, "getpass", return_value=self.secret) as hidden, redirect_stdout(output):
+                    setup.guided(self.home, name)
+                hidden.assert_called_once()
+                self.assertEqual(config.resolve_provider(self.home, name, {}).state, "retention_hold")
+                self.assertIn(config.RETENTION_SOURCES[name], output.getvalue())
+                self.assertNotIn(self.secret, output.getvalue())
+                self.enable(name, retention_acknowledged=True)
+                selected = config.resolve_provider(self.home, name, {})
+                self.assertEqual((selected.state, selected.credential), ("ready", self.secret))
+                self.assertNotIn(self.secret, repr(selected))
+                self.enable(name, retention_acknowledged=False)
+                self.assertEqual(config.resolve_provider(self.home, name, {}).state, "retention_hold")
+                config.configure_provider(self.home, name, "skipped")
+                self.assertEqual(config.resolve_provider(self.home, name, {config.CATALOG[name]["environment"]: self.secret}).state, "skipped")
+                self.assertFalse(config.provider_status(self.home, {})["providers"][name]["tested"])
+
     def test_enabled_store_env_precedence_skip_revisit_and_remove(self):
         self.enable(credential=self.secret)
         self.assertEqual(config.resolve_provider(self.home, "exa", {}).credential, self.secret)

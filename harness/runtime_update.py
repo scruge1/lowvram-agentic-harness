@@ -679,7 +679,8 @@ def validate_research_status(value):
             and value.get("limits") == "Local configuration only. No provider request, quota check or managed environment forwarding was tested.",
             "Actual research status response is outside the redacted v1 contract")
     providers = value["providers"]
-    require(isinstance(providers, dict) and set(providers) == {"searxng", "exa", "brave", "tavily", "ddg"},
+    legacy = {"searxng", "exa", "brave", "tavily", "ddg"}
+    require(isinstance(providers, dict) and set(providers) in (legacy, legacy | {"serper", "jina", "serpapi"}),
             "Actual research status provider inventory differs")
     for provider in providers.values():
         require(isinstance(provider, dict)

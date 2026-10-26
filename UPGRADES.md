@@ -5,6 +5,33 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Complete the optional search provider catalog - 2026-10-26
+
+Parent: `ab7a637cdf140ca14f3dafb37c5d4b38cfc35777`.
+
+Add the existing Serper, Jina Search and SerpAPI request/normalization contracts
+to the sole home-owned research catalog and fixed-endpoint HTTPX resolver.
+Preserve the five earlier providers' relative order, the shared deadline,
+request-count budget, DNS binding, response limits and typed fallback results.
+Jina requests metadata without page content. SerpAPI's query key is never
+returned in request URLs, raw errors or echoed result fields. Semantic errors
+and malformed responses do not count as valid empty searches.
+
+Reuse hidden terminal entry and the existing owner-only key store. The three
+additional providers start unconfigured and require explicit retention consent.
+Existing five-provider configuration is normalized only in memory; reading it
+does not write files or enable ambient keys. Redacted update verification accepts
+the exact old five or new eight-provider inventory and still rejects unknown
+IDs and secret fields. Retain the exact historical five-provider validator in
+its source40 fixture instead of changing that fixture's original hash.
+
+Official signup guidance is dated 26 October 2026: Serper's initial 2,500 queries
+are not monthly credits, Jina's initial token offer has non-commercial terms,
+and SerpAPI's current free plan lists 250 monthly searches. Setup does not create
+accounts or incur charges. Synthetic native HTTPX, filesystem and protocol
+controls qualify the source contracts only; live keyed-provider operation and
+useful model-driven research remain separate acceptance work.
+
 ## Inspect native scheduled work without activating it - 2026-10-26
 
 Parent commit: `ca520c1a818afa90c7c5c5cdeef7e8cd5a52d0b1`.

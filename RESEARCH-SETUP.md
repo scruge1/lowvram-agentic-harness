@@ -1,7 +1,11 @@
 # Optional search providers
 
 DuckDuckGo is the keyless default. Add other providers only if you want them.
-The host uses one configured order: SearXNG, Exa, Brave, Tavily, DuckDuckGo.
+The host uses one configured order: SearXNG, Exa, Brave, Tavily, Serper,
+Jina Search, SerpAPI, DuckDuckGo. The three additional providers are optional
+and initially unconfigured. Existing five-provider settings remain valid;
+status normalizes missing entries in memory without writing settings, enabling
+keys or granting consent.
 An unconfigured or skipped provider is not activated by an ambient API key.
 Use the installed home command below. Setup itself sends no provider request.
 
@@ -35,9 +39,13 @@ Guidance checked on 26 October 2026; plans and terms can change:
 | Exa | [Signup](https://dashboard.exa.ai/), [pricing](https://exa.ai/pricing): $10 monthly credits plus $10 initial credits; no payment method required. [Create a dashboard key](https://exa.ai/docs/get-started/quickstart). Credits are not a fixed query count. |
 | Brave | [Dashboard](https://api-dashboard.search.brave.com/), [quickstart](https://api-dashboard.search.brave.com/documentation/quickstart): activate the Search plan, then create its key under API Keys. Card required; $5 monthly credits, no standalone free plan. Review usage limits and auto-reload before enabling it. The [billing FAQ](https://api-dashboard.search.brave.com/documentation/resources/help-feedback) permits a prepaid balance of $0; auto-reload can charge the card and is uncapped if no monthly limit is set. Retained results require [storage rights](https://brave.com/search/api/). |
 | Tavily | [Signup](https://app.tavily.com/), [pricing](https://www.tavily.com/pricing): 1,000 credits/month, no card required. Under dashboard API keys, [create a named key and set its monthly usage limit](https://help.tavily.com/articles/9170796666-how-can-i-create-an-api-key). The installed adapter uses [basic Search at 1 credit per request](https://docs.tavily.com/documentation/api-credits). |
+| Serper (`serper`) | [Signup and dashboard](https://serper.dev/): 2,500 signup queries, no card required. This is an initial credit, not a monthly allowance. Create a dashboard API key and review the [terms](https://serper.dev/terms), including business-use and result-storage conditions. |
+| Jina Search (`jina`) | [Create a key](https://jina.ai/api-dashboard/key-manager). [Search requires a key](https://docs.jina.ai/). [Current pricing](https://jina.ai/api-dashboard/pricing/) offers 10 million initial tokens for non-commercial use (CC-BY-NC); this is not unrestricted free production use or a fixed query count. Review Search costs and auto top-up before using paid options. |
+| SerpAPI (`serpapi`) | [Signup](https://serpapi.com/users/sign_up), [pricing](https://serpapi.com/pricing): 250 searches/month on the current free plan. Copy the dashboard key only into hidden terminal entry and review the [legal terms](https://serpapi.com/legal). Empty results may still count toward quota. |
 
-Brave stays held unless you explicitly confirm that your current rights cover
-stored search results in **both research artifacts and native session history**.
+Brave, Serper, Jina Search and SerpAPI stay held unless you explicitly confirm
+that your current rights cover stored search results in **both research
+artifacts and native session history**.
 A private artifact also stores data. A key, free credits or a plan name does not
 establish storage rights. Revisit can withdraw the acknowledgement. The runtime
 must skip a held provider before making a request or retaining its results.
@@ -46,14 +54,20 @@ party content. See the current [Exa terms](https://exa.ai/terms) and
 [Tavily terms](https://www.tavily.com/terms), and check source rights for your use.
 
 The installed search adapters use SearXNG JSON search, Exa Search, Brave Web
-Search and Tavily basic Search. They do not enable the providers' hosted answer,
-research-agent, crawl or map products. A provider website may need JavaScript
+Search, Tavily basic Search, Serper web search, Jina Search metadata and SerpAPI
+Google organic results. Jina receives `X-Respond-With: no-content`; fetching a
+result page remains a separate operation. SerpAPI requires a query-parameter
+key, so the host never retains request URLs or raw provider errors and withholds
+result fields that echo a raw or URL-encoded key. Malformed or semantic-error
+responses are failures, not valid empty results. These adapters do not enable
+the providers' hosted answer, research-agent, crawl or map products. A provider website may need JavaScript
 for signup; setup prints links for your browser and accepts only the resulting
 key in your own terminal. It does not automate login or keep browser cookies.
 The SearXNG adapter does not accept account login, HTTP Basic credentials or
 proxy authentication; supply an owned endpoint reachable without those fields.
 
-Normal search stops after the first usable configured provider. Missing,
+Normal search stops after the first usable configured provider, with up to eight
+attempted providers inside the same operation deadline. Missing,
 skipped, rights-held or cooling-down providers make no request. A failure may
 reach the next configured provider only within the remaining operation budget;
 it does not guarantee a result or independent corroboration. DuckDuckGo uses
@@ -80,7 +94,8 @@ Status returns presence and configuration state, never a key or fingerprint.
 “Ready” here means locally configured, **not tested**. This module does not
 inspect account quotas, confirm storage rights or prove managed environment
 forwarding. Enabled providers can use `EXA_API_KEY`, `BRAVE_API_KEY`,
-`TAVILY_API_KEY` or `SEARXNG_URL` before local settings only when the trusted
+`TAVILY_API_KEY`, `SERPER_API_KEY`, `JINA_API_KEY`, `SERPAPI_KEY` or `SEARXNG_URL`
+before local settings only when the trusted
 helper actually receives that variable. No `.env`, global configuration or
 another application's key store is searched.
 
@@ -98,6 +113,12 @@ For source development, `python -m harness.research_setup --home HOME ACTION`
 is the same parser. The managed entry owns its normal home lifecycle lease;
 calling the source module directly does not establish installed lifecycle or
 provider acceptance.
+
+The additional request/normalization contracts reuse the existing search
+adapter source. Offline controls use native HTTPX MockTransport with synthetic
+keys and responses, plus filesystem setup and redacted-status checks. They do
+not establish live keyed-provider acceptance, available quota or a complete
+model-driven research result. Signup offers and terms are dated guidance.
 
 Existing homes retain their installed controller and may not expose this grouped
 command. Use that home's supported update plan and its exact source constraints;

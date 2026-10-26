@@ -21,7 +21,8 @@ SCHEMA = "agent-home-research/v1"
 AUTH_SCHEMA = "agent-home-research-auth/v1"
 MAX_BYTES = 32768
 RIGHTS_SOURCE = "https://brave.com/search/api/"
-ORDER = ("searxng", "exa", "brave", "tavily", "ddg")
+LEGACY_ORDER = ("searxng", "exa", "brave", "tavily", "ddg")
+ORDER = (*LEGACY_ORDER[:-1], "serper", "jina", "serpapi", "ddg")
 CATALOG = {
     "searxng": {"environment": "SEARXNG_URL", "signup": None,
                 "guide": "https://docs.searxng.org/dev/search_api.html",
@@ -31,14 +32,27 @@ CATALOG = {
             "note": "$10 credits each month plus $10 initial credits; no payment method required. Create a key in your dashboard. Credits are not a query count. Provider and source terms still apply."},
     "brave": {"environment": "BRAVE_API_KEY", "signup": "https://api-dashboard.search.brave.com/",
               "guide": RIGHTS_SOURCE,
+              "retention_guide": RIGHTS_SOURCE,
               "note": "$5 monthly credits; card required, no standalone free plan. Select the Search plan, set usage limits and review auto-reload before creating its API key. A $0 prepaid balance is supported; auto-reload can incur charges. Storage rights must cover persisted research artifacts and native session history. Otherwise this provider remains held."},
     "tavily": {"environment": "TAVILY_API_KEY", "signup": "https://app.tavily.com/",
                "guide": "https://www.tavily.com/pricing",
                "note": "1,000 API credits/month, no card required. In the dashboard API keys section, create a named key and set its monthly limit. This adapter uses basic search, 1 credit/request; source terms still apply."},
+    "serper": {"environment": "SERPER_API_KEY", "signup": "https://serper.dev/",
+               "guide": "https://serper.dev/", "retention_guide": "https://serper.dev/terms",
+               "note": "2,500 signup queries, no card required; this is an initial credit, not a monthly allowance. Create a key in your dashboard. Review the business-use and storage terms before enabling persisted search results. Provider and source rights must cover research artifacts and native session history."},
+    "jina": {"environment": "JINA_API_KEY", "signup": "https://jina.ai/api-dashboard/key-manager",
+             "guide": "https://docs.jina.ai/", "retention_guide": "https://jina.ai/api-dashboard/pricing/",
+             "note": "Search requires a key. The pricing page offers 10 million initial tokens for non-commercial use (CC-BY-NC), not unrestricted free production use. Search token costs and current terms apply. This adapter requests no-content results, not page downloads. Confirm rights for research artifacts and native session history; do not enable auto top-up unless you intend paid use."},
+    "serpapi": {"environment": "SERPAPI_KEY", "signup": "https://serpapi.com/users/sign_up",
+                "guide": "https://serpapi.com/pricing", "retention_guide": "https://serpapi.com/legal",
+                "note": "250 searches/month on the current free plan. Create a key in your dashboard and review current quota and storage terms; empty results may still count. Provider and source rights must cover research artifacts and native session history. Setup does not purchase a plan or guarantee availability."},
     "ddg": {"environment": None, "signup": None,
             "guide": "https://duckduckgo.com/",
             "note": "Keyless fallback; no guaranteed quota or availability."},
 }
+KEYED = frozenset(name for name in ORDER if name not in {"searxng", "ddg"})
+RETENTION_SOURCES = {name: item["retention_guide"] for name, item in CATALOG.items()
+                     if "retention_guide" in item}
 GUIDANCE_CHECKED = "2026-10-26"
 
 
@@ -209,16 +223,21 @@ def _settings(home, raw):
     value = _json(raw)
     require(set(value) == {"schema", "home", "providers"} and value["schema"] == SCHEMA
             and value["home"] == str(home) and isinstance(value["providers"], dict)
-            and set(value["providers"]) == set(ORDER), "Research settings identity or schema differs")
+            and set(LEGACY_ORDER).issubset(value["providers"])
+            and not set(value["providers"]) - set(ORDER), "Research settings identity or schema differs")
     for name, item in value["providers"].items():
         require(isinstance(item, dict) and set(item) == ({"state", "retention", "rights_source", "endpoint"}
                 if name == "searxng" else {"state", "retention", "rights_source"}), "Unexpected provider settings")
         require(isinstance(item["state"], str) and item["state"] in {"unconfigured", "enabled", "skipped"}
                 and isinstance(item["retention"], str) and item["retention"] in {"not_confirmed", "rights_confirmed"}, "Invalid provider state")
-        require(item["rights_source"] == (RIGHTS_SOURCE if item["retention"] == "rights_confirmed" else None), "Use the official retention guidance link")
-        require(name == "brave" or item["retention"] == "not_confirmed", "Only Brave records this retention acknowledgement")
+        require(name in RETENTION_SOURCES or item["retention"] == "not_confirmed", "This provider has no retention acknowledgement")
+        require(item["rights_source"] == (RETENTION_SOURCES[name] if item["retention"] == "rights_confirmed" else None), "Use the official retention guidance link")
         if name == "searxng" and item["endpoint"] is not None:
             _endpoint(item["endpoint"])
+    # Normalize old five-provider homes in memory only. Reading/status must not
+    # write settings, adopt ambient credentials or manufacture consent.
+    defaults = _defaults(home)["providers"]
+    value["providers"] = {name: value["providers"].get(name, defaults[name]) for name in ORDER}
     return value
 
 
@@ -239,7 +258,7 @@ def _auth(home, raw):
     value = _json(raw)
     require(set(value) == {"schema", "home", "keys"} and value["schema"] == AUTH_SCHEMA
             and value["home"] == str(home) and isinstance(value["keys"], dict)
-            and not set(value["keys"]) - {"exa", "brave", "tavily"}, "Research authentication identity or schema differs")
+            and not set(value["keys"]) - KEYED, "Research authentication identity or schema differs")
     for key in value["keys"].values():
         _key(key)
     return value
@@ -268,7 +287,7 @@ def resolve_provider(home, provider, environ=None, *, require_retention=True):
     state = item["state"]
     if state != "enabled":
         return ProviderResolution(provider, state)
-    if provider == "brave" and require_retention and item["retention"] != "rights_confirmed":
+    if provider in RETENTION_SOURCES and require_retention and item["retention"] != "rights_confirmed":
         return ProviderResolution(provider, "retention_hold")
     env = os.environ if environ is None else environ
     endpoint, credential, origin = None, None, "none"
@@ -299,7 +318,7 @@ def provider_status(home, environ=None):
         selected = resolve_provider(home, name, environ)
         origin = selected.credential_source
         present = selected.credential is not None
-        if name in {"exa", "brave", "tavily"} and settings["providers"][name]["state"] == "enabled":
+        if name in KEYED and settings["providers"][name]["state"] == "enabled":
             origin = "environment" if env.get(CATALOG[name]["environment"]) else "home" if name in auth["keys"] else "none"
             present = origin != "none"
         providers[name] = {"configured_state": settings["providers"][name]["state"],
@@ -363,7 +382,7 @@ def configure_provider(home, provider, state, *, credential=None, endpoint=None,
                        retention_acknowledged=None, remove_credential=False):
     """Human setup only. No credential values in return values or errors."""
     require(provider in ORDER and state in {"enabled", "skipped", "unconfigured"}, "Invalid provider selection")
-    require(credential is None or provider in {"exa", "brave", "tavily"}, "This provider has no account key")
+    require(credential is None or provider in KEYED, "This provider has no account key")
     if credential is not None:
         _key(credential)
     require(endpoint is None or provider == "searxng", "Only SearXNG accepts an owned endpoint")
@@ -371,7 +390,7 @@ def configure_provider(home, provider, state, *, credential=None, endpoint=None,
         endpoint = _endpoint(endpoint)
     require(retention_acknowledged is None or type(retention_acknowledged) is bool,
             "Retention acknowledgement must be explicit")
-    require(retention_acknowledged is None or provider == "brave", "Retention acknowledgement applies to Brave")
+    require(retention_acknowledged is None or provider in RETENTION_SOURCES, "This provider has no retention acknowledgement")
     home = _home(home)
     identity = (home / "home.json").read_bytes()
     directory = _directory(home, create=True)
@@ -382,10 +401,10 @@ def configure_provider(home, provider, state, *, credential=None, endpoint=None,
         settings["providers"][provider]["state"] = state
         if endpoint is not None:
             settings["providers"][provider]["endpoint"] = endpoint
-        if provider == "brave" and retention_acknowledged is not None:
+        if provider in RETENTION_SOURCES and retention_acknowledged is not None:
             settings["providers"][provider].update(
                 retention="rights_confirmed" if retention_acknowledged else "not_confirmed",
-                rights_source=RIGHTS_SOURCE if retention_acknowledged else None)
+                rights_source=RETENTION_SOURCES[provider] if retention_acknowledged else None)
         if credential is not None:
             auth["keys"][provider] = credential
         if remove_credential:

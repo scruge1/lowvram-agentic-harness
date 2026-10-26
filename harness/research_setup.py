@@ -49,14 +49,15 @@ def guided(home, provider=None):
         if choice in {"s", "r"}:
             config.configure_provider(home, name, "skipped", remove_credential=choice == "r")
             continue
-        key = masked_key() if name in {"exa", "brave", "tavily"} else None
+        key = masked_key() if name in config.KEYED else None
         endpoint = None
         if name == "searxng":
             endpoint = input("Your owned SearXNG endpoint (Enter keeps saved endpoint): ").strip() or None
         acknowledged = None
-        if name == "brave":
-            print("Brave is held unless your rights cover stored search results in research artifacts AND native session history.")
-            acknowledged = input("My current plan explicitly permits both [yes/Enter]: ").strip().lower() == "yes"
+        if name in config.RETENTION_SOURCES:
+            print(name + " is held unless your rights cover stored search results in research artifacts AND native session history.")
+            print("Review terms and your intended use: " + config.RETENTION_SOURCES[name])
+            acknowledged = input("My current plan and use rights explicitly permit both [yes/Enter]: ").strip().lower() == "yes"
         config.configure_provider(home, name, "enabled", credential=key or None, endpoint=endpoint,
                                   retention_acknowledged=acknowledged)
     return config.provider_status(home)

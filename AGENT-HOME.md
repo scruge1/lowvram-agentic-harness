@@ -572,8 +572,8 @@ python /chosen/agent-home/agent-home.py research status
 ```
 
 Only explicitly enabled providers are considered. Skip overrides an environment
-key, and Brave stays held until storage rights cover artifacts and session
-history. The model tool cannot accept keys, change provider settings or approve
+key. Brave, Serper, Jina Search and SerpAPI stay held until storage rights cover
+artifacts and session history. The model tool cannot accept keys, change provider settings or approve
 rights. No personal browser profile, cookies or stealth service are used.
 
 The source port is deliberately identified by what it contains:
