@@ -305,7 +305,7 @@ still verifies artifacts, integrates the card and checks the root outcome.
 
 Use the supplied `inspect` arguments with read-only `task_agent_inspect` to recover
 large records. Follow each returned `next` argument set. Offsets count Unicode
-code points, not bytes or lines; every actual serialized response is at most12KiB.
+code points, not bytes or lines; every serialized model-facing JSON window is at most12KiB.
 Pages bind the exact native record digest, original capture/route source and
 currently admitted project. They expose no arbitrary file selector and perform
 no inference, project mutation, progress credit, approval or replay. Without a
