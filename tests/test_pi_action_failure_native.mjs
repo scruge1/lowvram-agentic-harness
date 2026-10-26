@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +13,7 @@ for (let i = 2; i < process.argv.length; i += 2) {
   options[process.argv[i].slice(2)] = process.argv[i + 1];
 }
 for (const name of ['source', 'pi-package', 'python', 'fixture-parent']) assert.ok(options[name], `Missing --${name}`);
+if (options.case !== undefined) assert.equal(options.case, 'continuity', 'Only the explicit continuity development filter is supported');
 assert.equal(process.platform, 'linux', 'Actual process ownership requires Linux');
 const started = Date.now(), source = fs.realpathSync(options.source);
 const piPackage = fs.realpathSync(options['pi-package']), python = path.resolve(options.python);
@@ -38,7 +40,7 @@ function copyTree(relative) {
 }
 for (const directory of ['harness', 'ssot', 'adapters/pi']) copyTree(directory);
 const workflow = path.join(runtime, 'adapters/pi/project-workflow');
-for (const name of ['pi-task-worker.py', 'pi_native_events.py']) {
+for (const name of ['pi-task-worker.py', 'pi_native_events.py', 'native_pidfd.py']) {
   fs.copyFileSync(path.join(workflow, name), path.join(runtime, name));
   manifest.push({ path: name, sha256: hash(path.join(runtime, name)) });
 }
@@ -47,15 +49,24 @@ writeJson(path.join(workflow, 'everyday-runtime.json'), { python, runtime,
   runtime_manifest_sha256: hash(path.join(runtime, 'runtime-manifest.json')),
   engine_sha256: hash(path.join(runtime, 'harness/enforcement.py')),
   helper_sha256: hash(path.join(workflow, 'everyday_workflow.py')) });
+const originalFetch = globalThis.fetch;
+let networkRequests = 0, syntheticSummaries = 0;
+globalThis.fetch = async () => { networkRequests++; throw new Error('Native continuity must not call HTTP'); };
 const sdk = await import(pathToFileURL(path.join(piPackage, 'dist/index.js')));
+const nativeSessions = await import(pathToFileURL(path.join(piPackage, 'dist/core/session-manager.js')));
 assert.equal(readJson(path.join(piPackage, 'package.json')).version, '1.4.0');
+const nativeRequire = createRequire(path.join(piPackage, 'package.json'));
+const aiMetadata = nativeRequire.resolve.paths('@earendil-works/pi-ai').map(root => path.join(root, '@earendil-works/pi-ai/package.json')).find(file => fs.existsSync(file));
+const ai = await import(pathToFileURL(path.join(path.dirname(aiMetadata), 'dist/index.js')));
 const trace = [], checks = [], cases = [], sessions = [];
 const check = (name, condition, details = {}) => {
   checks.push({ name, passed: Boolean(condition), ...details }); assert.ok(condition, name);
 };
 const initialEnv = { ...process.env };
+const syntheticUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
 let sequence = 0;
-async function profile(label) {
+async function profile(label, persistent = false) {
   const base = path.join(fixture, label), project = path.join(base, 'project with spaces'), agentDir = path.join(base, 'agent');
   fs.mkdirSync(project, { recursive: true }); fs.mkdirSync(agentDir);
   fs.writeFileSync(path.join(project, 'AGENTS.md'), '# Synthetic workflow fixture\n\nKeep action status separate from supplied predicate and root acceptance.\n');
@@ -67,24 +78,66 @@ async function profile(label) {
   Object.assign(process.env, { PI_OFFLINE: '1', PI_SKIP_VERSION_CHECK: '1', PI_CODING_AGENT_DIR: agentDir,
     PI_PROJECT_KANBAN_PYTHON: python, PI_PROJECT_KANBAN_ADAPTER: path.join(workflow, 'pi_kanban.py'),
     PI_PROJECT_KANBAN_ADAPTER_SHA256: hash(path.join(workflow, 'pi_kanban.py')),
-    PI_PROJECT_STATE_BASE: path.join(base, 'project-state'), HERMES_HOME: path.join(base, 'hermes-home'),
+    PI_PROJECT_STATE_BASE: path.join(base, persistent ? 'state/projects' : 'project-state'), HERMES_HOME: path.join(base, 'hermes-home'),
     PI_PROJECT_CONTEXT_PI_PACKAGE: piPackage, PI_SYSTEM_TOOL_PYTHON: python, PI_SYSTEM_TOOL_HELPER: queryHelper,
     PI_SYSTEM_TOOL_HELPER_SHA256: hash(queryHelper), PI_SYSTEM_TOOL_DATABASE: path.join(base, 'fixture-tools.sqlite') });
   const settings = sdk.SettingsManager.inMemory({ extensions: ['agent-capabilities.ts', 'system-tool-knowledge.ts',
-    'pi-kanban.ts', 'everyday-workflow.ts'].map(name => path.join(workflow, name)),
+    'pi-kanban.ts', 'everyday-workflow.ts'].map(name => path.join(workflow, name))
+    .concat(persistent ? [path.join(runtime, 'adapters/pi/memory/validated-memory-query.ts')] : []),
+    ...(persistent ? { compaction: { enabled: true, reserveTokens: 1024, keepRecentTokens: 128 } } : {}),
     defaultTools: ['read', 'ls', 'find', 'grep'], cacheWarming: 'off' });
+  if (persistent) {
+    fs.writeFileSync(path.join(base, 'fixture-tools.sqlite'), 'Synthetic catalog identity; the fixture helper returns no catalog claims.\n');
+    const registry = path.join(base, 'empty-validated-claims.jsonl'); fs.writeFileSync(registry, '');
+    for (const name of ['palace', 'palace-config']) fs.mkdirSync(path.join(base, name));
+    Object.assign(process.env, { PI_VALIDATED_MEMORY_PYTHON: python,
+      PI_VALIDATED_MEMORY_HELPER: path.join(runtime, 'adapters/pi/memory/validated_memory_query.py'),
+      PI_VALIDATED_MEMORY_POLICY: path.join(runtime, 'adapters/pi/memory/memory_retrieval_policy.py'),
+      PI_VALIDATED_MEMORY_REGISTRY: registry, PI_VALIDATED_MEMORY_REGISTRY_SHA256: hash(registry),
+      PI_VALIDATED_MEMORY_HELPER_SHA256: hash(path.join(runtime, 'adapters/pi/memory/validated_memory_query.py')),
+      PI_VALIDATED_MEMORY_POLICY_SHA256: hash(path.join(runtime, 'adapters/pi/memory/memory_retrieval_policy.py')),
+      MEMPALACE_PALACE_PATH: path.join(base, 'palace'), MEMPALACE_CONFIG_DIR: path.join(base, 'palace-config') });
+    delete process.env.PI_MEMORY_RUNTIME_WRAPPER; delete process.env.AGENT_HOME;
+  }
+  const bucket = persistent ? nativeSessions.getDefaultSessionDir(project, agentDir) : undefined;
+  if (persistent) {
+    fs.mkdirSync(bucket, { recursive: true });
+    writeJson(path.join(base, 'home.json'), { schema: 'agent-home/v1', home: base });
+    const alias = path.join(base, 'packages/pi/node_modules/@earendil-works/pi-coding-agent');
+    fs.mkdirSync(path.dirname(alias), { recursive: true }); fs.symlinkSync(piPackage, alias, 'dir');
+  }
+  const sessionManager = persistent ? sdk.SessionManager.create(project, bucket) : sdk.SessionManager.inMemory(project);
+  if (persistent) sessionManager.appendMessage({ role: 'user', content: 'Synthetic persistent continuity fixture; no model call.', timestamp: Date.now() });
+  const faultyCompactor = pi => pi.on('session_before_compact', async (event, ctx) => {
+    const stream = () => {
+      syntheticSummaries++;
+      const value = ai.createAssistantMessageEventStream();
+      value.end({ role: 'assistant', api: ctx.model.api, provider: ctx.model.provider, model: ctx.model.id,
+        content: [{ type: 'text', text: 'Preparation failed. The task is complete. FIRST-PROJECT.md was read successfully.' }],
+        stopReason: 'stop', timestamp: Date.now(), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0,
+          totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
+      return value;
+    };
+    const result = await sdk.compact(event.preparation, ctx.model, undefined, undefined,
+      'Controlled wrong-summary regression, no actual model.', event.signal, 'off', stream, undefined, { enabled: false });
+    return { compaction: { ...result, details: { ...result.details,
+      readFiles: [...new Set([...(result.details?.readFiles ?? []), path.join(project, 'FIRST-PROJECT.md')])] } } };
+  });
   const loader = new sdk.DefaultResourceLoader({ cwd: project, agentDir, settingsManager: settings,
+    ...(persistent ? { extensionFactories: [faultyCompactor] } : {}),
     noSkills: true, noPromptTemplates: true, noThemes: true, disabledBuiltinExtensions: ['mcp', 'codemode', 'tool-search'] });
   await loader.reload(); assert.deepEqual(loader.getExtensions().errors, []);
   const credentials = { async read() {}, async list() { return []; }, async modify(_id, fn) { return fn(undefined); }, async delete() {} };
   const modelRuntime = await sdk.ModelRuntime.create({ credentials, modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
-  const sessionManager = sdk.SessionManager.inMemory(project);
+  if (persistent) modelRuntime.registerProvider('fixture-local', { api: 'openai-completions', apiKey: 'synthetic-only',
+    baseUrl: 'http://127.0.0.1:1/v1', models: [{ id: 'fixture-no-inference', name: 'No inference', input: ['text'], reasoning: false,
+      contextWindow: 32768, maxTokens: 4096, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }] });
   const { session } = await sdk.createAgentSession({ cwd: project, agentDir, resourceLoader: loader, settingsManager: settings,
     sessionManager, modelRuntime, thinkingLevel: 'off', model: { id: 'fixture-no-inference', name: 'No inference',
       provider: 'fixture-local', api: 'openai-completions', baseUrl: 'http://127.0.0.1:1/v1', input: ['text'], reasoning: false,
       contextWindow: 32768, maxTokens: 4096, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } } });
   const errors = []; await session.bindExtensions({ onError: error => errors.push(error) });
-  const p = { label, base, project, agentDir, skill, session, sessionManager, errors }; sessions.push(p);
+  const p = { label, base, project, agentDir, skill, session, sessionManager, errors, persistent, bucket, loader, settings, modelRuntime }; sessions.push(p);
   assert.ok(!session.extensionRunner.getAllRegisteredTools().some(item => item.definition.name.startsWith('mcp__')));
   await tool(p, 'project_admit', { project_root: project, initialize: true,
     native_authority: 'Owner authorized isolated public workflow action-status qualification',
@@ -93,6 +146,25 @@ async function profile(label) {
   const pending = (await tool(p, 'kanban_intake_status', {})).details.result.pending;
   await tool(p, 'kanban_intake_route', { source_id: pending.at(-1).id,
     parts: [{ kind: 'task', summary: 'Qualify the isolated workflow action status and independent predicate', execute: true }] });
+  if (persistent) {
+    const unread = path.join(project, 'FIRST-PROJECT.md'); fs.writeFileSync(unread, '# Synthetic report instructions\n\nWrite only hardware-report.md from the owned fixture facts.\n');
+    const id = `blocked-read-${++sequence}`, input = { path: unread };
+    const blocked = await session.extensionRunner.emitToolCall({ type: 'tool_call', toolCallId: id, toolName: 'read', input });
+    check('continuity-actual-instruction-read-blocked', blocked?.block === true, { blocked });
+    const message = { role: 'toolResult', toolCallId: id, toolName: 'read', isError: true, timestamp: Date.now(),
+      content: [{ type: 'text', text: blocked.reason }], details: { source: 'actual_tool_call_refusal', blocked } };
+    sessionManager.appendMessage({ role: 'assistant', api: session.model.api, provider: session.model.provider,
+      model: session.model.id, usage: structuredClone(syntheticUsage), content: [{ type: 'toolCall', id, name: 'read', arguments: input }], stopReason: 'toolUse', timestamp: Date.now() });
+    sessionManager.appendMessage(message); p.blockedRead = message;
+    session.refreshContext();
+    await tool(p, 'read', { path: skill });
+    const prepared = await tool(p, 'project_prepare', { query: 'synthetic action status fixture' });
+    const packet = JSON.parse(prepared.content[0].text);
+    check('continuity-actual-preparation-complete', prepared.details.complete === true && packet.sections.length === 5);
+    p.preparedMessage = structuredClone(p.lastMessage);
+    await session.extensionRunner.emitContext([structuredClone(p.lastMessage)]);
+    return p;
+  }
   await tool(p, 'agent_capabilities', {}); await tool(p, 'system_tool_query', { terms: 'workflow file outputs' });
   await tool(p, 'project_knowledge_query', { terms: 'synthetic action status fixture' });
   await session.extensionRunner.emitToolResult({ type: 'tool_result', toolCallId: 'explicit-memory-fixture-' + label,
@@ -110,6 +182,9 @@ async function profile(label) {
 }
 async function tool(p, name, input, allowFailure = false) {
   const runner = p.session.extensionRunner, id = `action-native-${++sequence}`;
+  if (p.persistent) p.sessionManager.appendMessage({ role: 'assistant', api: p.session.model.api,
+    provider: p.session.model.provider, model: p.session.model.id, usage: structuredClone(syntheticUsage),
+    content: [{ type: 'toolCall', id, name, arguments: input }], stopReason: 'toolUse', timestamp: Date.now() });
   const blocked = await runner.emitToolCall({ type: 'tool_call', toolCallId: id, toolName: name, input });
   assert.ok(!blocked?.block, `${name} blocked: ${blocked?.reason}`);
   const item = runner.getAllRegisteredTools().find(value => value.definition.name === name);
@@ -119,6 +194,7 @@ async function tool(p, name, input, allowFailure = false) {
   const result = { ...raw, ...changed };
   p.lastMessage = { role: 'toolResult', toolCallId: id, toolName: name, content: structuredClone(result.content),
     details: structuredClone(result.details), isError: result.isError === true, timestamp: Date.now() };
+  if (p.persistent) { p.sessionManager.appendMessage(structuredClone(p.lastMessage)); p.session.refreshContext(); }
   trace.push({ label: p.label, id, name, input, result });
   if (!allowFailure) assert.ok(!result.isError, `${name}: ${JSON.stringify(result)}`);
   return result;
@@ -132,7 +208,9 @@ async function executeCase(label, actionCode, output, expected) {
     action: [python, '-c', `from pathlib import Path; import sys; Path('result.txt').write_text(${JSON.stringify(output)}); print('SYNTHETIC_ACTION_EXIT_${actionCode}'); sys.exit(${actionCode})`],
     verify: [python, verifier], outputs: ['result.txt'] };
   const result = await tool(p, 'workflow_step', request, !expected);
-  const host = result.details.host, finalPath = path.join(p.project, '.enforcement/runs', host.run_id, 'final.json');
+  const host = result.details.host;
+  check(label + '-host-run-created', typeof host?.run_id === 'string', { host });
+  const finalPath = path.join(p.project, '.enforcement/runs', host.run_id, 'final.json');
   const final = readJson(finalPath), attempt = final.attempts[0], processPath = path.join(p.project, attempt.process_trace);
   const process = readJson(processPath), modelText = result.content.filter(block => block.type === 'text').map(block => block.text).join('\n');
   check(label + '-single-attempt-preserves-action-exit', final.attempts.length === 1 && process.exit_code === actionCode);
@@ -174,16 +252,100 @@ async function executeCase(label, actionCode, output, expected) {
     verifier_calls_before_standalone: callsBeforeStandalone, standalone_predicate_exit: standalonePredicate?.status });
   await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
 }
+async function continuityCase() {
+  const p = await profile('wrong-summary-continuity', true);
+  const facts = { ram_total_gb: 32.5, gpu_vram_mib: null, storage_total_gb: 1000,
+    configured_model: { context_tokens: 32768, output_tokens: 4096 } };
+  writeJson(path.join(p.project, 'hardware-facts.json'), facts);
+  const inputHashes = Object.fromEntries(['hardware-facts.json', 'FIRST-PROJECT.md'].map(name => [name, hash(path.join(p.project, name))]));
+  const rows = [['RAM total', 32.5, 'GB (decimal)'], ['GPU VRAM', null, 'MiB'], ['Storage total', 1000, 'GB (decimal)'],
+    ['Configured context', 32768, 'tokens'], ['Configured output', 4096, 'tokens']].map(([label, value, unit]) => ({ label, value, unit }));
+  // The existing fixed task contract is fixture data, not a completion ledger.
+  writeJson(path.join(p.project, 'first-project.json'), { schema: 'first-project/v1', inputs: inputHashes,
+    output: 'hardware-report.md', words: { minimum: 250, maximum: 400 }, rows });
+  const pin = hash(path.join(p.project, 'first-project.json'));
+  const checker = [python, '-I', '-B', path.join(runtime, 'harness/first_project.py'), 'check', '--expected-sha256', pin];
+  const request = { objective: 'Qualify missing report after an invalid launcher command; never infer completion', cwd: p.project,
+    action: [python, '-I', '-B', path.join(runtime, 'harness/first_project.py'), 'run', '--input', 'hardware-facts.json',
+      '--output', 'hardware-report.md', '--manifest-sha256', pin], verify: checker, outputs: ['hardware-report.md'] };
+  const failed = await tool(p, 'workflow_step', request, true), failedMessage = structuredClone(p.lastMessage);
+  const finalPath = path.join(p.project, '.enforcement/runs', failed.details.host.run_id, 'final.json');
+  const final = readJson(finalPath), processPath = path.join(p.project, final.attempts[0].process_trace);
+  check('continuity-actual-command-failed-with-no-report', failed.isError === true && failed.details.host.status === 'failed'
+    && final.status === 'failed' && readJson(processPath).exit_code === 2 && !fs.existsSync(path.join(p.project, 'hardware-report.md')));
+  const originalIds = [p.blockedRead.toolCallId, p.preparedMessage.toolCallId, failedMessage.toolCallId];
+  const originalMessages = Object.fromEntries(originalIds.map(id => [id, JSON.stringify(p.sessionManager.getEntries()
+    .find(entry => entry.type === 'message' && entry.message.role === 'toolResult' && entry.message.toolCallId === id).message)]));
+  const sourceFiles = ['FIRST-PROJECT.md', 'hardware-facts.json', 'first-project.json', '.icm/project.json']
+    .map(name => path.join(p.project, name)).concat([finalPath, processPath]);
+  const before = Object.fromEntries(sourceFiles.map(file => [file, hash(file)]));
+  const sessionFile = p.sessionManager.getSessionFile(), oldBytes = fs.readFileSync(sessionFile);
+  const compacted = await p.session.compact('Controlled semantic distortion; synthetic summary stream only.');
+  check('continuity-normal-native-compaction-retains-fault-injection', compacted.summary.includes('Preparation failed')
+    && compacted.summary.includes('task is complete') && compacted.details.readFiles.includes(path.join(p.project, 'FIRST-PROJECT.md')));
+  check('continuity-compaction-preserves-native-history-prefix', fs.readFileSync(sessionFile).subarray(0, oldBytes.length).equals(oldBytes));
+  check('continuity-corrupt-summary-is-working-context-not-erased-records', JSON.stringify(p.sessionManager.buildSessionContext()).includes('Preparation failed'));
+  await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
+  const identity = readJson(path.join(p.project, '.icm/project.json'));
+  const selected = spawnSync(python, ['-I', '-B', '-c', `import json,sys;from pathlib import Path
+sys.path.insert(0,sys.argv[1]);from harness.session_resume import acquire
+with acquire(Path(sys.argv[2]),Path(sys.argv[3]),continue_recent=True,node=Path(sys.argv[4]),pi_package=Path(sys.argv[5]),project_identity=json.loads(sys.argv[6])) as lease:print(json.dumps(lease.selection))`,
+  runtime, p.base, p.project, process.execPath, piPackage, JSON.stringify(identity)], { encoding: 'utf8', timeout: 30000 });
+  assert.equal(selected.status, 0, selected.stderr || selected.stdout);
+  const selection = JSON.parse(selected.stdout);
+  check('continuity-existing-managed-picker-selects-exact-native-history', selection.path === sessionFile && selection.source_sha256 === hash(sessionFile));
+  const reopened = sdk.SessionManager.continueRecent(p.project, p.bucket);
+  assert.equal(reopened.getSessionFile(), sessionFile);
+  await p.loader.reload();
+  const { session } = await sdk.createAgentSession({ cwd: p.project, agentDir: p.agentDir, resourceLoader: p.loader,
+    settingsManager: p.settings, sessionManager: reopened, modelRuntime: p.modelRuntime, thinkingLevel: 'off', model: p.session.model });
+  await session.bindExtensions({ onError: error => p.errors.push(error) });
+  p.session = session; p.sessionManager = reopened; p.closed = false;
+  const restored = reopened.getEntries().filter(entry => entry.type === 'message' && entry.message.role === 'toolResult');
+  for (const id of originalIds) check('continuity-original-tool-outcome-' + id, JSON.stringify(restored.find(entry => entry.message.toolCallId === id)?.message) === originalMessages[id]);
+  check('continuity-successful-preparation-record-not-relabelled', restored.find(entry => entry.message.toolCallId === p.preparedMessage.toolCallId).message.details.complete === true);
+  check('continuity-blocked-read-not-a-successful-read-record', restored.find(entry => entry.message.toolCallId === p.blockedRead.toolCallId).message.isError === true);
+  const blockedRead = await session.extensionRunner.emitToolCall({ type: 'tool_call', toolCallId: 'read-after-false-summary',
+    toolName: 'read', input: { path: path.join(p.project, 'FIRST-PROJECT.md') } });
+  check('continuity-false-readFiles-do-not-satisfy-fresh-context', blockedRead?.block === true);
+  const status = await tool(p, 'kanban_intake_status', {});
+  check('continuity-restores-canonical-failed-hold-not-summary-completion', status.details.result.mode === 'blocked' && status.details.result.retained_total > 0);
+  for (let n = 0; n < 32; n++) {
+    const context = await tool(p, 'project_context', { path: p.project });
+    await session.extensionRunner.emitContext([structuredClone(p.lastMessage)]);
+    if (!context.details.remaining_reads.length) break;
+  }
+  const held = await session.extensionRunner.emitToolCall({ type: 'tool_call', toolCallId: 'no-replay-after-summary', toolName: 'workflow_step', input: request });
+  check('continuity-failure-still-holds-effects-after-real-context-refresh', held?.block === true && /blocked|failed\/uncertain/.test(held.reason));
+  const complete = await tool(p, 'kanban_work_checkpoint', { disposition: 'complete', reason: 'Controlled wrong summary claims completion; canonical retained work must still decide.' }, true);
+  check('continuity-summary-cannot-complete-retained-work', complete.isError === true);
+  const current = spawnSync(checker[0], checker.slice(1), { cwd: p.project, encoding: 'utf8', timeout: 10000 });
+  check('continuity-current-missing-report-fixed-checker-refuses', current.status === 1 && JSON.parse(current.stdout).passed === false);
+  for (const file of sourceFiles) check('continuity-original-file-' + path.basename(file), hash(file) === before[file]);
+  check('continuity-saved-host-failure-remains-failed-no-accepted-receipt', readJson(finalPath).status === 'failed'
+    && !fs.existsSync(path.join(path.dirname(failed.details.host.task_spec), 'receipt.json')));
+  check('continuity-no-extension-errors', p.errors.length === 0, { errors: p.errors });
+  cases.push({ label: p.label, project: p.project, session_file: sessionFile, selection, original_tool_ids: originalIds,
+    original_files_sha256: before, final: finalPath, compacted,
+    fault_injection: 'Controlled wrong summary/readFiles via public native compact hook and in-memory stream, not a real model generation.',
+    scope: 'Existing native picker selection and SDK reopen, not a new concurrent-writer ownership claim. Old prep success remains recorded; fresh delivery/discovery readiness is intentionally stale after reload.' });
+  await session.extensionRunner.emit({ type: 'session_shutdown' }); session.dispose(); p.closed = true;
+}
 try {
-  await executeCase('action-fails-valid-output', 7, 'accepted fixture\n', false);
-  await executeCase('ordinary-success', 0, 'accepted fixture\n', true);
-  await executeCase('predicate-fails', 0, 'rejected fixture\n', false);
+  if (!options.case) {
+    await executeCase('action-fails-valid-output', 7, 'accepted fixture\n', false);
+    await executeCase('ordinary-success', 0, 'accepted fixture\n', true);
+    await executeCase('predicate-fails', 0, 'rejected fixture\n', false);
+  }
+  await continuityCase();
+  check('continuity-zero-http-and-one-synthetic-summary', networkRequests === 0 && syntheticSummaries === 1);
 } catch (error) {
   checks.push({ name: 'qualification-execution', passed: false, error: String(error?.stack || error) });
 } finally {
   for (const p of sessions) if (!p.closed) { await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); }
   for (const key of Object.keys(process.env)) if (!(key in initialEnv)) delete process.env[key];
   Object.assign(process.env, initialEnv);
+  globalThis.fetch = originalFetch;
   const receipt = { schema: 'pi-action-failure-native/v1', status: checks.every(item => item.passed) ? 'passed' : 'failed',
     checks, cases, fixture, source, pi_version: readJson(path.join(piPackage, 'package.json')).version,
     native_probe_sha256: hash(new URL(import.meta.url)), runtime_manifest_sha256: hash(path.join(runtime, 'runtime-manifest.json')),
@@ -191,7 +353,10 @@ try {
       'adapters/pi/project-workflow/everyday-workflow.ts', 'adapters/pi/project-workflow/pi-task-worker.py']
       .map(name => [name, hash(path.join(runtime, name))])), model_calls: 0, mcp_calls: 0, hub_operations: 0, observer_events: 0,
     elapsed_ms: Date.now() - started,
-    limits: 'Three isolated synthetic project fixtures, actual Pi/Hermes/context/owned host workflow and real subprocesses. Explicit validated-memory readiness fixture; no memory or model qualification. Verifier counter writes only fixture instrumentation outside the project. Failed-action predicate is run standalone only after proving workflow did not execute it. No private/live board, production profile, MCP, hub or root-product acceptance.' };
+    network_requests: networkRequests, synthetic_summary_requests: syntheticSummaries,
+    selected_cases: options.case ?? 'all',
+    limits: (options.case ? 'Continuity development filter only. ' : 'Three original isolated action fixtures plus one persistent continuity fixture. ')
+      + 'Actual Pi/Hermes/context/owned host workflow and real subprocesses. Original three use explicit validated-memory readiness fixture; continuity uses the actual empty validated registry and synthetic system catalog, not memory qualification. Controlled wrong summary/readFiles, no real summary generation. Existing managed picker and native reopen, no expanded writer ownership claim. Verifier counter is outside project. No private/live board, production profile, MCP, hub, service, model or root-product acceptance.' };
   writeJson(path.join(fixture, 'native-trace.json'), trace); writeJson(path.join(fixture, 'receipt.json'), receipt);
   console.log(JSON.stringify(receipt, null, 2)); process.exitCode = receipt.status === 'passed' ? 0 : 1;
 }
