@@ -5,6 +5,37 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Distinguish retained source capture from its short view - 2026-10-26
+
+Parent commit: `61600f0b73e0e1304ff0f1e96edc3e0c1a9a4bff`.
+
+The native fetcher retains full cleaned text while exposing a bounded short view.
+Its `partial` status and `text_truncated` flag can describe only that view.
+The fallback wrapper previously marked the requested source incomplete even
+when all captured text remained available and hash-bound in its artifact.
+
+Verify the retained raw and full-clean hashes, displayed-prefix hash, consistent
+view flag, supported successful content and absence of raw truncation/challenge
+before marking an original fetch capture complete. Keep the original native
+partial packet and view unchanged in attempt custody. Missing or corrupt proof,
+raw truncation, alternate/archive content and captured browser windows remain
+incomplete. No URL, size limit, deadline, provider or scoring threshold changes.
+
+A synthetic native-constructor control retains 32,199 characters with a 20,000
+character view. It checks capture classification while preserving the bounded
+model projection and existing 14,000-character mining prefix/analysis scope.
+This is not an actual CSV page measurement or normal pipeline acceptance.
+The intended versioned CSV source has not been fetched; earlier retained Python
+documentation retrieval timed out without a response. Real normal acquisition,
+same-question mining/consensus and its reopen proof remain separate.
+
+The pinned research environment passed 84 offline controls, including native
+artifact/HTTPX fixtures, retained custody, invalid metadata and unchanged
+projection/mining limits. Pinned Ruff and all seven self-tests passed. The local
+Windows run also passed 84 controls with ten declared environment/platform skips.
+These are source controls; no normal network acquisition, Pi/model caller or
+protected runtime was executed for this correction.
+
 ## Retry transient bootstrap transfers - 2026-10-26
 
 Parent commit: `381b22cf2a390ff665f28f7f46360a59d1be0f76`.
