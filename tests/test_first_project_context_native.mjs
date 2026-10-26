@@ -18,7 +18,7 @@ const script = `import importlib.util,json,os,subprocess,sys
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,sys.argv[1]);from harness import home,first_project
-h=Path(sys.argv[2]);home.scaffold(h,'Context qualification','core','http://127.0.0.1:1/v1','synthetic-no-inference',source=Path(sys.argv[1]),offline=True)
+h=Path(sys.argv[2]);home.scaffold(h,name='Context qualification',profile='core',base_url='http://127.0.0.1:1/v1',model='synthetic-no-inference',source=Path(sys.argv[1]),offline=True)
 c=json.loads((h/'home.json').read_text());c['installed']={'hermes':{'fixture':True}};(h/'home.json').write_text(json.dumps(c))
 os.environ['PI_PROJECT_STATE_BASE']=str(h/'state/projects')
 s=importlib.util.spec_from_file_location('identity',Path(sys.argv[1])/'adapters/pi/project-workflow/project_identity.py');identity=importlib.util.module_from_spec(s);s.loader.exec_module(identity)
