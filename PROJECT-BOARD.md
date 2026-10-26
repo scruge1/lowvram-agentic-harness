@@ -47,31 +47,51 @@ scheme. It is not an OS sandbox or remote authentication solution. Remote
 exposure, effect controls and existing-home asset/controller adoption require
 their own reviewed paths.
 
-## Current component route
+## Open an installed board
 
-The installed stable entry exposes `board --project PATH`. Its current advanced
-asset flags are `--assets PATH --asset-manifest-sha256 SHA256`. It prints the
-loopback URL while the foreground view is running. Open that URL on the same
-machine. Stop the foreground command to close the view and release its lease.
+After a new home's installation completes, run:
 
-Build the local assets from a fresh copy of the exact upstream commit with its
-unchanged workspace lock. Install only its web dependency closure with
-`npm ci --workspace web --include-workspace-root=false --ignore-scripts
---no-audit --no-fund`. Then run `scripts/build_project_board_assets.py` with
-`--upstream PATH --node PATH --output NEW_PATH`. The builder requires the reviewed
-managed Node version and verifies the upstream inputs. Supply the resulting
-manifest's SHA-256 to the board command. The view checks every asset against it,
-including each file immediately before delivery.
+```bash
+python /data/my-agent/agent-home.py board --project /data/my-agent/projects/example
+```
 
-An isolated Linux component fixture exercised the normal stable entry, local
-assets and actual native UI. It checked cards, comments, result summaries,
+Open the printed loopback URL on the same machine. The command stays in the
+foreground. Stop it to close the view and release its home lease. The project
+must already exist; this command does not create a project or board.
+
+The source installer builds the local assets during the new Hermes package's
+exclusive phase, before recording its package fingerprint. Its existing package
+record owns the asset manifest and hashes. The board command resolves that
+record, so normal use needs no asset path or manually supplied hash. Doctor
+reports missing or changed UI files. Earlier installed Hermes records do not
+acquire a UI record automatically; they require reviewed maintenance.
+
+The native web dependency closure uses the pinned workspace lock and
+[npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/), with lifecycle scripts,
+audit and funding output disabled. The build checks clean Git source before and
+after compilation, retains licences, and records its own host inputs and runtime.
+A completed matching build can finish a package-record save after interruption.
+Unknown or incomplete output is retained and refused before package effects.
+
+For reviewed development fixtures, `--assets PATH --asset-manifest-sha256 SHA256`
+remains an explicit override. `scripts/build_project_board_assets.py` accepts
+`--upstream PATH --node PATH --output NEW_PATH`; it does not install dependencies
+or replace an existing output. The view checks every recorded asset before
+serving it, including the file immediately before delivery.
+
+## Qualification limits
+
+An isolated Linux component fixture exercised the normal stable entry, explicit
+local assets and actual native UI. It checked cards, comments, result summaries,
 search, desktop/mobile layout, disabled effects and foreign-project refusal.
 Closing the owner stopped the listener and allowed an exclusive home lease.
 The selected board and knowledge database bytes remained unchanged. The fixture
 borrowed one verified public Hermes package environment; it did not establish
 complete installation of the selected profile or existing-home adoption.
 
-Automatic installer-owned asset build and admission remain open. A normal fresh
-install followed by the board command must qualify that path before this is a
-one-install feature. Existing controller or dependency holds must remain visible;
-do not hand-copy a new runtime or asset record into an older home.
+Automatic installer-owned build and record resolution are implemented in this
+source. Actual normal fresh installation followed by the board command remains
+unqualified. That proof is required before calling this a one-install feature.
+Existing controller and dependency holds remain visible; do not hand-copy a new
+runtime or asset record into an older home. Read-only status and saved summaries
+do not establish checked-file opening, full native UI controls or task quality.

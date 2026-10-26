@@ -229,20 +229,24 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=0)
     args = parser.parse_args(argv)
     require(0 <= args.port <= 65535, "Invalid local port")
-    require(args.assets is not None and args.asset_manifest_sha256,
-            "Board UI files are not installed. Build the pinned local assets with scripts/build_project_board_assets.py, "
-            "then supply --assets and --asset-manifest-sha256. Automatic installation is not available yet.")
-    assets = asset_files(args.assets, args.asset_manifest_sha256)
-    with selected_project(args.home, args.project) as selected:
-        server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(selected, assets))
-        try:
-            print(json.dumps({"url": f"http://127.0.0.1:{server.server_port}/", "project": selected.project_id,
-                              "read_only": True, "access": "Same-machine loopback; no remote authentication claim"}), flush=True)
-            server.serve_forever()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            server.server_close()
+    with home_entry.consumer(args.home):
+        if args.assets is None and args.asset_manifest_sha256 is None:
+            from harness import project_board_assets
+            selected_home, config = homes.load(args.home)
+            args.assets, args.asset_manifest_sha256 = project_board_assets.resolve(selected_home, config)
+        require(args.assets is not None and args.asset_manifest_sha256,
+                "For an advanced asset override, supply both --assets and --asset-manifest-sha256")
+        assets = asset_files(args.assets, args.asset_manifest_sha256)
+        with selected_project(args.home, args.project) as selected:
+            server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(selected, assets))
+            try:
+                print(json.dumps({"url": f"http://127.0.0.1:{server.server_port}/", "project": selected.project_id,
+                                  "read_only": True, "access": "Same-machine loopback; no remote authentication claim"}), flush=True)
+                server.serve_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
     return 0
 
 
