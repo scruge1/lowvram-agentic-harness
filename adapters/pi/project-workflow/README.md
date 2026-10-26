@@ -144,6 +144,21 @@ status tools. Configure `PI_SYSTEM_TOOL_HELPER`, `PI_SYSTEM_TOOL_DATABASE`, and
 `PI_SYSTEM_TOOL_HELPER_SHA256`. Catalog results are retrieval guidance. They do
 not prove that a tool is installed, loaded, healthy, or authorized.
 
+`resource_status({})` and `/resource-status` read only the current `AGENT_HOME`.
+The loaded capability adapter and Python helper must match that home's source
+manifest. The helper uses the existing shared lifecycle consumer and owned
+model-service status checks. It never starts, stops, downloads or reserves a
+model. Existing resource-wait IDs stay unchanged; use `kanban_intake_status` for
+their original reason, trigger and receipt. A status read earns no progress.
+
+Host RAM and CPU affinity are snapshots, not exclusive allocations or model-fit
+proof. Attached endpoint configuration does not prove service ownership. Busy
+state and request queue length remain unknown. New GPU starts stay held by the
+existing admission rule. Retained setup/recovery phases remain labelled as
+historical or unresolved; a health response cannot erase them. The returned
+owned-stop argv is operator guidance only. It invokes no release action and
+requires explicit instruction and the existing exact-lifetime checks.
+
 Questions and draft plans can receive a normal answer without forced cards,
 checkpoints or intake polls. The existing native journal retains uncommitted
 conversation as deferred context. `kanban_intake_status` exposes up to twelve

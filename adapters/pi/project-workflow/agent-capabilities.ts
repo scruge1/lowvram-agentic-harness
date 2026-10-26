@@ -44,7 +44,72 @@ export function collectCapabilities(pi: Pick<ExtensionAPI, 'getAllTools' | 'getA
   return snapshot;
 }
 
+export function resourceWaits(branch: any[]) {
+  const selected = branch.findLast(entry => entry.type === 'custom' && entry.customType === 'pi-kanban-selection/v1')?.data?.project?.root;
+  const state = branch.findLast(entry => entry.type === 'custom' && entry.customType === 'pi-request-work-state/v1')?.data;
+  const rows = Array.isArray(state?.task_waits) && typeof selected === 'string'
+    ? state.task_waits.filter((wait: any) => wait.root === selected && wait.kind === 'resource' && wait.status === 'waiting'
+      && typeof wait.id === 'string' && wait.id.length <= 256 && typeof wait.task === 'string' && wait.task.length <= 256) : [];
+  return { source: 'current_native_branch', count: rows.length, truncated: rows.length > 8,
+    rows: rows.slice(0, 8).map((wait: any) => ({ wait_id: wait.id, task_id: wait.task, kind: 'resource', status: 'waiting' })),
+    inspect: { tool: 'kanban_intake_status', arguments: {} },
+    limits: 'Retained wait metadata only; inspect its original reason/trigger. This read does not verify a receipt, resolve a wait, grant permission or earn progress.' };
+}
+
+async function resourceStatus(pi: ExtensionAPI, ctx: any, signal?: AbortSignal) {
+  if (signal?.aborted) throw new Error('cancelled');
+  const home = process.env.AGENT_HOME, python = process.env.AGENT_HOME_PYTHON;
+  if (!home || !python || !path.isAbsolute(home) || !path.isAbsolute(python) || fs.realpathSync(home) !== home) throw new Error('home');
+  const configFile = path.join(home, 'home.json');
+  if (fs.statSync(configFile).size > 65536) throw new Error('home');
+  const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  if (config.schema !== 'agent-home/v1' || config.home !== home) throw new Error('identity');
+  const runtime = path.join(home, 'runtime'), manifestFile = path.join(runtime, 'runtime-manifest.json');
+  if (fs.statSync(manifestFile).size > 4 * 1024 * 1024) throw new Error('manifest');
+  const raw = fs.readFileSync(manifestFile), digest = (data: Buffer) => createHash('sha256').update(data).digest('hex');
+  if (digest(raw) !== config.runtime_manifest_sha256) throw new Error('manifest');
+  const manifest = JSON.parse(raw.toString('utf8'));
+  const closure = ['harness/__init__.py', 'harness/resource_status.py', 'harness/home_entry.py', 'harness/model_service.py',
+    'harness/model_service_handoff.py', 'harness/model_profiles.py', 'harness/hardware_probe.py', 'harness/bootstrap.py',
+    'harness/model-service-pins.json', 'adapters/pi/project-workflow/agent-capabilities.ts'];
+  for (const relative of closure) {
+    const file = path.join(runtime, relative), rows = manifest.files?.filter((item: any) => item.path === relative);
+    if (!Array.isArray(rows) || rows.length !== 1 || fs.realpathSync(file) !== file || digest(fs.readFileSync(file)) !== rows[0].sha256)
+      throw new Error('source');
+  }
+  if (fs.realpathSync(new URL(import.meta.url)) !== path.join(runtime, 'adapters/pi/project-workflow/agent-capabilities.ts')) throw new Error('loaded_source');
+  const result = await pi.exec(python, ['-I', '-B', path.join(runtime, 'harness/resource_status.py'), '--home', home],
+    { cwd: home, timeout: 15000, signal });
+  if (signal?.aborted || result.killed || result.code !== 0 || Buffer.byteLength(result.stdout) > 12288) throw new Error('read');
+  const report = JSON.parse(result.stdout);
+  if (report.schema !== 'agent-home-resource-status/v1' || report.home !== home || report.authority !== 'none' || report.generative_requests !== 0)
+    throw new Error('report');
+  report.waits_observed = resourceWaits(ctx.sessionManager.getBranch());
+  if (Buffer.byteLength(JSON.stringify(report)) > 12288) throw new Error('bounds');
+  ctx.ui?.setStatus?.('resource-status', `Model: ${report.service?.status ?? 'unknown'}; queue/busy unknown; ${report.waits_observed.count} retained resource waits`);
+  return report;
+}
+
 export default function (pi: ExtensionAPI) {
+  pi.registerTool({
+    name: 'resource_status', label: 'Current home resources',
+    description: 'Read this managed home\'s owned service identity and bounded local health status, measured host RAM/CPU and retained resource-wait IDs. Queue/busy/fit are unknown; attached endpoints grant no process ownership. No start, stop, reservation, receipt resolution, productive progress or inference.',
+    parameters: Type.Object({}, { additionalProperties: false }),
+    async execute(_id, _params, signal, _update, ctx) {
+      try { const report = await resourceStatus(pi, ctx, signal); return { content: [{ type: 'text' as const, text: JSON.stringify(report) }], details: { ok: true, report } }; }
+      catch { return { content: [{ type: 'text' as const, text: 'Resource status unavailable or cancelled. Inspect this home\'s lifecycle/identity and retained service evidence; no action was taken.' }], details: { ok: false }, isError: true }; }
+    },
+  });
+  pi.registerCommand('resource-status', {
+    description: 'Read this home\'s resource status once; no model request or resource action.',
+    handler: async (args, ctx) => {
+      try {
+        if (args.trim()) throw new Error('no_arguments');
+        fs.writeSync(1, JSON.stringify(await resourceStatus(pi, ctx)) + '\n');
+      }
+      catch { fs.writeSync(1, JSON.stringify({ schema: 'agent-home-resource-status/v1', status: 'unavailable', authority: 'none', generative_requests: 0 }) + '\n'); }
+    },
+  });
   pi.registerCommand('agent-health', {
     description: 'Read this managed home\'s loaded native bindings and tool readiness without a model request.',
     handler: async (_args, ctx) => {
