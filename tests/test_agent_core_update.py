@@ -292,7 +292,9 @@ class AgentCoreUpdateTests(UpdateFixture):
         original = candidate.read_text(encoding="utf-8")
         try:
             candidate.write_bytes(Path(bootstrap.__file__).read_bytes())
-            with self.assertRaisesRegex(ValueError, "outside agent-core-source"):
+            # A later frontier may recognize its named nodes, then refuse the
+            # remaining current controller definitions. Both paths stay closed.
+            with self.assertRaisesRegex(ValueError, "outside agent-core-source|Unreviewed home definitions/constants/imports changed"):
                 update.core_source_bindings(self.case["home"], self.case["source"])
         finally:
             candidate.write_bytes(original_bytes)
