@@ -83,6 +83,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   let captures = new Map<string, Capture>();
   let intents = new Map<string, { project: Project | null; parts: Part[]; control?: string; cancel_task_ids: string[] }>();
   let routed = new Set<string>();
+  let routingResults = new Map<string, any>();
   let deferred = new Set<string>();
   let authorized = new Set<string>();
   let excluded: (Work & { cancel_order: number })[] = [];
@@ -102,6 +103,23 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   const refreshStatus = () => liveUI?.setStatus?.('request-intake', `Work: ${state.mode}; ${pending().length} unrouted; ${state.queue.length} retained`);
   const save = () => { revision++; pi.appendEntry(STATE, structuredClone(state)); refreshStatus(); };
   const pending = () => [...captures.values()].filter(x => !routed.has(x.id) && !deferred.has(x.id));
+  const effectFree = (intent: any) => intent?.control === 'preserve'
+    && Array.isArray(intent.cancel_task_ids) && !intent.cancel_task_ids.length
+    && Array.isArray(intent.parts) && intent.parts.length > 0
+    && intent.parts.every((part: Part) => ['question', 'control'].includes(part.kind) && !part.execute && !part.task_id);
+  const activateCurrentWork = (id: string, work: Work[]) => {
+    const project = bindings.project();
+    if (!work.length || state.conversation?.source_id !== id || !project
+        || work.some(item => item.root !== project.root)) return;
+    // Navigation follows this fresh approval, without cancelling older work or
+    // clearing a pause, failed action, dependency or child uncertainty.
+    if (state.mode !== 'paused') state.conversation.phase = 'execution';
+    bindings.select(work[0].task); save();
+  };
+  const userInputPending = (ctx: any) => {
+    try { return !!ctx.hasPendingMessages?.() || !!ctx.ui?.getEditorText?.()?.trim(); }
+    catch { return true; } // An unavailable editor cannot authorize automatic work.
+  };
   const deferUncommitted = (reason: string) => {
     // Only the current conversational source can settle or be superseded.
     // Legacy/historical pending inputs and frozen uncertain effects stay pending.
@@ -139,6 +157,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     return reply.result;
   };
   const rememberRouting = (data: any) => {
+    routingResults.set(data.id, structuredClone(data));
     const capture = captures.get(data.id), intent = intents.get(data.id);
     for (const item of data.work ?? []) {
       const index = (data.bound ?? []).findIndex((part: any) => part.task_id === item.task);
@@ -190,15 +209,16 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   const maybeWake = async (wait: TaskWait, ctx: any, allowWake: boolean) => {
     // A receipt verifies its registered condition; it is never owner approval.
     if (!allowWake || wait.notice || !alive || !ctx || bindings.project()?.root !== wait.root
-        || pending().length || bindings.failed() || state.mode === 'paused' || state.mode === 'blocked' || state.wait) return;
+        || pending().length || userInputPending(ctx) || bindings.failed() || state.mode === 'paused' || state.mode === 'blocked' || state.wait) return;
     const { decision, packet } = await decide(ctx);
-    if (decision.decision !== 'continue' || wait.status !== 'resolved') return;
+    if (userInputPending(ctx) || decision.decision !== 'continue' || wait.status !== 'resolved') return;
     let admitted = packet.tasks.find((t: any) => t.id === wait.task && t.source === wait.source);
     if (!admitted) return; // cancelled/reauthorised tickets cannot wake a different source
     for (let depth = 0; admitted && depth < 64; depth++) {
       if (packet.excluded.some((x: any) => x.task === admitted.id && x.source === admitted.source)) return;
       admitted = packet.tasks.find((t: any) => t.id === admitted.parent && t.source === wait.source);
     }
+    if (userInputPending(ctx)) return;
     recordDecision(decision, packet);
     if (state.mode === 'waiting') state.mode = 'running';
     state.stalls = 0;
@@ -252,7 +272,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     cleanWatchers(); liveCtx = ctx;
     liveUI = ctx.ui;
     revision++; alive = true; authorized = new Set(); excluded = []; captureOrdinal = 0; captureOrder = new Map(); authorizationOrder = new Map();
-    captures = new Map(); intents = new Map(); routed = new Set(); deferred = new Set(); state = initial();
+    captures = new Map(); intents = new Map(); routed = new Set(); routingResults = new Map(); deferred = new Set(); state = initial();
     const priorReasons = new Map<string, string>();
     const retiredReason = 'Automatic continuation budget reached; retained work is not complete';
     let repairedCurrentReason = false;
@@ -260,6 +280,14 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       if (entry.type !== 'custom') continue;
       if (entry.customType === CAPTURE) { captures.set(entry.data.id, entry.data); captureOrder.set(entry.data.id, ++captureOrdinal); }
       if (entry.customType === INTENT) { intents.set(entry.data.id, entry.data.intent); deferred.delete(entry.data.id); }
+      if (entry.customType === 'pi-request-classification-correction/v1') {
+        const capture = captures.get(entry.data.id);
+        const previous = intents.get(entry.data.id);
+        if (previous && capture?.sha256 === entry.data.source_sha256 && effectFree(entry.data.previous)
+            && digest(previous) === digest(entry.data.previous)) {
+          routed.delete(entry.data.id); routingResults.delete(entry.data.id);
+        }
+      }
       if (entry.customType === DISCUSSION) {
         const capture = captures.get(entry.data.id);
         if (capture && capture.sha256 === entry.data.source_sha256 && entry.data.disposition === 'deferred'
@@ -323,6 +351,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   const policy = 'Persistent request intake policy: answer ordinary questions directly and return draft plans for discussion before new work. '
     + 'A question or draft needs a normal reply, not a forced card/checkpoint/tool call. Uncommitted conversational captures are durably deferred at settlement; their full text stays retrievable. '
     + 'Before project execution, route every distinct aspect of the current explicit approved work or amendment through kanban_intake_status and kanban_intake_route. A deferred old source is context, not execution approval. '
+    + 'Fresh approved work selects its own card while older approvals stay retained. If the CURRENT original source already explicitly approved an action but you classified it as effect-free question/control, use reclassify_current:true with its task/amendment. This corrects classification, never creates approval or rewrites uncertain effects. '
     + 'A status question or unapproved new idea does not cancel or pause already-authorised work: after answering, continue the existing ready task unless a real pause, failure, dependency or explicit scope hold applies. '
     + 'Reuse existing cards for amendments; split new work into parts, held ideas stay triage. Questions/control need no card. '
     + 'execute=true only for work authorized by the source request or existing native plan; ideas/transport membership do not authorize effects. '
@@ -394,8 +423,16 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       throw new Error('Source belongs to another project. Return to its project before routing; record a cross-project handoff there.');
     const intent = { project: current ?? capture.project, parts: params.parts, control: params.control ?? 'preserve', cancel_task_ids: cancellations };
     const previous = intents.get(capture.id);
-    if (previous && digest(previous) !== digest(intent)) throw new Error('Routing intent already persisted. Resume identical parts after uncertain effects; amend cards separately.');
-    if (routed.has(capture.id)) return result({ replay: true, source_id: capture.id });
+    const reclassify = params.reclassify_current === true && (!previous || digest(previous) !== digest(intent));
+    if (reclassify && (!effectFree(previous) || state.conversation?.source_id !== capture.id || deferred.has(capture.id)
+        || digest(previous!.project) !== digest(intent.project)
+        || !params.parts.some((part: Part) => ['task', 'amend'].includes(part.kind) && part.execute === true)))
+      throw new Error('Only the current effect-free question/control classification can be corrected against its original explicit owner approval. Preserve frozen effectful intents and project identity.');
+    if (previous && !reclassify && digest(previous) !== digest(intent)) throw new Error('Routing intent already persisted. Resume identical parts after uncertain effects; amend cards separately.');
+    if (routed.has(capture.id) && !reclassify) {
+      activateCurrentWork(capture.id, routingResults.get(capture.id)?.work ?? []);
+      return result({ replay: true, source_id: capture.id });
+    }
     const recovered = new Map<number, string>();
     for (const item of params.recover_existing ?? []) {
       const index = item.part_index, part = params.parts[index];
@@ -429,8 +466,14 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     // Validation above can await read-only board calls. A superseded conversation
     // must not freeze a new routing intent or write a card after that boundary.
     if (deferred.has(capture.id)) throw new Error('Conversation was deferred during validation; bind work to the current owner source.');
+    if (reclassify && state.conversation?.source_id !== capture.id)
+      throw new Error('Classification correction was superseded during validation; preserve the original source and current input.');
     // Freeze plan BEFORE board effects. Stable per-source/part keys recover a lost reply without duplicate cards.
-    if (!previous) { pi.appendEntry(INTENT, { id: capture.id, intent }); intents.set(capture.id, intent as any); }
+    if (reclassify) {
+      pi.appendEntry('pi-request-classification-correction/v1', { id: capture.id, previous, replacement: intent, source_sha256: capture.sha256 });
+      routed.delete(capture.id); routingResults.delete(capture.id);
+    }
+    if (!previous || reclassify) { pi.appendEntry(INTENT, { id: capture.id, intent }); intents.set(capture.id, intent as any); }
     const work: Work[] = [];
     const bound: any[] = [];
     for (const [index, part] of (params.parts as Part[]).entries()) {
@@ -484,12 +527,12 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     // Question/control-only bookkeeping is not task progress.
     if (needsBoard) state.progress++;
     save();
-    if (!bindings.task() && work[0]) bindings.select(work[0].task);
+    activateCurrentWork(capture.id, work);
     return result({ source_id: capture.id, bound, state: status() });
   };
   pi.registerTool({ name: 'kanban_intake_route', label: 'Route captured requests',
-    description: 'Account for EVERY distinct aspect of ONE captured input. Tasks/new ideas create idempotent cards, amendments comment on existing cards; questions/control remain in the source log. Preserve active task. Retry identical parts after uncertainty. recover_existing binds explicitly identified source-bound cards created manually during a failed route; it does not rewrite the frozen intent or authorize new work. execute is permission scope classification, never new approval. Pause/resume must follow explicit user instructions.',
-    parameters: Type.Object({ source_id: Type.String(), control: Type.Optional(Type.Union(['preserve', 'pause', 'resume'].map(Type.Literal))),
+    description: 'Account for EVERY distinct aspect of ONE captured input. Tasks/new ideas create idempotent cards, amendments comment on existing cards; questions/control remain in the source log. Fresh current-source approved work selects its own card; retain older approvals. reclassify_current corrects only the current effect-free classification against its original explicit approval, never new permission. Retry identical parts after uncertainty. recover_existing binds explicitly identified source-bound cards created manually during a failed route; it does not rewrite the frozen intent or authorize new work. execute is permission scope classification, never new approval. Pause/resume must follow explicit user instructions.',
+    parameters: Type.Object({ source_id: Type.String(), reclassify_current: Type.Optional(Type.Boolean({ description: 'Correct only the current effect-free question/control classification when its original text already explicitly approved task execution. Not new approval. Preserve original events and frozen effectful intents.' })), control: Type.Optional(Type.Union(['preserve', 'pause', 'resume'].map(Type.Literal))),
       recover_existing: Type.Optional(Type.Array(Type.Object({ part_index: Type.Integer({ minimum: 0, maximum: 29 }), task_id: Type.String({ minLength: 1 }) }, { additionalProperties: false }), { maxItems: 30, description: 'Recover cards already created manually for this frozen source, without duplicate creation. Each card must cite this source ID and SHA256; held parts must remain triage. Original parts and authority remain unchanged.' })),
       cancel_task_ids: Type.Optional(Type.Array(Type.String(), { maxItems: 30, description: 'Only explicit owner cancellation. Stop retaining these session-owned cards; record cancellation and block runnable cards without deleting workspaces.' })),
       parts: Type.Array(Type.Object({ kind: Type.Union(['task', 'amend', 'held', 'question', 'control'].map(Type.Literal)),
@@ -718,7 +761,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     // canContinue is a preview BEFORE our drafts. A final assistant message normally
     // makes it false; the custom_message below supplies the required next context.
     // Pi revalidates canContinue after committing drafts and still owns abort handling.
-    if (event.outcome !== 'completed' || event.continue || event.context.pendingMessages?.length) return;
+    if (event.outcome !== 'completed' || event.continue || event.context.pendingMessages?.length || userInputPending(ctx)) return;
     const stop = (reason: string) => {
       // Intake diagnostics must not replace an explicit pause or an unresolved failure.
       if (state.mode !== 'paused' && state.mode !== 'blocked' && state.mode !== 'waiting') state.reason = reason;
@@ -746,6 +789,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     let instruction: string | undefined;
     try {
       const { decision, packet } = await decide(ctx);
+      if (userInputPending(ctx) || pending().length) return;
       recordDecision(decision, packet);
       if (decision.decision === 'route_pending') instruction = 'Route the pending user input before finishing. Do not execute it first. ' + liveGuidance();
       else if (decision.decision === 'continue') {
@@ -766,6 +810,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       }
       stop('Retained decision unavailable; inspect before continuing: ' + reason); return;
     }
+    if (userInputPending(ctx) || pending().length) return;
     if (!instruction) { save(); return; }
     state.requests++; save();
     return { entries: [{ type: 'custom_message' as const, customType: 'pi-work-continuation/v1',

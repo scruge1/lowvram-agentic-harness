@@ -15,13 +15,13 @@ import { stripTypeScriptTypes } from 'node:module';
 import { createHash, randomUUID } from 'node:crypto';
 const [file, which] = process.argv.slice(1);
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-let decisions=0;
+let decisions=0,onProjection,typed='',queued=false,editorError=false,crashAt;
 const Type=new Proxy({},{get:()=>()=>({})});
 const dependencies={typebox:{Type},'node:crypto':{createHash,randomUUID},
  './read-loop-079.ts':{registerReadLoopGuard:()=>({warning:()=>''})},
  './dependency-receipts-138.ts':{checkedReceipt:()=>{},inspectReceipt:()=>({verified:false}),watchReceipt:()=>()=>{},blockedTaskIds:()=>new Set()},
  './retained-packet-138.ts':{workKey:x=>x.root+'\0'+x.task,nativeCompletionOrder:()=>new Map(),cancelledSelection:async()=>false,
-  buildRetainedPacket:async input=>({tasks:input.state.queue.map(x=>({id:x.task,source:x.source,status:'ready'})),anchors:[],excluded:[],coverage:{complete:true,truncated:false,missing:[]}})},
+  buildRetainedPacket:async input=>{if(onProjection){const fn=onProjection;onProjection=undefined;await fn();}return {tasks:input.state.queue.map(x=>({id:x.task,source:x.source,status:'ready'})),anchors:[],excluded:[],coverage:{complete:true,truncated:false,missing:[]}};}},
  './decision-bridge-138.ts':{packetDigest:digest,decideRetainedWork:async packet=>{decisions++;return packet.tasks.length?{decision:'continue',selected:{task:packet.tasks[0].id,source:packet.tasks[0].source,action:'continue'}}:{decision:'queue_complete'};}}};
 const context=vm.createContext({Buffer,process,console,structuredClone,setTimeout,clearTimeout});
 const module=new vm.SourceTextModule(stripTypeScriptTypes(fs.readFileSync(file,'utf8')),{context});
@@ -31,11 +31,15 @@ await module.evaluate();
 const hooks=new Map(),tools=new Map(),entries=[],calls=[];
 let project=null,selected=null,loseCreate=false;
 const pi={on(name,fn){if(!hooks.has(name))hooks.set(name,[]);hooks.get(name).push(fn);},registerTool(tool){tools.set(tool.name,tool);},registerCommand(){},
- appendEntry(customType,data){entries.push({type:'custom',customType,data:structuredClone(data)});}};
+ appendEntry(customType,data){entries.push({type:'custom',customType,data:structuredClone(data)});
+  if(crashAt===customType){crashAt=undefined;throw Error('Controlled failure after native append');}}};
+const created=new Map();
 const call=async request=>{calls.push(request);if(request.action==='create'&&loseCreate){loseCreate=false;throw Error('Controlled failed reply');}
- return{ok:true,result:request.action==='create'?{task:{id:'A',status:'ready'}}:{task:{id:request.task_id,status:'ready'},comments:[]}};};
+ if(request.action==='create'&&!created.has(request.idempotency_key))created.set(request.idempotency_key,String.fromCharCode(65+created.size));
+ return{ok:true,result:request.action==='create'?{task:{id:created.get(request.idempotency_key),status:'ready'}}:{task:{id:request.task_id,status:'ready'},comments:[]}};};
 module.namespace.registerRequestIntake(pi,{project:()=>project,task:()=>selected,failed:()=>false,select:id=>selected=id,call});
-const ctx={cwd:'/owned-fixture',sessionManager:{getSessionId:()=> 'unit-only-session',getBranch:()=>entries},ui:{setStatus(){},notify(){}}};
+const ctx={cwd:'/owned-fixture',sessionManager:{getSessionId:()=> 'unit-only-session',getBranch:()=>entries},hasPendingMessages:()=>queued,
+ ui:{setStatus(){},notify(){},getEditorText(){if(editorError)throw Error('Editor unavailable');return typed;}}};
 const fire=async(name,event={})=>{let value;for(const fn of hooks.get(name)??[])value=await fn(event,ctx)??value;return value;};
 const tool=async(name,input)=>tools.get(name).execute('unit',input,undefined,undefined,ctx);
 const state=async()=> (await tool('kanban_intake_status',{})).details.result;
@@ -77,6 +81,54 @@ if(which==='question'){
  assert.equal((await tool('kanban_intake_status',{source_id:id})).details.result.disposition,'pending');
  entries.push({type:'custom',customType:'pi-request-discussion/v1',data:{id,source_sha256:'0'.repeat(64),disposition:'deferred'}});
  await fire('session_tree');assert.equal((await state()).pending_total,1,'Wrong source hash cannot defer legacy input');
+}else if(which==='selection'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};
+ const a=await capture('Owner approves A.');const pa=[{kind:'task',summary:'Approved A',execute:true}];
+ await tool('kanban_intake_route',{source_id:a,parts:pa});assert.equal(selected,'A');
+ const b=await capture('Owner now approves B; keep older A.');const pb=[{kind:'task',summary:'Approved B',execute:true}];
+ await tool('kanban_intake_route',{source_id:b,parts:pb});assert.equal(selected,'B','Fresh approval must replace stale navigation');
+ assert.equal((await state()).queue.length,2);assert.equal(created.size,2);
+ await tool('kanban_intake_route',{source_id:a,parts:pa});assert.equal(selected,'B','Old exact retry must not steal current navigation');
+ selected='stale';await fire('session_tree');await tool('kanban_intake_route',{source_id:b,parts:pb});
+ assert.equal(selected,'B');assert.equal(created.size,2,'Exact retry after routed-before-selection must not create again');
+ const before=(await state()).progress;const q=await capture('Status only.');
+ await tool('kanban_intake_route',{source_id:q,parts:[{kind:'question',summary:'Status'}]});
+ assert.equal(selected,'B');assert.equal((await state()).progress,before);assert.equal((await state()).queue.length,2);
+ assert.equal((await settle()).continue,true,'Older approval queue remains available, no focus-stop');
+}else if(which==='correction'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};
+ const id=await capture('Owner explicitly approves execution of C.');
+ await tool('kanban_intake_route',{source_id:id,parts:[{kind:'question',summary:'Controlled mistaken classification'}]});
+ const p=[{kind:'task',summary:'Original approved C',execute:true}];const request={source_id:id,reclassify_current:true,parts:p};
+ assert.equal((await tool('kanban_intake_route',request)).isError,undefined);assert.equal(created.size,1);assert.equal(selected,'A');
+ assert.equal(entries.filter(x=>x.customType==='pi-request-classification-correction/v1').length,1);
+ await tool('kanban_intake_route',request);assert.equal(created.size,1);
+ assert.equal((await tool('kanban_intake_route',{...request,parts:[{...p[0],summary:'Rewrite effectful intent'}]})).isError,true);
+ for(const point of ['pi-request-route-intent/v1','pi-request-routed/v1']){
+  const source=await capture('Owner explicitly approves this independent fixture action.');
+  await tool('kanban_intake_route',{source_id:source,parts:[{kind:'control',summary:'Controlled effect-free misclassification'}]});
+  const retry={source_id:source,reclassify_current:true,parts:[{kind:'task',summary:'Approved action '+point,execute:true}]};
+  crashAt=point;assert.equal((await tool('kanban_intake_route',retry)).isError,true);
+  await fire('session_tree');assert.equal((await tool('kanban_intake_route',retry)).isError,undefined);
+  const size=created.size;await tool('kanban_intake_route',retry);assert.equal(created.size,size);
+  assert.equal(selected,(await state()).queue.at(-1).task);
+ }
+ const stale=await capture('Owner approved this action, but a newer source supersedes this classification.');
+ await tool('kanban_intake_route',{source_id:stale,parts:[{kind:'question',summary:'Mistaken'}]});
+ await capture('Current status only.');assert.equal((await tool('kanban_intake_route',{source_id:stale,reclassify_current:true,parts:p})).isError,true);
+ const foreign=await capture('Owner approved action within original identity only.');await tool('kanban_intake_route',{source_id:foreign,parts:[{kind:'control',summary:'Mistaken'}]});
+ project={...project,boardId:'different'};assert.equal((await tool('kanban_intake_route',{source_id:foreign,reclassify_current:true,parts:p})).isError,true);
+}else if(which==='typing'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};const id=await capture('Owner approves A.');
+ await tool('kanban_intake_route',{source_id:id,parts:[{kind:'task',summary:'Approved A',execute:true}]});
+ const before=JSON.stringify(await state()),count=entries.length;
+ typed='Unsent owner draft';assert.equal(await settle(),undefined);assert.equal(typed,'Unsent owner draft');assert.equal(entries.length,count);assert.equal(JSON.stringify(await state()),before);
+ typed='';queued=true;assert.equal(await settle(),undefined);assert.equal(entries.length,count);queued=false;
+ editorError=true;assert.equal(await settle(),undefined);assert.equal(entries.length,count);editorError=false;
+ const requests=(await state()).requests,decisionsBefore=entries.filter(x=>x.customType==='pi-work-decision/v1').length;
+ onProjection=()=>{typed='Typed during awaited retained projection';};assert.equal(await settle(),undefined);
+ assert.equal((await state()).requests,requests);assert.equal(entries.filter(x=>x.customType==='pi-work-decision/v1').length,decisionsBefore);
+ assert.equal(typed,'Typed during awaited retained projection');
 }else throw Error('Unknown unit case');
 await fire('session_shutdown');console.log('Conversation state control passed: '+which);
 """
@@ -108,6 +160,15 @@ class ConversationModuleTests(unittest.TestCase):
 
     def test_legacy_pending_and_wrong_hash_remain_pending(self):
         self.run_case("legacy")
+
+    def test_fresh_current_approval_selection_and_exact_replay(self):
+        self.run_case("selection")
+
+    def test_same_source_effect_free_correction_and_append_recovery(self):
+        self.run_case("correction")
+
+    def test_queued_typed_and_mid_await_input_suppress_automatic_work(self):
+        self.run_case("typing")
 
 
 if __name__ == "__main__":
