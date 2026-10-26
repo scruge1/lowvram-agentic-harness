@@ -33,6 +33,107 @@ cleanup; explicit fixture close fixes that control. Positive installed-home
 adoption, recurrence source handoff, local notification delivery and live-agent
 scheduled work remain separate.
 
+## Inspect current project sources before Library retrieval - 2026-10-26
+
+Parent commit: `b3d55f6f28df2c054c529cf64404e5dbb37355ea`.
+
+The existing project index could return an old snippet after its source changed
+or disappeared. Keep its legacy snapshot query explicitly labelled. Add opt-in
+current query, status and bounded original-source read to the same knowledge
+module and CLI. Reuse the existing project identity, source policy, manifest and
+SQLite FTS5 index; add no database, service, registry or automatic rebuild.
+
+Current query compares policy/manifest/index bindings and actual indexed chunks
+with selected current source bytes inside one read-only SQLite snapshot. Recheck
+source hashes/membership before delivery. A changed, missing, unsupported or
+mismatched source set yields no current query results. An exact source read can
+still show current bytes while reporting a stale index; an expected SHA refuses
+the old binding. Preserve UTF-8 bytes and line endings, with at most4000 characters
+and50 lines in the read window.
+
+Default policy discovery checks the existing10-second caller ceiling and prunes
+excluded directories. Keep the existing2MiB default per-file ceiling. Defer on
+incomplete inspection or complex custom recursive policies instead of extending
+the scan. Do not use the backup operation's cold-copy budgets as hot-query policy.
+Import, edits and deletion remain ordinary authorized file actions followed by
+the existing explicit rebuild. No Pi authority, effect or completion gate changes.
+
+Validation:21 actual fictional filesystem/SQLite and scoped CLI controls pass on
+Linux; Windows passes with one native-symlink permission skip. The preceding
+packet passed seven coordinator regressions; the busy-read correction leaves
+their legacy definitions unchanged. Ruff0.16.10 and all
+seven core self-tests pass. Controls cover actual edit/delete/add, retained legacy
+snapshots, strict abstention and explicit rebuild, source hashes/windows, actual
+chunk/orphan corruption, foreign/policy/manifest bindings, late changes, bounded
+deferral, CRLF, excluded credentials and unsupported formats. Retain the initial
+Windows fixture connection/newline failure and later test-only lint failure;
+neither was resolved by weakening the production checks.
+
+A later owned SQLite lock counter showed0.5s declared inspection completing at
+1.531s after0.4s controlled discovery work: the old connect timeout spent the
+budget again. Current reads now use zero busy wait and typed deferral on native
+busy/locked state, with no partial payload. Retain the measured counter and
+earlier frozen qualification. A focused actual exclusive-lock control verifies
+the corrected path and normal retrieval after the owner releases its lock.
+
+Hosted Windows3.13 then exposed a false deferral before reading current bytes.
+A native same-file witness has identical identity, size, mode and modification
+time but different path/descriptor ctime meanings. Preserve the full path stamp
+against later path stamps and the full descriptor stamp against later descriptor
+stamps. Cross-compare only commensurate identity/size/mode/mtime. Both byte/hash
+passes and raw/chunk drift checks stay intact; focused controls retain independent
+path and descriptor drift refusals. The related upstream report is
+[CPython157671](https://github.com/python/cpython/issues/157671).
+Retain the failed hosted runs and native diagnostic witnesses; remove the
+temporary diagnostic workflow before the final source head. This is not a
+general Windows runtime or same-user writer isolation claim.
+
+This is source/backend qualification, not installed Library or UI adoption.
+The current Pi query route still uses the labelled legacy snapshot behavior.
+PDF/image/other original-format extraction, multilingual/semantic search,
+Library import/update UX and normal export integration remain open. Reuse the
+existing separately authorized backup/export route; add no archive engine or
+active project migration. No private corpus, protected home, model or service
+was read or changed by this qualification.
+
+## Retain scoped capture receipts across native reopen - 2026-10-26
+
+Parent commit: `b3d55f6f28df2c054c529cf64404e5dbb37355ea`.
+
+The existing capture status lived only in extension memory. Reopening lost that
+view, while the source catalog recorded only size and mtime. Reuse the current
+capture reader, native formatter, existing latest receipt and status tool. Hash
+raw prefixes and exports while those streams are already processed; do not add
+a second full-history pass. Preserve all original JSONL bytes and keep tool
+metadata distinct from full raw diagnostic evidence.
+
+Keep `sources.json` list values unchanged for retained consumers and rollback.
+Versioned hashes stay in existing `latest.json`; an older consumer can discard
+them without breaking its catalog. Missing receipts remain unverified until an
+explicit selected recapture. Record pending/failed mining separately from
+captured bytes. The status entry reuses the source-bound memory wrapper and
+shared home consumer, without importing memory packages or requiring a hub.
+It reads bounded metadata and stats, not raw bodies. Size/mtime agreement never
+becomes cryptographic currentness, claim trust, permission or task progress.
+
+Validation:37 Linux source controls and13 actual native SDK checks pass. The
+native fixture uses an owned offline core scaffold, a read-only supplied Pi and
+Python dependency, real native session create/open and the actual MemPalace3.11
+pure formatter in export-only mode. It covers persistent receipts, bounded
+model content, source/home/cancel refusals and conserved raw/config/catalog
+bytes, with no provider, miner, palace or service request. Source controls cover
+a stopped52 MiB stream, explicit catch-up, growth, no-op, legacy receipt loss,
+mining failure and metadata limits. Seven self-tests and pinned Ruff pass.
+These are component checks, not a new-host package install, whole managed CLI
+adoption, complete history indexing or useful model recall acceptance.
+
+The first hosted Windows run completed its545-test second group with one legacy
+fixture error. Its temporary path was not canonicalized before the helper call.
+Resolve that fixture root, matching the real CLI; preserve the production path
+guard. An owned NTFS-junction control reproduces the unresolved-path refusal
+and passes the corrected original test. Preserve the failed run; no gate or
+runtime deadline is increased.
+
 ## Preserve a failed report during explicit evidence-bound repair - 2026-10-26
 
 Parent commit: `5e65ba17b94b166db65e43a671cdbaf0af8059fd`.
