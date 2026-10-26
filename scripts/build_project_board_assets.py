@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+HOST_FILES = ("entry.js", "style.css", "index.html", "native-utils.ts", "NOTICE.md", "HERMES-LICENSE.txt")
 
 
 def digest(path):
@@ -47,9 +48,12 @@ def native_source_identity(upstream, expected_commit):
             "dependency_scope": "Git binds workspace source; installed npm dependencies require their separate locked-install qualification"}
 
 
-def build(upstream, node, output):
+def build(upstream, node, output, *, pass_fds=(), environment=None):
     upstream, node = Path(upstream).resolve(strict=True), Path(node).resolve(strict=True)
     output = Path(output).absolute()
+    environment = dict(os.environ if environment is None else environment, NODE_ENV="production")
+    environment.pop("NODE_OPTIONS", None)
+    environment.pop("NODE_PATH", None)
     if output.exists() or output.is_symlink():
         raise ValueError("Use a new build output; retain earlier artifacts")
     policy = json.loads((ROOT / "harness/project-board-native.json").read_text(encoding="utf-8"))
@@ -61,7 +65,7 @@ def build(upstream, node, output):
     # upstream. Permit checkout line endings, never different source text.
     if (ROOT / "adapters/project-board/native-utils.ts").read_text(encoding="utf-8") != (upstream / "web/src/lib/utils.ts").read_text(encoding="utf-8"):
         raise ValueError("The retained native utility source differs from upstream")
-    version = subprocess.check_output([str(node), "--version"], text=True, timeout=10).strip()
+    version = subprocess.check_output([str(node), "--version"], text=True, timeout=10, pass_fds=pass_fds, env=environment).strip()
     if version != "v22.23.2":
         raise ValueError("Use the reviewed managed Node22.23.2")
     vite = upstream / "node_modules/vite/bin/vite.js"
@@ -70,9 +74,13 @@ def build(upstream, node, output):
     parent = upstream / "web"
     with tempfile.TemporaryDirectory(prefix="project-board-host-", dir=parent) as temporary:
         host = Path(temporary)
-        for file in (ROOT / "adapters/project-board").iterdir():
-            if file.is_file():
-                shutil.copyfile(file, host / file.name)
+        host_sources = {}
+        for name in HOST_FILES:
+            file = ROOT / "adapters/project-board" / name
+            if file.is_symlink() or not file.is_file():
+                raise ValueError("Host source is missing or redirected: " + name)
+            host_sources[name] = digest(file)
+            shutil.copyfile(file, host / name)
         shutil.copyfile(upstream / "web/src/lib/utils.ts", host / "native-utils.ts")
         shutil.copyfile(upstream / "web/src/index.css", host / "native-theme.css")
         native = (upstream / "plugins/kanban/dashboard/dist/index.js").read_text(encoding="utf-8")
@@ -95,9 +103,8 @@ def build(upstream, node, output):
         config.write_text("import {defineConfig} from 'vite';\nimport tailwindcss from '@tailwindcss/vite';\n"
                           "export default defineConfig({root:" + json.dumps(str(host)) + ",publicDir:false,plugins:[tailwindcss()],"
                           "build:{emptyOutDir:false,outDir:" + json.dumps(str(output)) + ",sourcemap:false}});\n", encoding="utf-8")
-        environment = dict(os.environ, NODE_ENV="production")
         subprocess.run([str(node), str(vite), "build", "--config", str(config)], cwd=upstream,
-                       env=environment, check=True, timeout=180)
+                       env=environment, check=True, timeout=180, pass_fds=pass_fds)
         (output / "native-board.js").write_text(adapted, encoding="utf-8")
         files = {p.relative_to(output).as_posix(): digest(p) for p in sorted(output.rglob("*")) if p.is_file()}
         notices = output / "notices"
@@ -116,8 +123,11 @@ def build(upstream, node, output):
     # generation leaves retained partial output without an admissible manifest.
     if native_source_identity(upstream, policy["commit"]) != source_identity:
         raise ValueError("Native source generation changed while building")
+    if {name: digest(ROOT / "adapters/project-board" / name) for name in HOST_FILES} != host_sources:
+        raise ValueError("Host source generation changed while building")
     manifest = {"schema": "project-board-assets/v1", "hermes_commit": source_identity["commit"],
                     "upstream_source": source_identity,
+                    "host_source_files": host_sources, "builder_sha256": digest(Path(__file__)),
                     "native_source_files": policy["files"], "native_readonly_adaptation":
                         "Disable websocket, orchestration, unavailable worker-log request and comment composer; manual reload is explicit",
                     "bridge_source_sha256": digest(ROOT / "adapters/project-board/entry.js"),

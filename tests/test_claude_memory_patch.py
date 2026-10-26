@@ -254,9 +254,10 @@ class InstallerLeaseTests(unittest.TestCase):
 
         def loop(root, config, python312, **kwargs):
             phases.append((kwargs.get("only"), self.modes(), kwargs.get("finalize", True)))
-            if kwargs.get("only") == ("claude-mem",):
+            if kwargs.get("only") in {("hermes",), ("claude-mem",)}:
                 fds = kwargs["lifecycle_fds"]
                 self.assertTrue(fds)
+                self.assertEqual(kwargs["lifecycle_lease"].mode, "exclusive")
                 # The existing command runner really passes the same EX lease.
                 code = "import pathlib;print(pathlib.Path('/proc/self/fdinfo/" + str(fds[0]) + "').read_text())"
                 result = home.run([os.sys.executable, "-c", code], cwd=root, pass_fds=fds)
@@ -264,13 +265,17 @@ class InstallerLeaseTests(unittest.TestCase):
 
         with patch.object(home, "_install_packages", side_effect=loop):
             home.install_packages(self.root, self.config)
-        self.assertEqual(len(phases), 3)
+        self.assertEqual(len(phases), 6)
         self.assertNotIn("claude-mem", phases[0][0])
         self.assertIn("READ", phases[0][1])
-        self.assertEqual(phases[1][0], ("claude-mem",))
+        self.assertEqual(phases[1][0], ("hermes",))
         self.assertIn("WRITE", phases[1][1])
         self.assertIn("READ", phases[2][1])
-        self.assertTrue(phases[2][2])
+        self.assertEqual(phases[3][0], ("claude-mem",))
+        self.assertIn("WRITE", phases[3][1])
+        self.assertIn("READ", phases[4][1])
+        self.assertIn("READ", phases[5][1])
+        self.assertTrue(phases[5][2])
         with home._observer_install_exclusive(self.root):
             self.assertIn("WRITE", self.modes())
 
@@ -282,8 +287,7 @@ class InstallerLeaseTests(unittest.TestCase):
             self.assertIn(str(Path(home.__file__).resolve()), str(caught.exception))
             self.assertIn("resume-install", str(caught.exception))
             self.assertIn("READ", self.modes())
-        self.assertEqual(len(calls), 1)
-        self.assertNotIn("claude-mem", calls[0]["only"])
+        self.assertEqual(calls, [])
 
     def test_partial_package_failure_retains_prior_records_and_skips_final_binding(self):
         calls = []
@@ -296,7 +300,7 @@ class InstallerLeaseTests(unittest.TestCase):
 
         with patch.object(home, "_install_packages", side_effect=loop), self.assertRaisesRegex(home.HomeError, "synthetic"):
             home.install_packages(self.root, self.config)
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 4)
         self.assertIn("pi", self.config["installed"])
         self.assertNotIn("claude-mem", self.config["installed"])
         with home._observer_install_exclusive(self.root):

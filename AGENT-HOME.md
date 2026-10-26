@@ -119,6 +119,17 @@ python /data/my-agent/agent-home.py palace status
 /data/my-agent/bin/mempalace status
 ```
 
+The source installer also builds the read-only local board for a new home:
+
+```bash
+python /data/my-agent/agent-home.py board --project /data/my-agent/projects/example
+```
+
+Open the printed URL on the same machine to read cards, comments and saved
+summaries. Normal use resolves the installed asset record. Older homes need
+reviewed asset/controller maintenance. Fresh-install board qualification remains
+pending; see [PROJECT-BOARD.md](PROJECT-BOARD.md) for exact source and native limits.
+
 Inside a managed Pi session, `project_create` accepts only `{"name":"example"}`.
 It calls the same home factory as the CLI above: the new project is placed under
 `HOME/projects/example` with its own Git root, instructions, ignore rules and

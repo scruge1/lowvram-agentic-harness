@@ -12,36 +12,56 @@ from unittest import mock
 from harness import home as bootstrap, maintenance as state, runtime_update as update
 from harness.research_install import REQUIREMENTS
 from tests import test_agent_core_update as core_fixture
-from tests.test_controller_migration import reviewed_home_before_board
+from tests.test_controller_migration import legacy_controller_source
 from tests.test_runtime_update import UpdateFixture, digest
 
 
-def source60_home(text):
-    """Reverse the exact released61 lab-only wiring, never synthesize approval."""
-    if '    board_view = commands.add_parser("board",' in text:
-        text = reviewed_home_before_board(text)
-    nodes = ast.parse(text).body
-    environment = next(node for node in nodes if isinstance(node, ast.FunctionDef) and node.name == "environment")
-    choices = [node for node in environment.body if isinstance(node, ast.If)
-               and "PI_HARNESS_LAB_PYTHON" in ast.get_source_segment(text, node)]
-    if len(choices) != 1:
-        raise AssertionError("Released lab environment fixture changed")
-    node = choices[0]
-    lines = text.splitlines(keepends=True)
-    text = "".join(lines[:node.lineno - 1] + lines[node.end_lineno:])
-    line = '            extensions.append(str(runtime / "adapters/pi/lab/harness-lab.ts"))\n'
-    if text.count(line) != 1:
-        raise AssertionError("Released lab extension fixture changed")
-    text = text.replace(line, "")
+def checked_home(text, expected):
     tree = ast.parse(text)
     for child in ast.walk(tree):
         if hasattr(child, "type_params"):
             del child.type_params
     observed = {node.name: update.node_hash(node) for node in tree.body
-                if isinstance(node, ast.FunctionDef) and node.name in update.CORE_LAB_OLD_NODES}
-    if observed != update.CORE_LAB_OLD_NODES:
-        raise AssertionError("Reconstructed released60 definitions differ")
+                if isinstance(node, ast.FunctionDef) and node.name in expected}
+    if observed != expected:
+        raise AssertionError("Frozen released home definitions differ")
     return text
+
+
+def source60_home():
+    return checked_home(legacy_controller_source(), update.CORE_LAB_OLD_NODES)
+
+
+def source61_home():
+    # Exactly the two public additions in 1aceecd37220c630ef7f71766f90457f827c8af2.
+    # Do not reverse changes from the current installer or alter admission hashes.
+    text = source60_home()
+    environment = next(node for node in ast.parse(text).body
+                       if isinstance(node, ast.FunctionDef) and node.name == "environment")
+    original = ast.get_source_segment(text, environment)
+    marker = '    if config.get("framework_binding_sha256"):\n'
+    addition = '''    if config.get("profile") == "full":
+        helper = home / "runtime/adapters/pi/lab/harness_lab.py"
+        lab_python = executable(home / "envs/harness2")
+        value.update({"PI_HARNESS_LAB_PYTHON": str(lab_python), "PI_HARNESS_LAB_HELPER": str(helper),
+                      "PI_HARNESS_LAB_HELPER_SHA256": digest(helper)})
+        if lab_python.is_file():
+            from harness import home_entry
+            command = home_entry.guarded_command(home, [str(lab_python), "-s", "-B", str(home / "runtime/pi-task-worker.py"),
+                                                       "--guard", str(lab_python), "-I", "-B", str(helper), "--home", str(home)],
+                                                 python=str(lab_python))
+            encoded = json.dumps(command, ensure_ascii=False, separators=(",", ":"))
+            value["PI_HARNESS_LAB_COMMAND"] = encoded
+            value["PI_HARNESS_LAB_COMMAND_SHA256"] = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+'''
+    if original.count(marker) != 1 or text.count(original) != 1:
+        raise AssertionError("Frozen environment insertion point changed")
+    text = text.replace(original, original.replace(marker, addition + marker))
+    marker = '            extensions.append(str(runtime / "adapters/pi/claude-memory.ts"))\n'
+    if text.count(marker) != 1:
+        raise AssertionError("Frozen extension insertion point changed")
+    text = text.replace(marker, marker + '            extensions.append(str(runtime / "adapters/pi/lab/harness-lab.ts"))\n')
+    return checked_home(text, update.CORE_LAB_NEW_NODES)
 
 
 def source60_verify():
@@ -65,7 +85,7 @@ class LabSourceUpdateTests(UpdateFixture):
         super().setUp()
         case = self.case
         candidate = case["source"] / "harness/home.py"
-        candidate.write_text(reviewed_home_before_board(candidate.read_text(encoding="utf-8")), encoding="utf-8")
+        candidate.write_text(source61_home(), encoding="utf-8")
         spec = importlib.util.spec_from_file_location("harness.lab_source61_unit_fixture", candidate)
         historical_home = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(historical_home)
@@ -76,7 +96,7 @@ class LabSourceUpdateTests(UpdateFixture):
         check.start()
         self.addCleanup(check.stop)
         file = case["home"] / "runtime/harness/home.py"
-        file.write_text(source60_home(file.read_text(encoding="utf-8")), encoding="utf-8")
+        file.write_text(source60_home(), encoding="utf-8")
         # Synthetic old payload identity only. The frozen old verifier is
         # executed below; actual old complete-controller proof is native QA.
         file = case["home"] / "runtime/harness/runtime_update.py"

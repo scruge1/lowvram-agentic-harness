@@ -28,8 +28,8 @@ class AgentHomeTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 1)
         failure = json.loads(result.stderr[result.stderr.index('{'):])
-        self.assertIn("Board UI files are not installed", failure["error"])
-        self.assertIn("build_project_board_assets.py", failure["error"])
+        self.assertIn("Local board files are not installed", failure["error"])
+        self.assertIn("reviewed source installer", failure["error"])
         self.assertEqual(failure["authority"], "none")
         self.assertFalse(project.exists())
 

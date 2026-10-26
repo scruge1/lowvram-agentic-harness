@@ -29,6 +29,35 @@ export CLI calls from an unrelated directory, restored queries, original path
 conservation and retained partial failures are checked. This does not establish
 full installed-home adoption, in-place recovery or Windows capture enforcement.
 
+## Record installer-owned local board assets - 2026-10-26
+
+Parent commit: `a47dab60701bb407da8b405add0ab2163414fda8`.
+
+Build the pinned web closure and static read view during a new Hermes package's
+exclusive phase, before its package fingerprint is saved. Reuse the existing
+installer loop, home lease, child descriptor forwarding and package record.
+Retain the exact source/host/runtime manifest and licences. The normal board
+command resolves that record without manual asset flags; package checks and
+doctor expose missing or changed UI files. Older installed records and unknown
+partial output refuse before package effects. No UI server starts during setup.
+
+The compiler copies an explicit host file set and checks it for drift. Its own
+local Python helper package is included in the runtime closure. Historical C7
+tests use an exact public pre-board home.py fixture, with explicit LF/CRLF hashes
+and actual module loading at its true copied path. Original production v1 hashes
+and scopes stay fixed; the current controller remains outside those frontiers.
+The later lab-frontier fixture adds only the two exact published source61 lab
+blocks to that frozen source60, then checks the unchanged old/new AST hashes.
+Its candidate equals the complete published source61 text. The join reuses the
+existing exhaustive unit-test groups without changing their deadlines.
+
+Focused source controls cover package-record/path/source/asset drift, retained
+partials, shared or foreign lease refusal, actual EX child descriptor forwarding,
+installed-entry READ refusal and both legacy migration scopes. These synthetic
+fixtures perform no npm or package installation and do not establish a normal
+fresh factory, browser adoption or model result. Actual fresh install followed
+by the default board command remains required before one-install acceptance.
+
 ## Recover current approved routing without dropping older work - 2026-10-26
 
 Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
