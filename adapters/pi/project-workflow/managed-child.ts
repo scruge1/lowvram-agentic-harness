@@ -3,6 +3,7 @@ import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager
 import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { childModelReply } from './child-reply.mjs';
 
 const ALLOWED = new Set(['read', 'grep', 'find', 'ls', 'agent_capabilities', 'system_tool_query',
   'validated_memory_query', 'project_knowledge_query', 'project_context', 'workflow_step', 'web_research',
@@ -64,6 +65,9 @@ export async function runManagedChild(pi: any, ctx: any, id: string,
     recordBytes += bytes; target.push(value);
   };
   let childSession: string | undefined;
+  const journalRecord = () => ({ id, ...grant.identity, child_session: childSession ?? null,
+    model_sha256: modelBinding, state, timed_out: timedOut, cancelled: signal.aborted, messages, calls, toolResults,
+    acceptance: 'untrusted_child_result_not_root_acceptance', restart: 'in_memory_no_resume_no_automatic_replay' });
   try {
     current(); await grant.verify(); current();
     if (typeof ctx.executeTool !== 'function' || !Array.isArray(ctx.tools)) throw new Error('Native parent executeTool is required');
@@ -128,7 +132,7 @@ export async function runManagedChild(pi: any, ctx: any, id: string,
     const result = { schema: 'pi-managed-child/v1', ok: true, ...grant.identity, child_session: childSession,
       model_sha256: modelBinding, messages, calls, toolResults, acceptance: 'untrusted_child_result_not_root_acceptance',
       restart: 'in_memory_no_resume_no_automatic_replay' };
-    return { content: [{ type: 'text' as const, text: JSON.stringify(result) }], details: result };
+    return { content: [{ type: 'text' as const, text: JSON.stringify(childModelReply(result, journalRecord())) }], details: result };
   } catch (error) {
     state = timedOut ? 'deadline' : signal.aborted ? 'cancelled' : 'failed';
     throw error;
@@ -144,9 +148,7 @@ export async function runManagedChild(pi: any, ctx: any, id: string,
       throw error;
     } finally {
       child?.dispose();
-      pi.appendEntry('pi-managed-child-result/v1', { id, ...grant.identity, child_session: childSession ?? null,
-        state, timed_out: timedOut, cancelled: signal.aborted, messages, calls, toolResults,
-        acceptance: 'untrusted_child_result_not_root_acceptance', restart: 'in_memory_no_resume_no_automatic_replay' });
+      pi.appendEntry('pi-managed-child-result/v1', journalRecord());
     }
   }
 }

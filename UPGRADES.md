@@ -26,6 +26,14 @@ loss. Kernel exit, unreaped zombies and final owner reaping are distinct evidenc
 Synthetic SSE and explicit memory fixtures do not qualify real model behavior,
 whole-profile delegation, model capacity or root-outcome quality.
 
+An actual parent serializer counterexample exposed74,428bytes of child reply
+from a24,029byte read. Replies now project at most12KiB while keeping the full
+trace in native journal/details. A read-only companion pages the exact retained
+record with source/project/digest binding and explicit completeness. The matched
+synthetic case delivered1,541bytes, recovered the full record across seven bounded
+pages and kept pause/uncertainty, source authority and original history intact.
+These are serialized bytes, not measured model tokens or inference latency.
+
 ## Connect the optional deterministic component lab - 2026-10-26
 
 Parent commit: `3808ec7610d3e2d083cd68124c75d381e956a74d`.

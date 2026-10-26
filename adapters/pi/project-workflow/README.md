@@ -297,8 +297,22 @@ second coordinator, memory capture extension or MCP connection. Its task prose
 is delegated data, never fresh owner approval. Source/model/input changes,
 cancellation and the declared deadline cancel or hold delivery. Actual calls,
 assistant messages and native usage fields are bounded to256KiB and retained in
-the parent's native journal. Child completion is untrusted output; the parent
+the parent's native journal and tool details. The model receives a summary of at
+most12KiB, with actual final text, reported tool outcomes, receipt/output locators
+and an exact record digest. Omitted text/calls/locators are marked; the summary
+never claims complete evidence. Child completion is untrusted output; the parent
 still verifies artifacts, integrates the card and checks the root outcome.
+
+Use the supplied `inspect` arguments with read-only `task_agent_inspect` to recover
+large records. Follow each returned `next` argument set. Offsets count Unicode
+code points, not bytes or lines; every actual serialized response is at most12KiB.
+Pages bind the exact native record digest, original capture/route source and
+currently admitted project. They expose no arbitrary file selector and perform
+no inference, project mutation, progress credit, approval or replay. Without a
+digest, `call_id` returns bound metadata first, including an unfinished start
+when no result survived. Inspection stays available during a pause or unresolved
+child hold. `complete_record` describes one selected record only; it does not
+mean the whole attempt/history is present or its task is accepted.
 
 There is no saved child JSONL or child resume. After parent loss, an unmatched
 native child-start record holds effects and automatic continuation. Inspect the

@@ -283,6 +283,24 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  pi.registerTool({
+    name: 'task_agent_inspect', label: 'Inspect retained child evidence',
+    description: 'Read-only bounded current-native-branch child journal data for the admitted original project. Use the summary call_id/record_sha256 and follow next_offset; omit hash first for metadata when a child failed or disappeared. No file selector, execution/progress/approval or replay. Complete_record means one record only, not whole history or task acceptance.',
+    parameters: Type.Object({ call_id: Type.String({ minLength: 1, maxLength: 256 }),
+      record_sha256: Type.Optional(Type.String({ pattern: '^[a-f0-9]{64}$' })),
+      offset: Type.Optional(Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })),
+      max_bytes: Type.Optional(Type.Integer({ minimum: 1024, maximum: 12288 })) }, { additionalProperties: false }),
+    async execute(_id, params, signal, _update, ctx) {
+      try {
+        if (signal?.aborted) throw new Error('Child inspection cancelled');
+        const { inspectChildRecord } = await import('./child-reply.mjs');
+        const view = inspectChildRecord(ctx.sessionManager.getBranch(), activeProject, ctx.sessionManager.getSessionId(), params);
+        if (signal?.aborted) throw new Error('Child inspection cancelled');
+        return { content: [{ type: 'text' as const, text: JSON.stringify(view) }], details: { ok: true, schema: view.schema } };
+      } catch (error) { return failure(error); }
+    },
+  });
+
   const projectRequest = (request: Record<string, unknown>) => {
     if (!activeProject) throw new Error('Admit a project with project_admit before using its board');
     return { ...request, project_root: activeProject.root };
