@@ -263,3 +263,71 @@ verifier are required before execution; an arbitrary predicate cannot supply
 Git commit or remote proof. Existing intake, task, project-context, pause,
 failure and process-owner checks still apply. This is a narrow installed-helper
 route, not attribution or enforcement of every shell Git operation.
+
+
+## One managed child
+
+`task_agent` runs one serial native Pi child on the currently selected, runnable,
+source-authorized **hierarchy child** card. First create/decompose and select the
+card with the existing board tools. Complete normal parent discovery, applicable
+project-context delivery and skill reads before delegating. Supply a short `task`
+and explicit `timeout_seconds` in1..86385. This is a productive child-operation
+budget, not a session or whole-project limit; each supervised action still uses
+its declared action/check budgets. There is no default600-second child policy.
+
+This is a new integration of Pi1.4 public SDK APIs. It is not an upstream core
+`task_agent` tool or a transplant of a private worker launcher. The child has a
+fresh native in-memory session and the same owned local model/configuration.
+The model/auth runtime reads the same agent directory normally. The adapter
+does not copy API keys into arguments or records. Different providers, models, routing headers,
+config sources and extension provider overrides are held. The existing parent
+retains its home/resource lease and project session writer lease.
+
+Only a fixed subset of existing inspection, discovery, research and
+`workflow_step` tools is offered. Calls use native parent `executeTool`, with its
+existing source, context, skill, failure and process-ownership checks. No child
+project/intake/card lifecycle or recursive child tool is exposed. Parent effects
+outside this active child's nested tool calls are held until it settles. This
+is cooperative ownership, not a hostile-code sandbox. The child cannot load a
+new topic's context into the parent's prompt mid-operation; missing parent
+context stays held for parent inspection before a later delegation.
+
+The child loads normal prompt/skill/context resources without registering a
+second coordinator, memory capture extension or MCP connection. Its task prose
+is delegated data, never fresh owner approval. Source/model/input changes,
+cancellation and the declared deadline cancel or hold delivery. Actual calls,
+assistant messages and native usage fields are bounded to256KiB and retained in
+the parent's native journal and tool details. The model receives a summary of at
+most12KiB, with actual final text, reported tool outcomes, receipt/output locators
+and an exact record digest. Omitted text/calls/locators are marked; the summary
+never claims complete evidence. Child completion is untrusted output; the parent
+still verifies artifacts, integrates the card and checks the root outcome.
+
+Use the supplied `inspect` arguments with read-only `task_agent_inspect` to recover
+large records. Follow each returned `next` argument set. Offsets count Unicode
+code points, not bytes or lines; every serialized model-facing JSON window is at most12KiB.
+Pages bind the exact native record digest, original capture/route source and
+currently admitted project. They expose no arbitrary file selector and perform
+no inference, project mutation, progress credit, approval or replay. Without a
+digest, `call_id` returns bound metadata first, including an unfinished start
+when no result survived. Inspection stays available during a pause or unresolved
+child hold. `complete_record` describes one selected record only; it does not
+mean the whole attempt/history is present or its task is accepted.
+
+There is no saved child JSONL or child resume. After parent loss, an unmatched
+native child-start record holds effects and automatic continuation. Inspect the
+retained journal and partial host artifacts before routing a fresh explicit
+owner resume. A model work checkpoint cannot clear this uncertainty. A matching
+`returned` result closes the start; failed, cancelled, deadline, delivery-held or
+unknown results keep the hold even if the parent failure hook was never saved.
+The existing failure/pause rules keep their separate meanings.
+Never automatically replay an interrupted child.
+
+`tests/test_pi_managed_child_native.mjs` qualifies the SDK/tool integration with
+synthetic provider responses, real Hermes and supervised fixture actions. Its
+scoped `--case positive` and `--case lifetime` controls distinguish successful
+return from parent-loss ownership/reopen checks. An explicit memory-result
+fixture avoids memory service calls. These are not a real-model delegation,
+whole managed CLI, full-profile or semantic-quality acceptance claim. Research-only
+continuation accounting through nested child results is not qualified; no
+progress is inferred from child text or receipt metadata.

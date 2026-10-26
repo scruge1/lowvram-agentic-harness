@@ -13,7 +13,7 @@ const ROUTED = 'pi-request-routed/v1';
 const STATE = 'pi-request-work-state/v1';
 const DISCUSSION = 'pi-request-discussion/v1';
 const TERMINAL = new Set(['done', 'archived']);
-const EXECUTION = new Set(['workflow_step', 'run_step', 'run_ledger', 'write', 'edit']);
+const EXECUTION = new Set(['workflow_step', 'run_step', 'run_ledger', 'write', 'edit', 'task_agent']);
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const boardTitle = (summary: string) => Array.from(summary.trim()).slice(0, 200).join('').trim();
 
@@ -28,6 +28,41 @@ export function researchCreditSeen(branch: any[], recent: Set<string>, key: stri
   if (!branch.some(entry => entry.type === 'custom' && entry.customType === STATE && entry.data?.research_credit?.key === key)) return false;
   rememberResearchCredit(recent, key); return true;
 }
+// Native journal recovery only. No child run store or completion authority.
+export function unresolvedChildCalls(branch: any[], root?: string) {
+  const starts = new Map<string, { data: any; ordinal: number }>();
+  const captures = new Map<string, any>(), intents = new Map<string, any>();
+  const resumes = new Map<string, number>();
+  const identity = (data: any) => digest([data.project?.root, data.project?.projectId, data.project?.boardId,
+    data.card, data.parent_card, data.source, data.source_sha256, data.parent_session]);
+  for (const [ordinal, entry] of branch.entries()) {
+    if (entry.type !== 'custom') continue;
+    const data = entry.data;
+    if (entry.customType === CAPTURE) captures.set(data.id, data);
+    if (entry.customType === INTENT) intents.set(data.id, data.intent);
+    if (entry.customType === ROUTED && data.control === 'resume') {
+      const capture = captures.get(data.id), intent = intents.get(data.id);
+      if (capture && !['historical-unverified', 'extension'].includes(capture.source)
+          && intent?.control === 'resume' && typeof intent.project?.root === 'string'
+          && capture.project?.root === intent.project.root)
+        resumes.set(intent.project.root, ordinal);
+    }
+    if (entry.customType === 'pi-managed-child-start/v1') {
+      if (typeof data?.id !== 'string' || !data.id || typeof data.project?.root !== 'string')
+        throw new Error('Invalid managed-child start journal; inspect before execution');
+      starts.set(data.id, { data, ordinal });
+    }
+    if (entry.customType === 'pi-managed-child-result/v1') {
+      const start = starts.get(data?.id);
+      // Failure can be journaled before the parent's tool_result failure hook.
+      // A crash there still requires inspection and fresh owner resume.
+      if (start && data.state === 'returned' && identity(start.data) === identity(data)) starts.delete(data.id);
+    }
+  }
+  return [...starts].filter(([, start]) => (!root || start.data.project.root === root)
+    && start.ordinal > (resumes.get(start.data.project.root) ?? -1)).map(([id]) => id);
+}
+
 type Project = { root: string; projectId: string; boardId: string };
 type Part = { kind: 'task' | 'amend' | 'held' | 'question' | 'control'; summary: string;
   task_id?: string; execute?: boolean; priority?: number; expandable?: boolean };
@@ -40,7 +75,7 @@ type State = { mode: 'running' | 'paused' | 'blocked' | 'waiting' | 'complete'; 
   task_waits?: TaskWait[]; queue: Work[]; requests: number; started: number; progress: number; seen: number; stalls: number;
   research_credit?: { key: string; fingerprint: string; session: string; root: string; task: string; source: string;
     artifact_id: string; content_scope: string; coverage: string } };
-type Bindings = { project: () => Project | null; task: () => string | null;
+type Bindings = { project: () => Project | null; task: () => string | null; child?: () => string | undefined;
   select: (id: string) => void; failed: () => boolean;
   call: (request: Record<string, unknown>, signal?: AbortSignal) => Promise<any> };
 
@@ -251,6 +286,12 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
         state = saved;
         state.task_waits ??= [];
       }
+    }
+    const unfinished = unresolvedChildCalls(ctx.sessionManager.getBranch(), bindings.project()?.root);
+    if (unfinished.length && !['paused', 'waiting'].includes(state.mode)) {
+      state.mode = 'blocked'; state.reason = 'Unsettled in-memory child: ' + unfinished.slice(0, 8).join(', ')
+        + '. Inspect retained start/tool/output evidence; fresh owner resume is required, never automatic replay.';
+      save();
     }
     // Repair only the retired diagnostic. Preserve every non-reason field and write back once.
     if (repairedCurrentReason) save();
@@ -550,6 +591,10 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       return; // Pure inspection never acquires execution authority from accounting.
     }
     if (!EXECUTION.has(event.toolName) && event.toolName !== 'bash') return;
+    const unresolved = unresolvedChildCalls(ctx.sessionManager.getBranch(), bindings.project()?.root);
+    const activeChild = bindings.child?.();
+    if (unresolved.some(id => id !== activeChild || event.parentToolCallId !== activeChild))
+      return { block: true, reason: 'An active or unsettled managed child owns this scope. Inspect retained evidence; only its own native nested tools may run. After parent loss, route a fresh explicit owner resume before another attempt.' };
     if (pending().length) return { block: true, reason: 'New user input is not routed. Read kanban_intake_status and route every aspect before project execution.' };
     if (state.mode === 'paused' || state.mode === 'blocked' || (state.mode === 'waiting' && state.wait)) return { block: true, reason: `Work ${state.mode}: ${state.reason}. Route an explicit resume or record resolved dependency first.` };
     const before = stamp();
@@ -615,7 +660,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     if (!EXECUTION.has(event.toolName) && event.toolName !== 'bash') return;
     if (event.isError || event.details?.ok === false) {
       state.mode = 'blocked'; state.reason = `Inspect failed/uncertain ${event.toolName} before retry; do not replay effects`; save();
-    } else { state.progress++; save(); }
+    } else if (event.toolName !== 'task_agent') { state.progress++; save(); }
   });
   pi.on('turn_end', async (event: any, ctx: any) => {
     for (const result of event.toolResults ?? []) {
@@ -679,6 +724,12 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       if (state.mode !== 'paused' && state.mode !== 'blocked' && state.mode !== 'waiting') state.reason = reason;
       save(); ctx.ui?.notify?.(`Work stopped: ${state.reason}`, 'warning');
     };
+    if (unresolvedChildCalls(ctx.sessionManager.getBranch(), bindings.project()?.root).length) {
+      if (!['paused', 'waiting'].includes(state.mode)) {
+        state.mode = 'blocked'; state.reason = 'Unsettled in-memory child; inspect retained evidence and route fresh owner resume. No automatic replay.';
+      }
+      save(); return;
+    }
     if (state.conversation && state.conversation.phase !== 'execution') {
       const changed = deferUncommitted('settled_without_committed_execution');
       if (state.conversation.phase === 'review') { state.conversation.phase = 'discussion'; save(); }
@@ -734,4 +785,46 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
           ...decision, tasks: packet.tasks.length, anchors: packet.anchors.length }), 'info');
       } catch (error) { ctx.ui.notify('Retained evaluation unavailable: ' + String(error), 'warning'); }
     } });
+  // Host-only capability. Delegated task prose is never inserted as fresh owner input.
+  // Reuse the retained packet and current source scope; expose no grant tool/schema.
+  return {
+    async childGrant(ctx: any) {
+      const scope = researchScope(ctx), session = ctx.sessionManager.getSessionId();
+      const project = bindings.project(), task = bindings.task();
+      if (unresolvedChildCalls(ctx.sessionManager.getBranch(), project?.root).length)
+        throw new Error('Unsettled child evidence requires inspection and fresh owner resume');
+      if (!alive || !project || !task || bindings.failed() || pending().length || state.mode !== 'running')
+        throw new Error('Child requires unchanged admitted running source-bound work');
+      const packet = await projectPacket(ctx);
+      if (scope !== researchScope(ctx) || !packet.coverage.complete || packet.coverage.truncated || packet.coverage.missing.length)
+        throw new Error('Child requires a complete unchanged retained projection');
+      const selected = packet.tasks.find((item: any) => item.id === task);
+      if (!selected?.parent || !['ready', 'running'].includes(selected.status) || blockedTaskIds(packet).has(task))
+        throw new Error('Select an existing runnable authorized hierarchy child before delegation');
+      const seen = new Set<string>(); let current = selected, admitted = false;
+      for (let depth = 0; current && depth < 64; depth++) {
+        if (seen.has(current.id) || current.project_root !== project.root || current.source !== selected.source
+            || packet.excluded.some((item: any) => item.task === current.id && item.source === current.source)) break;
+        seen.add(current.id);
+        if (packet.anchors.some((item: any) => item.task === current.id && item.source === current.source)) { admitted = true; break; }
+        current = packet.tasks.find((item: any) => item.id === current.parent);
+      }
+      const source = captures.get(selected.source);
+      if (!admitted || !source || selected.prerequisites.some((id: string) => !TERMINAL.has(packet.prerequisite_status[id])))
+        throw new Error('Child scope or prerequisites are not authorized');
+      const bound = packetDigest(packet);
+      return {
+        identity: { project: structuredClone(project), card: task, parent_card: selected.parent,
+          source: source.id, source_sha256: source.sha256, parent_session: session },
+        async verify() {
+          if (!alive || scope !== researchScope(ctx) || ctx.sessionManager.getSessionId() !== session)
+            throw new Error('Child source, input, selection or work changed; delivery held');
+          const actual = await projectPacket(ctx);
+          if (scope !== researchScope(ctx) || packetDigest(actual) !== bound)
+            throw new Error('Child board/source changed; delivery held; inspect retained child effects');
+        },
+      };
+    },
+  };
+
 }
