@@ -30,7 +30,7 @@ the scan. Do not use the backup operation's cold-copy budgets as hot-query polic
 Import, edits and deletion remain ordinary authorized file actions followed by
 the existing explicit rebuild. No Pi authority, effect or completion gate changes.
 
-Validation:19 actual fictional filesystem/SQLite and scoped CLI controls pass on
+Validation:21 actual fictional filesystem/SQLite and scoped CLI controls pass on
 Linux; Windows passes with one native-symlink permission skip. The preceding
 packet passed seven coordinator regressions; the busy-read correction leaves
 their legacy definitions unchanged. Ruff0.16.10 and all
@@ -47,6 +47,18 @@ budget again. Current reads now use zero busy wait and typed deferral on native
 busy/locked state, with no partial payload. Retain the measured counter and
 earlier frozen qualification. A focused actual exclusive-lock control verifies
 the corrected path and normal retrieval after the owner releases its lock.
+
+Hosted Windows3.13 then exposed a false deferral before reading current bytes.
+A native same-file witness has identical identity, size, mode and modification
+time but different path/descriptor ctime meanings. Preserve the full path stamp
+against later path stamps and the full descriptor stamp against later descriptor
+stamps. Cross-compare only commensurate identity/size/mode/mtime. Both byte/hash
+passes and raw/chunk drift checks stay intact; focused controls retain independent
+path and descriptor drift refusals. The related upstream report is
+[CPython157671](https://github.com/python/cpython/issues/157671).
+Retain the failed hosted runs and native diagnostic witnesses; remove the
+temporary diagnostic workflow before the final source head. This is not a
+general Windows runtime or same-user writer isolation claim.
 
 This is source/backend qualification, not installed Library or UI adoption.
 The current Pi query route still uses the labelled legacy snapshot behavior.

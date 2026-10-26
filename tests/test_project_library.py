@@ -9,6 +9,8 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -219,6 +221,42 @@ class ProjectLibraryTests(unittest.TestCase):
         result = knowledge.current(self.root, source="docs/record.md", start_line=2, line_limit=1)
         self.assertEqual(result["source"]["text"], "Orchard café.\r\n")
         self.assertEqual(result["source"]["sha256"], hashlib.sha256(raw).hexdigest())
+
+    def test_distinct_native_ctime_meanings_do_not_hide_current_source(self):
+        original = knowledge.os.fstat
+        fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+        def descriptor(fd):
+            info = original(fd)
+            values = {key: getattr(info, key) for key in fields}
+            values["st_ctime_ns"] += 1000
+            return SimpleNamespace(**values)
+        with mock.patch.object(knowledge.os, "fstat", side_effect=descriptor):
+            result = self.query()
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["results"][0]["sha256"], hashlib.sha256(self.note.read_bytes()).hexdigest())
+
+    def test_each_native_metadata_channel_still_detects_drift(self):
+        fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+        for channel in ("descriptor", "path"):
+            with self.subTest(channel=channel):
+                calls = 0
+                original_fd, original_path = knowledge.os.fstat, knowledge._stamp
+                def descriptor(fd):
+                    nonlocal calls
+                    info = original_fd(fd)
+                    values = {key: getattr(info, key) for key in fields}
+                    calls += 1
+                    if calls > 1:
+                        values["st_ctime_ns"] += 1000
+                    return SimpleNamespace(**values)
+                def path_stamp(path):
+                    nonlocal calls
+                    value = original_path(path)
+                    calls += 1
+                    return (*value[:-1], value[-1] + (1000 if calls > 1 else 0))
+                target, name, side_effect = (knowledge.os, "fstat", descriptor) if channel == "descriptor" else (knowledge, "_stamp", path_stamp)
+                with mock.patch.object(target, name, side_effect=side_effect), self.assertRaises(knowledge.CurrentDeferred):
+                    knowledge._current_bytes(self.note, knowledge.DEFAULT_CONFIG["max_file_bytes"], time.monotonic() + 10)
 
     def test_existing_two_mib_read_ceiling_defers_even_with_larger_policy(self):
         policy = self.root / knowledge.CONFIG_PATH

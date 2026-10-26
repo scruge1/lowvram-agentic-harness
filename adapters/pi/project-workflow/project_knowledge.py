@@ -312,10 +312,13 @@ def _current_bytes(path: Path, maximum: int, deadline: float) -> tuple[bytes, tu
         raise CurrentDeferred("Current-source file exceeds the selected inspection bound")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
     with os.fdopen(os.open(path, flags), "rb") as stream:
-        if _stat_stamp(os.fstat(stream.fileno())) != before:
+        opened = _stat_stamp(os.fstat(stream.fileno()))
+        # Windows path ctime can mean creation time while descriptor ctime
+        # means change time. Keep full stamps within each native API channel.
+        if opened[:5] != before[:5]:
             raise CurrentDeferred("Current source changed before opening")
         raw = stream.read(maximum + 1)
-        if _stat_stamp(os.fstat(stream.fileno())) != before:
+        if _stat_stamp(os.fstat(stream.fileno())) != opened:
             raise CurrentDeferred("Current source changed during reading")
     _current_time(deadline)
     if len(raw) > maximum or len(raw) != before[3] or _stamp(path) != before:
