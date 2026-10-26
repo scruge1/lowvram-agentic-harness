@@ -614,6 +614,55 @@ artifact remains for inspection; it is not rolled back or automatically replayed
 Use `read` and its offsets to inspect the complete result. The full question-to-
 consensus research journey and useful model-driven acceptance remain open.
 
+### Bind research to a question and requested URLs
+
+The main agent can compose the existing tool calls around immutable plan data.
+`plan` records its question, extraction fields and1–12 angle queries. It performs
+no inference and grants no permission. The question/schema must stay identical
+through the bound chain. Existing unbound research calls remain available.
+
+```json
+{"action":"plan","query":"How does the method work?","extraction_schema":["mechanism"],"angles":[{"id":"mechanism","query":"method mechanism official documentation"}]}
+```
+
+Use the returned artifact ID as `research_plan_id` on `search`, with the exact
+`angle_id` and planned query. Then call `retrieval_plan` with that plan ID and
+`requests`: each row has a short `id`, `angle_id` and exact `url`. A URL chosen
+from search also has its `search_artifact_id` and zero-based `hit_index`; the URL
+must match the actual cached hit. Direct URLs are agent declarations. Declare
+the manifest before acquisition. It accepts1–128 requests within64KiB; the root
+plan accepts32KiB. Queries are at most1000 characters and URLs at most4096.
+
+Pass `retrieval_plan_id`, `request_id` and the exact URL to `fetch` or `render`.
+Failed outcomes keep the same binding and remain readable. Bound `mine` takes
+both plan IDs and1–4 successful source artifact IDs; it derives question/schema
+and recall bias from the plan. Supplied overrides must match. Its selected local
+model, source-window, exact-span, cancellation and successful-only resume rules
+remain in force. A failed/zero-claim result is never a successful seen receipt.
+
+Bound `consensus` takes both plan IDs, up to32 mining IDs in `artifact_ids` and
+the supplied search/fetch/render audit IDs in `acquisition_artifact_ids` (at most
+268 IDs and32MiB of acquisition data). Include search parents of declared hits.
+It reports every declared URL and angle. A uniquely eligible complete capture
+with healthy mining fulfills a URL automatically, and the result records that
+choice. Earlier supplied failed or partial attempts remain in its audit. A failed
+fetch followed by a complete rendered capture and healthy mining can fulfill the
+same request. Multiple eligible choices stay held until optional `fulfillments`
+selects `{request_id, acquisition_artifact_id, mining_artifact_id}`. Search
+ambiguity similarly accepts `search_fulfillments` rows `{angle_id, artifact_id}`.
+Missing, partial, failed or unmined fulfillment cannot report complete accounting.
+
+Here `coverage_complete` means complete declared request/window accounting. Each
+fulfilled row retains `content_scope`, `input_chars`, `source_chars` and
+`input_truncated`; mining can still analyse only its existing14000-character
+prefix. This is no whole-page, whole-web or semantic-completeness claim. The
+audit covers supplied outcomes, not proof that every ever-issued attempt was
+provided. Healthy no-relevance coverage remains a non-successful result. Plans,
+manifests and consensus use declared2–60-second productive deadlines; native
+cleanup is separate. Late cancellation can hold delivery while committed bound
+data survives. No automatic replay, task completion or execution authority is
+created. Useful model-driven question-to-report acceptance remains separate.
+
 Full source bytes, complete permitted static extraction, provenance and download
 bytes stay in content-addressed project-state artifacts. Model replies remain
 within12KiB. Follow `next_offset` for more cached text/metadata; cached reads do

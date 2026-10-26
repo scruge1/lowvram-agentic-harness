@@ -28,6 +28,40 @@ signs, backticks and Unicode, check exact bytes and unchanged inputs, and refuse
 missing/placeholder text, occupied outputs and dangling symlinks. Native context
 delivery and useful actual model output remain separate acceptance evidence.
 
+## Bind declared research requests to immutable outcomes - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+Extend the existing `web_research` tool and ArtifactStore with the main agent's
+question/schema/angle plan and an immutable requested-URL manifest. Reuse the
+canonical topic-specific planning fields, without its private CLI invocation.
+The same main-agent tool loop composes search, acquisition, selected-model claim
+mining and deterministic consensus. No new inference call, router, registry,
+store, scheduler, daemon, home controller or dependency is introduced. Existing
+unbound APIs remain available; planning data grants no permissions.
+
+Validate exact search queries/hits, requested URLs, project identity and plan
+bindings before acquisition. Preserve failed attempts, unattempted requests,
+healthy zero-relevance and failed/partial mining. Uniquely eligible healthy
+fulfillment is recorded automatically; ambiguous choices need an explicit
+override. Recovery can fulfill the same requested URL with a complete rendered
+capture after a failed fetch while keeping the failure in its audit. Keep
+supplied-attempt audit, requested fulfillment and policy scoring distinct.
+Coverage describes declared request/window accounting. Existing prefix bounds
+and truncation remain explicit; it does not establish whole-page analysis,
+editorial independence, truth or every ever-issued attempt. Keep mining's
+successful-only seen/resume contract and all existing source-span checks.
+
+Bound text/count/serialized-byte inputs and reuse the accepted productive
+deadline/publication checks for new local actions. An88-source/22-mining-batch
+control exposed repeated immutable-manifest reads and a duplicate complete
+validation pass; retain both failures and reuse each operation's validated
+manifest/scorer output instead of increasing the deadline or adding a cache.
+Source/native fixtures cover the normal chain, isolation, recovery, ambiguity,
+window scope, cancellation and deadlines using synthetic acquisition/model
+transports. They do not accept the useful normal model-driven research journey.
+Research-progress accounting is a separate reproduced feature.
+
 ## Score complete cached mining inputs without inference - 2026-10-25
 
 Parent commit: `fd096f30bf027f8fb26b0278007ba5d1f25d8c3a`.
