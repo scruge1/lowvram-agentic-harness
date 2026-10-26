@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Read owned resource status without reserving or releasing it - 2026-10-26
+
+Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
+
+Reuse the existing model-service status and shared home consumer behind a
+current-home-only `resource_status` tool and `/resource-status` command. Verify
+the installed helper closure, service route, process lifetime and child home
+lease before reporting a live owned process. Return a whitelist of nonsecret
+fields. Preserve recorded recovery uncertainty and existing native wait IDs.
+Status reads create no task progress or receipt authority. Release stays an
+explicit operator action through the existing service CLI, shown as argv data.
+
+Separate measured RAM/CPU snapshots from configured serving arguments. Request
+occupancy, queue length, model fit and task capability remain unknown. Attached
+endpoints establish no service ownership. No new allocator, registry, poller,
+model start, foreign service action or GPU admission is added.
+
+Validation: eight source controls cover ownership/refusal/secret projections;
+their owned-process functions are explicitly mocked. Twelve actual native SDK
+checks cover the attached/unmanaged branch, isolated helper and command,
+Unicode/space paths, source/cancel/home refusals and unchanged intake records.
+That fixture makes no model or service request and does not qualify live owned
+service status, normal managed CLI deployment or useful model behavior.
+
 ## One source-bound native child - 2026-10-26
 
 Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
