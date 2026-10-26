@@ -35,6 +35,7 @@ existing routing guidance. Compare the retained scope across the await instead
 of suppressing every pending capture. The exact predecessor and follow-up
 whole-module controls distinguish retained routing guidance from new input,
 typed drafts and queued messages; they do not grant execution permission.
+The added pending-history/race controls bring the focused passing total to27.
 
 ## Admit the reviewed agent lab source frontier - 2026-10-26
 
