@@ -33,6 +33,14 @@ and managed Node. No CDN, personal bundle or hand-written replacement board.
 Retain build provenance, dependency licences and artifact hashes. Never hide
 new imports or bypass an update hold.
 
+The builder requires the actual pinned Git checkout root, clean staged and
+working source, and no untracked source. It checks again after the temporary
+host is removed. Only explicit root/web `node_modules` and pip metadata paths
+are excluded from the untracked check. The manifest records the observed commit,
+tree and upstream licence hash. Git covers transitive workspace source; the
+installed npm dependency generation still needs its separate locked-install
+qualification. An extracted source archive alone is not a Git checkout.
+
 This entry is single-machine loopback only and serves reads from one explicitly
 admitted project. It needs no private monitoring server, account or new token
 scheme. It is not an OS sandbox or remote authentication solution. Remote

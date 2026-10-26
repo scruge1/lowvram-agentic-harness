@@ -20,12 +20,40 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def native_source_identity(upstream, expected_commit):
+    """Use the actual pinned checkout, including transitive workspace source."""
+    upstream = Path(upstream).resolve(strict=True)
+    def git(*arguments):
+        result = subprocess.run(["git", *arguments], cwd=upstream, capture_output=True, timeout=30)
+        if result.returncode:
+            raise ValueError("Use the exact clean native Git checkout; source inspection failed")
+        return result.stdout
+    if Path(os.fsdecode(git("rev-parse", "--show-toplevel")).strip()).resolve() != upstream:
+        raise ValueError("Native source must be its actual Git checkout root")
+    commit = os.fsdecode(git("rev-parse", "HEAD")).strip()
+    if commit != expected_commit:
+        raise ValueError("Native Git HEAD differs from the pinned commit")
+    git("diff", "--quiet", "--ignore-submodules=none", "--")
+    git("diff", "--cached", "--quiet", "--ignore-submodules=none", "--")
+    # Deliberately omit --exclude-standard: ignored files can still be new
+    # source. Only dependency installations and pip metadata are exempt.
+    exclusions = ("/node_modules/", "/web/node_modules/", "/hermes_agent.egg-info/")
+    untracked = git("ls-files", "--others", "-z", *["--exclude=" + name for name in exclusions])
+    if untracked:
+        raise ValueError("Untracked native source exists; inspect it before building")
+    return {"commit": commit, "tree": os.fsdecode(git("rev-parse", "HEAD^{tree}")).strip(),
+            "tracked_source": "clean", "untracked_exclusions": list(exclusions),
+            "license_sha256": digest(upstream / "LICENSE"),
+            "dependency_scope": "Git binds workspace source; installed npm dependencies require their separate locked-install qualification"}
+
+
 def build(upstream, node, output):
     upstream, node = Path(upstream).resolve(strict=True), Path(node).resolve(strict=True)
     output = Path(output).absolute()
     if output.exists() or output.is_symlink():
         raise ValueError("Use a new build output; retain earlier artifacts")
     policy = json.loads((ROOT / "harness/project-board-native.json").read_text(encoding="utf-8"))
+    source_identity = native_source_identity(upstream, policy["commit"])
     for name, expected in policy["files"].items():
         if digest(upstream / name) != expected:
             raise ValueError("Native source drift: " + name)
@@ -84,13 +112,18 @@ def build(upstream, node, output):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(file, target)
         files.update({p.relative_to(output).as_posix(): digest(p) for p in sorted(notices.rglob("*")) if p.is_file()})
-        manifest = {"schema": "project-board-assets/v1", "hermes_commit": policy["commit"],
+    # The temporary host is gone before this second source check. A changed
+    # generation leaves retained partial output without an admissible manifest.
+    if native_source_identity(upstream, policy["commit"]) != source_identity:
+        raise ValueError("Native source generation changed while building")
+    manifest = {"schema": "project-board-assets/v1", "hermes_commit": source_identity["commit"],
+                    "upstream_source": source_identity,
                     "native_source_files": policy["files"], "native_readonly_adaptation":
                         "Disable websocket, orchestration, unavailable worker-log request and comment composer; manual reload is explicit",
                     "bridge_source_sha256": digest(ROOT / "adapters/project-board/entry.js"),
                     "node_version": version, "node_sha256": digest(node), "files": files,
                     "scope": "Fresh owned static build; package/installer/target adoption and visual acceptance are separate"}
-        (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
 
 

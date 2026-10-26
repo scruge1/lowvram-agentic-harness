@@ -37,6 +37,16 @@ the guard. Focused maintenance stage/plan controls then passed. Complete hosted
 checks, installer-owned asset admission, normal fresh installation, existing-home
 controller adoption, remote exposure and effect controls remain separate work.
 
+The successor builder admission binds the actual clean pinned upstream Git
+generation, including transitive workspace source and licence. It checks staged,
+working and untracked source before and after compilation, with only explicit
+dependency/pip-metadata exclusions. Three real-Git controls refuse source drift,
+ignored new source, wrong commits and a nested checkout root. A fresh genuine
+checkout with an exact copy of the separately qualified locked dependencies built
+identical UI files to the component-qualified predecessor. Dependency-source
+qualification remains distinct from the Git source-tree check. The top notice
+uses plain capability language; it does not promise saved-file verification.
+
 ## Explain how to repair invalid intake parts - 2026-10-26
 
 Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
