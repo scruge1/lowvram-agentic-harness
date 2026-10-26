@@ -25,21 +25,21 @@ ORDER = ("searxng", "exa", "brave", "tavily", "ddg")
 CATALOG = {
     "searxng": {"environment": "SEARXNG_URL", "signup": None,
                 "guide": "https://docs.searxng.org/dev/search_api.html",
-                "note": "Use your explicitly owned instance with JSON enabled. No provider account key. Setup does not install or probe it."},
+                "note": "Use your owned instance root URL with JSON enabled in search.formats; disabled JSON returns 403. No account key or login-cookie support. Setup does not install or probe it."},
     "exa": {"environment": "EXA_API_KEY", "signup": "https://dashboard.exa.ai/",
             "guide": "https://exa.ai/pricing",
-            "note": "$10 credits each month plus $10 initial credits; no payment method required. Credits are not a query count. Provider and source terms still apply."},
+            "note": "$10 credits each month plus $10 initial credits; no payment method required. Create a key in your dashboard. Credits are not a query count. Provider and source terms still apply."},
     "brave": {"environment": "BRAVE_API_KEY", "signup": "https://api-dashboard.search.brave.com/",
               "guide": RIGHTS_SOURCE,
-              "note": "$5 monthly credits; card required, no standalone free plan. Storage rights must cover persisted research artifacts and native session history. Otherwise this provider remains held."},
+              "note": "$5 monthly credits; card required, no standalone free plan. Select the Search plan, set usage limits and review auto-reload before creating its API key. A $0 prepaid balance is supported; auto-reload can incur charges. Storage rights must cover persisted research artifacts and native session history. Otherwise this provider remains held."},
     "tavily": {"environment": "TAVILY_API_KEY", "signup": "https://app.tavily.com/",
                "guide": "https://www.tavily.com/pricing",
-               "note": "1,000 API credits/month, no card required. Create a dashboard key with a monthly limit. Credits depend on endpoint/options; source terms still apply."},
+               "note": "1,000 API credits/month, no card required. In the dashboard API keys section, create a named key and set its monthly limit. This adapter uses basic search, 1 credit/request; source terms still apply."},
     "ddg": {"environment": None, "signup": None,
             "guide": "https://duckduckgo.com/",
             "note": "Keyless fallback; no guaranteed quota or availability."},
 }
-GUIDANCE_CHECKED = "2026-10-25"
+GUIDANCE_CHECKED = "2026-10-26"
 
 
 class ConfigError(ValueError):
