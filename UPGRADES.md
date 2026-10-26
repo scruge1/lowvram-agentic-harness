@@ -30,6 +30,39 @@ fixtures perform no npm or package installation and do not establish a normal
 fresh factory, browser adoption or model result. Actual fresh install followed
 by the default board command remains required before one-install acceptance.
 
+## One source-bound native child - 2026-10-26
+
+Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.
+
+Add one serial `task_agent` over Pi1.4's native in-memory session and model runtime.
+The current hierarchy child card and retained owner source remain host-bound.
+A fixed tool subset forwards through the existing parent native tool hooks and
+supervisor, without a new dispatcher, board, provider or session-writer bypass.
+Parent context must be delivered first. Actual child calls/messages/usage remain
+untrusted, bounded parent-journal evidence; child return cannot accept a root task.
+
+A forced parent-loss fixture exposed running intake state with an unmatched
+child start. Restore and effect/settlement gates now retain an uncertainty hold;
+a model checkpoint cannot clear it. Fresh same-project owner resume uses the
+existing intake route. No child state is reconstructed or automatically replayed.
+A native history-only crash-window counterexample also exposed a failed final
+record clearing the start before the parent's failure hook was saved. Only a
+matching `returned` result now closes that hold; failed or unknown final states
+remain inspectable and require fresh owner resume. Original history is preserved.
+Native fixtures cover source/config/model changes, unknown recursive tools,
+actual guarded file output and independent checking, cancellation and parent
+loss. Kernel exit, unreaped zombies and final owner reaping are distinct evidence.
+Synthetic SSE and explicit memory fixtures do not qualify real model behavior,
+whole-profile delegation, model capacity or root-outcome quality.
+
+An actual parent serializer counterexample exposed74,428bytes of child reply
+from a24,029byte read. Replies now project at most12KiB while keeping the full
+trace in native journal/details. A read-only companion pages the exact retained
+record with source/project/digest binding and explicit completeness. The matched
+synthetic case delivered1,541bytes, recovered the full record across seven bounded
+pages and kept pause/uncertainty, source authority and original history intact.
+These are serialized bytes, not measured model tokens or inference latency.
+
 ## Read an existing project through the native board - 2026-10-26
 
 Parent commit: `d188446a45d16bc97bfe6a110b8eff2c63c2f15f`.
