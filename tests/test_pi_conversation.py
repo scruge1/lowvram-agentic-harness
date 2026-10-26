@@ -21,8 +21,8 @@ const dependencies={typebox:{Type},'node:crypto':{createHash,randomUUID},
  './read-loop-079.ts':{registerReadLoopGuard:()=>({warning:()=>''})},
  './dependency-receipts-138.ts':{checkedReceipt:()=>{},inspectReceipt:()=>({verified:false}),watchReceipt:()=>()=>{},blockedTaskIds:()=>new Set()},
  './retained-packet-138.ts':{workKey:x=>x.root+'\0'+x.task,nativeCompletionOrder:()=>new Map(),cancelledSelection:async()=>false,
-  buildRetainedPacket:async input=>{if(onProjection){const fn=onProjection;onProjection=undefined;await fn();}return {tasks:input.state.queue.map(x=>({id:x.task,source:x.source,status:'ready'})),anchors:[],excluded:[],coverage:{complete:true,truncated:false,missing:[]}};}},
- './decision-bridge-138.ts':{packetDigest:digest,decideRetainedWork:async packet=>{decisions++;return packet.tasks.length?{decision:'continue',selected:{task:packet.tasks[0].id,source:packet.tasks[0].source,action:'continue'}}:{decision:'queue_complete'};}}};
+  buildRetainedPacket:async input=>{if(onProjection){const fn=onProjection;onProjection=undefined;await fn();}return {tasks:input.state.queue.map(x=>({id:x.task,source:x.source,status:'ready'})),pending:input.pending,anchors:[],excluded:[],coverage:{complete:true,truncated:false,missing:[]}};}},
+ './decision-bridge-138.ts':{packetDigest:digest,decideRetainedWork:async packet=>{decisions++;return packet.pending.length?{decision:'route_pending'}:packet.tasks.length?{decision:'continue',selected:{task:packet.tasks[0].id,source:packet.tasks[0].source,action:'continue'}}:{decision:'queue_complete'};}}};
 const context=vm.createContext({Buffer,process,console,structuredClone,setTimeout,clearTimeout});
 const module=new vm.SourceTextModule(stripTypeScriptTypes(fs.readFileSync(file,'utf8')),{context});
 await module.link(name=>{const values=dependencies[name];assert.ok(values,'Unexpected dependency '+name);
@@ -118,6 +118,23 @@ if(which==='question'){
  await capture('Current status only.');assert.equal((await tool('kanban_intake_route',{source_id:stale,reclassify_current:true,parts:p})).isError,true);
  const foreign=await capture('Owner approved action within original identity only.');await tool('kanban_intake_route',{source_id:foreign,parts:[{kind:'control',summary:'Mistaken'}]});
  project={...project,boardId:'different'};assert.equal((await tool('kanban_intake_route',{source_id:foreign,reclassify_current:true,parts:p})).isError,true);
+}else if(which==='pending-guidance'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};const id=await capture('Owner approves A.');
+ await tool('kanban_intake_route',{source_id:id,parts:[{kind:'task',summary:'Approved A',execute:true}]});
+ const text='Conserved earlier owner input requires routing before effects',legacy=randomUUID();
+ entries.push({type:'custom',customType:'pi-request-capture/v1',data:{id:legacy,text,source:'interactive',session:'unit-only-session',project,sha256:digest(text),images:0}});
+ await fire('session_tree');assert.equal((await state()).conversation.phase,'execution');assert.equal((await state()).pending_total,1);
+ const progress=(await state()).progress,createdBefore=created.size,boundary=await settle();
+ assert.equal(boundary?.continue,true,'An unchanged pre-existing pending capture must retain route_pending guidance');
+ assert.match(boundary.entries[0].content,/Route the pending user input before finishing/);
+ assert.equal((await state()).pending_total,1);assert.equal((await state()).progress,progress);assert.equal(created.size,createdBefore);
+ assert.equal((await fire('tool_call',{toolName:'bash',input:{command:'must-not-run'}})).block,true,'Guidance grants no effects');
+}else if(which==='pending-race'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};const id=await capture('Owner approves A.');
+ await tool('kanban_intake_route',{source_id:id,parts:[{kind:'task',summary:'Approved A',execute:true}]});
+ onProjection=()=>capture('New owner input arrived across the projection await.');
+ assert.equal(await settle(),undefined);assert.equal((await state()).pending_total,1);
+ assert.equal(entries.filter(x=>x.customType==='pi-work-decision/v1').length,0);
 }else if(which==='typing'){
  project={root:'/owned-fixture',projectId:'p',boardId:'b'};const id=await capture('Owner approves A.');
  await tool('kanban_intake_route',{source_id:id,parts:[{kind:'task',summary:'Approved A',execute:true}]});
@@ -169,6 +186,12 @@ class ConversationModuleTests(unittest.TestCase):
 
     def test_queued_typed_and_mid_await_input_suppress_automatic_work(self):
         self.run_case("typing")
+
+    def test_preexisting_pending_history_retains_routing_guidance(self):
+        self.run_case("pending-guidance")
+
+    def test_new_pending_input_across_await_holds_stale_continuation(self):
+        self.run_case("pending-race")
 
 
 if __name__ == "__main__":

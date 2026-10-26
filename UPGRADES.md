@@ -30,6 +30,11 @@ three injected journal/lost-reply recovery boundaries and mid-await typing.
 Twenty-five focused unit tests, seven self-tests and pinned Ruff pass. Scripted
 answers, a supported fixture UI context and zero model/HTTP calls establish the
 component behavior; they do not prove natural model use or live adoption.
+A review counterexample caught unchanged historical pending input losing its
+existing routing guidance. Compare the retained scope across the await instead
+of suppressing every pending capture. The exact predecessor and follow-up
+whole-module controls distinguish retained routing guidance from new input,
+typed drafts and queued messages; they do not grant execution permission.
 
 ## One source-bound native child - 2026-10-26
 

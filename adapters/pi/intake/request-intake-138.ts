@@ -788,8 +788,9 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     if (state.stalls >= 2) { stop('No progress across two settlement checks; inspect retained queue'); return; }
     let instruction: string | undefined;
     try {
+      const before = stamp();
       const { decision, packet } = await decide(ctx);
-      if (userInputPending(ctx) || pending().length) return;
+      if (userInputPending(ctx) || stamp() !== before) return;
       recordDecision(decision, packet);
       if (decision.decision === 'route_pending') instruction = 'Route the pending user input before finishing. Do not execute it first. ' + liveGuidance();
       else if (decision.decision === 'continue') {
@@ -810,7 +811,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       }
       stop('Retained decision unavailable; inspect before continuing: ' + reason); return;
     }
-    if (userInputPending(ctx) || pending().length) return;
+    if (userInputPending(ctx)) return;
     if (!instruction) { save(); return; }
     state.requests++; save();
     return { entries: [{ type: 'custom_message' as const, customType: 'pi-work-continuation/v1',
