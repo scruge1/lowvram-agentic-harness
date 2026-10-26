@@ -5,6 +5,82 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Forward the actual current assistant text to observer summaries - 2026-10-26
+
+Parent commit: `fe571e6687c3df4669c3baecd823e61bf7eb09f1`.
+
+The Pi settlement event contains only an abort flag. Sending an empty summary
+payload caused the pinned observer to report a missing last assistant message.
+Use Pi's supported read-only branch API to select the final persisted assistant
+message after the current agent-start marker, with the same session and working
+directory. Forward only its plain text through the existing bounded hook. Read
+after all message-end replacements; never substitute thinking, tool calls or an
+older run. Aborted runs skip summary dispatch. Missing, failed or drifted current
+messages hold it. Freeze queued hook identity and payload before asynchronous
+dispatch. No controller, package, provider or store contract changes.
+
+Actual Pi1.4 inert native checks cover final-message replacement and persistence,
+existing input/read hooks, empty/error/aborted summary refusal, session drift and
+queued identity/payload conservation. Synthetic SSE and Python child transport
+make zero model or HTTP requests. This is source/transport evidence, not real
+observer generation, credential-rotation acceptance or installed-target adoption.
+
+## Add an explicit fresh owned full-bundle candidate - 2026-10-25
+
+Parent commit: `f2393739857b7dd05c47c5c4b52337c248a8a31a`.
+
+The finite shell, native bootstrap, model-service setup and factory previously
+refused the full package profile on the owned authenticated local-model route.
+Permit explicit `--local-cpu --profile full` through the same one-command flow;
+keep the default agent profile, existing resource floors, permanent runtimes,
+package pins, service admission, stop/install/same-port restart and no-replay
+recovery unchanged. The full plan lists all nine packages and labels Harness2
+and DeepSeek as optional experimental laboratories.
+
+Require the same reviewed observer/factory/handoff/lease source closure before
+model transfer or pre-home stop/creation. Reuse the foreground observer, actual
+worker credential and shared-lease checks, exclusive package patching and
+child-only nonce resolution. Doctor validates the local native-provider and
+secret-free observer settings without starting capture or resolving a key.
+Windows owned-full creation refuses explicitly. This adds no new profile,
+credential store, router or observer mode.
+
+Pinned upstream source inspection found native output default 4096, not 16000,
+but a custom endpoint's unconfigured context defaults to 131072. Bind the native
+observer context/output settings to the home's selected limits on disk and in
+the child environment; capture admission also checks the actual worker values.
+Reject the native parser's unsupported ranges instead of accepting silent
+clamping/default substitution. Read-only status/keyword recall and exact stop
+stay independent of stale auth/budgets. The provider/backend is not patched.
+An isolated probe of the exact compiled native parser/window/wire functions used
+in-memory settings and an injected fetch, with no worker, network or inference.
+It confirmed the defaults, selected 32768/4096 limits, unbound 16000 override and
+invalid 4096/128 fallback. This is source proof; actual full capture remains open.
+
+Existing Pi input, tool-result and settled-turn hooks can capture; session
+shutdown only waits for queued work. The foreground worker remains a shared
+reader until explicit memory stop. Stale service credentials require explicit
+worker stop/start. Source checks do not imply that install, health or empty
+drain establish authenticated generation or useful recall.
+
+Focused source checks cover the finite entrypoints, no-effect shell plans,
+real scaffold/nonsecret configuration, changed observer source, source-held
+pre-home stop, service admission and existing nonce/foreground ownership
+controls. A frozen actual prior provider definition proves that the existing
+narrow core-source updater refuses this later home change. The updater is not
+relaxed, even for existing `agent` homes. Complete fresh full-nine installation,
+normal start, authenticated capture, service-key rotation and useful recall
+still require a separately reviewed new-home native caller. No old full-home,
+private store, model quality or whole-system parity claim follows here.
+
+The initial focused Linux source packet passed 106 checks in 70.696 seconds.
+After the final doctor/provider validation and compatibility fixture, three
+narrow checks passed in 6.580 seconds. Ruff 0.16.10 and all seven canonical
+`--selftest` commands passed. Windows metadata controls included explicit
+unsupported-full refusal; a new Unicode fixture's default-encoding mistake was
+corrected to UTF-8, and its exact case plus the new compatibility control passed.
+These fixtures isolate packages/services or use owned temporary lifecycle
+controls. They do not establish complete native full-bundle acceptance.
 ## Give the first-report agent an exact writing template - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.

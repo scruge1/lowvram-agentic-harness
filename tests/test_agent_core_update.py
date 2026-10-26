@@ -179,6 +179,34 @@ def old40_verify():
     return namespace["_verify"]
 
 
+PRE_FULL_OWNED_PROVIDER = r'''def owned_service_provider(home, binding, *, profile, base_url, model, context_window, max_output, model_profile, provider=None):
+    """Validate explicit owned attachment, without reading a nonce or service."""
+    from harness import model_service_handoff, model_profiles
+    if profile not in {"agent", "pi"}:
+        raise HomeError("Owned model authentication is qualified only for agent/pi; full/observer routing is not qualified.")
+    if type(context_window) is not int or type(max_output) is not int or context_window < 32768 or max_output < 4096:
+        raise HomeError("Owned full-agent setup requires at least32768 context and4096 output; a protocol-only service is insufficient.")
+    if max_output > context_window // 2:
+        raise HomeError("Owned output limit must preserve the existing factory's input-context budget.")
+    try:
+        route = model_service_handoff._binding(binding)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise HomeError("Invalid explicit owned model-service binding.") from error
+    clean = {"schema": model_service_handoff.SCHEMA, **route, "environment_variable": binding["environment_variable"]}
+    if binding != clean:
+        raise HomeError("Owned model binding contains unsupported fields.")
+    expected = {"home": str(Path(home).expanduser().resolve(strict=False)), "base_url": base_url, "model_id": model,
+                "context": context_window, "max_output": max_output, "transport_profile": model_profile}
+    if any(route.get(key) != value for key, value in expected.items()):
+        raise HomeError("Supplied factory inputs differ from the explicit owned serving selection.")
+    selected = {"baseUrl": base_url, "api": "openai-completions", "apiKey": "$" + binding["environment_variable"],
+                "models": [model_profiles.model_definition(model, context_window, max_output, model_profile)]}
+    if provider is not None and provider != selected:
+        raise HomeError("Owned provider must use the exact captured native environment-key definition.")
+    return selected'''
+PRE_FULL_OWNED_PROVIDER_SHA256 = 'd8225824f9afcb0710bfe329cf6373e5297a65b6137d4ec5b2473445c80681c3'
+
+
 class AgentCoreUpdateTests(UpdateFixture):
     def setUp(self):
         super().setUp()
@@ -389,6 +417,23 @@ class AgentCoreUpdateTests(UpdateFixture):
         with mock.patch.object(state.bootstrap, "__file__", str(case["home"] / "runtime/harness/home.py")), \
                 self.assertRaisesRegex(ValueError, "exact staged controller closure"):
             update.core_source_plan(case["home"], case["operation"])
+        self.assertFalse(self.journal().exists())
+
+    def test_actual_pre_full_provider_change_is_outside_existing_core_scope(self):
+        # Frozen public main44 function. The other fixture nodes deliberately
+        # remain synthetic; this real prior definition must still hold the plan.
+        self.assertEqual(hashlib.sha256(PRE_FULL_OWNED_PROVIDER.encode()).hexdigest(),
+                         PRE_FULL_OWNED_PROVIDER_SHA256)
+        file = self.case["home"] / "runtime/harness/home.py"
+        tree = ast.parse(file.read_text(encoding="utf-8"))
+        previous = ast.parse(PRE_FULL_OWNED_PROVIDER).body[0]
+        index = next(i for i, node in enumerate(tree.body)
+                     if isinstance(node, ast.FunctionDef) and node.name == "owned_service_provider")
+        tree.body[index] = previous
+        file.write_text(ast.unparse(tree), encoding="utf-8")
+        self.refresh_manifest()
+        with self.assertRaisesRegex(ValueError, "Unreviewed home"):
+            self.prepare_core()
         self.assertFalse(self.journal().exists())
 
     def test_core_scope_does_not_authorize_template_or_stable_binder_changes(self):

@@ -72,10 +72,27 @@ This route does not supply a vision projector.
 
 `--plan` creates nothing. The confirmation, or `--yes`, covers the displayed
 downloads and owned model start. Managed Python checks the canonical pins and
-resources before model transfer. Only `--name` and `--profile agent|pi` can be
-combined with `--local-cpu`; endpoint/model/budget/transport overrides, `full`,
+resources before model transfer. Only `--name` and `--profile agent|pi|full`
+can be combined with `--local-cpu`; endpoint/model/budget/transport overrides,
 offline mode and resume/runtime-only modes are refused. The existing endpoint
 attachment route remains the default.
+
+The explicit Linux full-bundle candidate uses the same entrypoint:
+
+```bash
+bash install.sh --home /data/my-full-agent --local-cpu --profile full --plan
+bash install.sh --home /data/my-full-agent --local-cpu --profile full --yes --name Owner
+```
+
+`agent` remains the default five-package profile. Full selects the existing nine
+pins, including Bun/Claude-mem and the optional Harness2/DeepSeek laboratories.
+Before model transfer or factory stop/home creation, the full route checks the
+reviewed observer/factory/handoff/lease source closure. Disk settings keep only
+a nonsecret placeholder; the worker receives the current owned-service key in
+its environment. Source checks and the prior two-package Bun lifecycle proof do
+not qualify a complete owned full install, authenticated capture, nonce rotation
+or useful recall. Those normal-path acceptance cases remain open. Windows owned
+full setup is explicitly unsupported. No old full-home migration is added.
 
 Setup uses the existing owned service and factory: start before home creation,
 capture the nonsecret binding, exact stop, normal package installation, then
@@ -370,6 +387,11 @@ That native evidence uses verified borrowed dependencies. It qualifies source
 adoption and rollback for that fixture, without observer installation, memory
 retrieval, model task quality or fresh installation claims. Other hosts and package
 profiles still require their own qualified adoption.
+
+The later fresh full-bundle factory changes home definitions outside that exact
+frontier. `agent-core-source-v1` cannot adopt this candidate on an existing
+source40 home, including the `agent` profile. A separately reviewed future
+frontier is required; this fresh-install feature does not relax the updater.
 
 The first agent session uses `project_admit` for its project and `project_context`
 for the relevant directory before execution. Read any remaining context windows
@@ -873,6 +895,37 @@ port is held. It is never stopped or adopted as this home's worker.
 and bounded complete API delivery. Chroma is disabled for this new observer;
 MemPalace supplies separate semantic recall. Hook delivery does not establish
 observer output quality or freshness. No global Claude/Codex profile is edited.
+
+The existing Pi hooks capture ordinary non-extension input, non-memory tool
+results and settled agent turns. The foreground worker retains its shared home
+lease across calls; session shutdown waits for queued hooks but does not stop
+that worker. Use explicit `memory stop` before maintenance that needs exclusive
+ownership. Owned capture validates the actual worker's current credential and
+lease. A stale worker after service-key rotation is held for explicit stop/start;
+resolving a fresh key for a helper does not silently rotate or replace it.
+
+Summary hooks send only the final persisted plain assistant text from the
+current run. They bind its session, working directory and branch at agent start,
+observe final message-hook replacements, and omit thinking and tool calls.
+Aborted runs do not enqueue summaries. Missing text, failed messages or changed
+bindings hold the summary; older history is not a substitute. Queued hooks retain
+their original session, directory and payload snapshot. Native Pi1.4 tests use
+synthetic foreground responses and an inert Python transport with zero model
+or HTTP requests; these tests do not establish target adoption or summary quality.
+
+The native `CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW` and
+`CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS` settings are bound to this home's
+configured context/output limits in both disk settings and the worker environment.
+Capture/start checks the actual worker values before submitting a hook.
+Pinned Claude-mem otherwise defaults a custom endpoint to a 131072 context window
+and 4096 output tokens; an accepted override can raise the output request.
+Unsupported native capture budgets are held instead of being silently clamped
+or replaced by defaults. The observer requires at least 8192 context, output 256
+through 1000000, exact native integers and the existing half-context output rule;
+the owned factory's existing 32768/4096 minimum remains unchanged. Status,
+historical keyword recall and exact stop do not require fresh budget/authentication.
+These controls bind upstream windowing and request limits; they do not establish
+tokenizer equivalence, generated capture or recall quality.
 
 An isolated Linux component run qualified the actual Bun1.4.4 and patched
 Claude-mem13.29.0 foreground lifecycle: startup and health, exact owned process,

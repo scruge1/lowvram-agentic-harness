@@ -33,7 +33,18 @@ DRAIN_SECONDS = 30
 CHILDREN = {}  # Reaping only; native worker.pid remains the upstream identity.
 
 
-def settings(home, config):
+def observer_budget(config):
+    """Native13.29 VVe/Vc ranges; avoid clamping or silent default substitution."""
+    context, output = config.get("context_window"), config.get("max_output")
+    if (type(context) is not int or not 8192 <= context <= 2**53 - 1
+            or type(output) is not int or not 256 <= output <= 1_000_000
+            or output > context // 2):
+        raise HomeError("Observer capture requires native context >=8192 (exact JavaScript integer), output256..1000000, and the existing half-context output limit.")
+    return {"CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": str(context),
+            "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": str(output)}
+
+
+def settings(home, config, *, require_budget=True):
     """Validate persisted nonsecret settings without resolving service credentials."""
     root = home / "memory/claude-mem"
     value = json.loads((root / "settings.json").read_text(encoding="utf-8"))
@@ -58,6 +69,14 @@ def settings(home, config):
         required["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"] = placeholder
     if any(str(value.get(key)) != expected for key, expected in required.items()):
         raise HomeError("Claude-mem local-provider/ownership configuration changed; hold capture before dispatch.")
+    # Stale worker/configured budgets cannot prevent exact stop, inspection or
+    # historical keyword recall. Only capture/start needs a current valid bound.
+    budget = (observer_budget(config) if require_budget else
+              {"CLAUDE_MEM_OBSERVER_CONTEXT_WINDOW": str(config.get("context_window")),
+               "CLAUDE_MEM_OBSERVER_MAX_OUTPUT_TOKENS": str(config.get("max_output"))})
+    if require_budget and any(str(value.get(key)) != expected for key, expected in budget.items()):
+        raise HomeError("Observer capture budget settings differ from this home's model; hold capture before dispatch.")
+    required.update(budget)
     return root, required
 
 
@@ -105,7 +124,7 @@ def worker_paths(home):
     return bun, worker.resolve()
 
 
-def health(home, root, config, worker, *, expected_api_key=None):
+def health(home, root, config, worker, *, expected_api_key=None, capture=False):
     """A responding port is insufficient: bind process, source and data root."""
     port = config["claude_memory_port"]
     try:
@@ -144,6 +163,12 @@ def health(home, root, config, worker, *, expected_api_key=None):
         keys = [value[len(prefix):] for value in values if value.startswith(prefix)]
         if len(keys) != 1 or not hmac.compare_digest(keys[0], os.fsencode(expected_api_key)):
             raise HomeError("Owned observer credential is stale; stop this exact worker before restarting. No capture was dispatched.")
+    if capture:
+        for key, expected in observer_budget(config).items():
+            prefix = os.fsencode(key + "=")
+            matches = [value[len(prefix):] for value in values if value.startswith(prefix)]
+            if len(matches) != 1 or matches[0] != os.fsencode(expected):
+                raise HomeError("Observer worker budget is stale; stop this exact worker before restarting. No capture was dispatched.")
     return {**observed, "agent_home_artifact": claude_memory_patch.disclosure()}
 
 
@@ -250,7 +275,7 @@ def foreground_start(home, root, config, bun, worker, env):
             while time.monotonic() < deadline:
                 if child.poll() is not None:
                     raise HomeError("Foreground worker exited during startup; inspect its owned log before recovery.")
-                observed = health(home, root, config, worker, expected_api_key=env["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"])
+                observed = health(home, root, config, worker, expected_api_key=env["CLAUDE_MEM_OPENAI_COMPAT_API_KEY"], capture=True)
                 if observed is not None:
                     if observed["pid"] != child.pid:
                         raise HomeError("Another process answered during foreground startup; no worker was adopted.")
@@ -335,7 +360,7 @@ def invoke(home, action, payload=None, event=None):
             raise HomeError("Search requires a nonempty query of at most 1000 characters.")
         if re.search(r"\b(plaintext|password|passcode|access[ -]?code|api[ -]?key|secret|token|credential)\b", event, re.I):
             return {"results": [], "abstained": True, "reason": "sensitive_query", "authority": "retrieval_only"}
-    root, required = settings(home, config)
+    root, required = settings(home, config, require_budget=action in {"start", "hook"})
     bun, worker = worker_paths(home)
     # Inspection, existing keyword recall and exact stop do not need inference.
     # Only starting/adopting a capture worker or sending a hook needs fresh auth.
@@ -349,7 +374,7 @@ def invoke(home, action, payload=None, event=None):
 
 def dispatch(home, root, config, bun, worker, env, expected_key, action, payload, event):
     owned = "owned_model_service" in config
-    observed = health(home, root, config, worker, expected_api_key=expected_key)
+    observed = health(home, root, config, worker, expected_api_key=expected_key, capture=action in {"start", "hook"})
     alive = live_pid(root) if observed is None else None
     if action == "status":
         if observed is not None:

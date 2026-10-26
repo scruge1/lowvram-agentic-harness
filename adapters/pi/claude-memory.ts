@@ -9,6 +9,7 @@ export default function (pi: ExtensionAPI) {
   if (!home || !python) throw new Error('AGENT_HOME and AGENT_HOME_PYTHON are required for memory hooks');
   let errorText = '';
   let serial: Promise<unknown> = Promise.resolve();
+  let run: { sessionId: string; cwd: string; leafId: string | null } | undefined;
   const inputs = new Map<string, unknown>();
   const invoke = (action: string, payload?: object, event?: string) => new Promise<any>((resolve, reject) => {
     const wire = payload ? JSON.stringify(payload) : '';
@@ -37,9 +38,11 @@ export default function (pi: ExtensionAPI) {
     child.stdin.end(wire);
   });
   const capture = (ctx: any, event: string, payload: object) => {
+    const sessionId = ctx.sessionManager.getSessionId(), cwd = ctx.cwd;
+    const queuedPayload = JSON.parse(JSON.stringify({ sessionId, cwd, ...payload }));
     serial = serial.then(async () => {
       try {
-        await invoke('hook', { sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, ...payload }, event);
+        await invoke('hook', queuedPayload, event);
         errorText = ''; ctx.ui?.setStatus?.('claude-memory', undefined);
       } catch (error) {
         errorText = String(error);
@@ -82,6 +85,31 @@ export default function (pi: ExtensionAPI) {
       await capture(ctx, 'observation', { toolName: event.toolName, toolInput: input,
         toolResponse: event.result, toolUseId: event.toolCallId });
   });
-  pi.on('agent_settled', async (_event: any, ctx: any) => { await capture(ctx, 'summarize', {}); });
-  pi.on('session_shutdown', async () => { await serial; inputs.clear(); });
+  pi.on('agent_start', async (_event: any, ctx: any) => {
+    run = { sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, leafId: ctx.sessionManager.getLeafId() };
+  });
+  pi.on('agent_settled', async (event: any, ctx: any) => {
+    const started = run;
+    run = undefined;
+    if (event.aborted) return;
+    const branch = ctx.sessionManager.getBranch();
+    const marker = started?.leafId == null ? -1 : branch.findIndex((entry: any) => entry.id === started.leafId);
+    const bound = started && started.sessionId === ctx.sessionManager.getSessionId() && started.cwd === ctx.cwd
+      && (started.leafId === null || marker >= 0);
+    // Read the final persisted message after all message_end hooks. Never scan
+    // an older run, forward thinking/tool calls, or fall back to unrelated text.
+    const latest = bound ? branch.slice(marker + 1).reverse().find((entry: any) =>
+      entry.type === 'message' && entry.message?.role === 'assistant')?.message : undefined;
+    const text = Array.isArray(latest?.content) ? latest.content
+      .filter((part: any) => part.type === 'text' && typeof part.text === 'string')
+      .map((part: any) => part.text).join('\n') : '';
+    if (!bound || !text.trim() || latest.stopReason === 'aborted' || latest.stopReason === 'error') {
+      errorText = 'Summary held: no completed plain assistant text in the current bound run';
+      ctx.ui?.setStatus?.('claude-memory', errorText);
+      pi.appendEntry('claude-memory-capture/v1', { status: 'held', event: 'summarize', error: errorText, authority: 'none' });
+      return;
+    }
+    await capture(ctx, 'summarize', { last_assistant_message: text });
+  });
+  pi.on('session_shutdown', async () => { await serial; inputs.clear(); run = undefined; });
 }

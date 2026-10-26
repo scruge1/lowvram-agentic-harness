@@ -94,7 +94,7 @@ def _preflight(home, selection, *, source, profile):
     # This check intentionally precedes stop, journal creation and scaffold.
     provider = factory.owned_service_provider(home, binding, profile=profile, base_url=route["base_url"], model=route["model_id"],
                                                context_window=route["context"], max_output=route["max_output"],
-                                               model_profile=route["transport_profile"], provider=selection["provider"])
+                                               model_profile=route["transport_profile"], provider=selection["provider"], source=source)
     require(source.is_dir(), "Select the complete installer checkout")
     require(not home.is_relative_to(source) and not source.is_relative_to(home), "Agent home and installer source must be separate trees")
     factory.source_files(source)
@@ -177,7 +177,7 @@ def main(argv=None):
     parser.add_argument("--home", type=Path, required=True)
     parser.add_argument("--selection", type=Path, required=True, help="Reviewed nonsecret capture JSON; not a model recommendation")
     parser.add_argument("--source", type=Path, default=factory.ROOT)
-    parser.add_argument("--profile", choices=("agent", "pi"), default="agent")
+    parser.add_argument("--profile", choices=("agent", "pi", "full"), default="agent")
     parser.add_argument("--name", default="Owner")
     parser.add_argument("--python312")
     parser.add_argument("--managed-node", type=Path)

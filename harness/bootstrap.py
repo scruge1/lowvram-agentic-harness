@@ -253,7 +253,7 @@ def installer_command(receipt, arguments, *, resume=False):
 def local_cpu_options(arguments):
     """Keep this finite candidate distinct from arbitrary installer overrides."""
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False, exit_on_error=False)
-    parser.add_argument("--profile", choices=("agent", "pi"), default="agent")
+    parser.add_argument("--profile", choices=("agent", "pi", "full"), default="agent")
     parser.add_argument("--name", default="Owner")
     require(sum(value == "--profile" or value.startswith("--profile=") for value in arguments) <= 1
             and sum(value == "--name" or value.startswith("--name=") for value in arguments) <= 1,
@@ -262,12 +262,12 @@ def local_cpu_options(arguments):
         options, unknown = parser.parse_known_args(arguments)
     except argparse.ArgumentError as error:
         raise BootstrapError("Invalid local CPU option: " + str(error)) from error
-    require(not unknown, "--local-cpu accepts only --profile agent|pi and --name; omit endpoint/model/budget/offline/resume overrides")
+    require(not unknown, "--local-cpu accepts only --profile agent|pi|full and --name; omit endpoint/model/budget/offline/resume overrides")
     require(options.name.strip() and not any(char in options.name for char in "\r\n\0"), "Use a nonempty one-line owner name")
     return options
 
 
-def local_cpu_plan(home):
+def local_cpu_plan(home, *, profile="agent"):
     """Authoritative read-only candidate plan from the existing native pin file."""
     from harness import hardware_probe, home as factory, model_service
     require(home.is_absolute() and home.resolve() == home and not home.exists() and not home.is_symlink(),
@@ -275,6 +275,9 @@ def local_cpu_plan(home):
     require(not home.is_relative_to(SOURCE) and not SOURCE.is_relative_to(home), "Installer source and home must be separate trees")
     require(all((SOURCE / "harness/templates/agent-home" / name).is_file() for name in factory.REQUIRED_TEMPLATES),
             "Required home templates are missing; no model transfer was started")
+    require(profile in {"agent", "pi", "full"}, "Select agent, pi or the explicit full candidate")
+    if profile == "full":
+        factory.owned_full_sources(SOURCE)
     pins = json.loads(model_service.PINS.read_text(encoding="utf-8"))
     spec = model_service.specification(model=pins["model"]["id"], backend="cpu", context=32768, max_output=4096,
                                        threads=8, batch_threads=8, ram_required_bytes=LOCAL_CPU_MEMORY)
@@ -290,6 +293,11 @@ def local_cpu_plan(home):
     report["storage"]["sufficient"] = report["storage"]["free_bytes"] >= report["storage"]["required_free_bytes"]
     report["scope"] = "CPU candidate; no task-quality, speed, GPU-fit or vision acceptance"
     report["additional_downloads"] = "Pinned agent packages, browser and first-use embeddings; total bytes unknown before resolution"
+    if profile == "full":
+        report["full_bundle"] = {"selected_packages": {key: factory.PINS[key] for key in factory.PROFILES["full"]},
+                                 "observer": "Existing Pi input, tool-result and agent-settled capture hooks; foreground worker retains a shared home lease until explicit memory stop",
+                                 "experimental_labs": ["harness2", "deepseek"],
+                                 "acceptance": "candidate; complete owned full install, authenticated capture, nonce rotation and useful recall remain unqualified"}
     return report
 
 
@@ -298,7 +306,7 @@ def install_local_cpu(receipt, arguments):
     from harness import model_service, model_service_handoff, model_service_setup
     options = local_cpu_options(arguments)
     home, root = Path(receipt["home"]), Path(receipt["runtime_root"])
-    report = local_cpu_plan(home)
+    report = local_cpu_plan(home, profile=options.profile)
     require(report["cpu"]["sufficient"], "Local CPU setup requires at least 8 available affinity/logical CPUs before model transfer")
     require(report["memory"]["sufficient"], "Local CPU setup requires at least 20 GiB available system RAM before model transfer")
     require(report["storage"]["sufficient"], "Local CPU setup requires at least 20 GiB free on the selected volume before model transfer")
@@ -346,8 +354,8 @@ def main(argv=None):
         arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
         if args.local_cpu:
             require(not args.runtimes_only and not args.resume_install, "Local CPU setup cannot mix runtime-only or resume modes")
-            local_cpu_options(arguments)
-            report = local_cpu_plan(args.home)
+            options = local_cpu_options(arguments)
+            report = local_cpu_plan(args.home, profile=options.profile)
             print(json.dumps(report, indent=2), flush=True)
             if args.plan:
                 return 0

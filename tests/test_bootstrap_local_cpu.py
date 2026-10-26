@@ -78,11 +78,12 @@ class LocalCpuBootstrapTests(unittest.TestCase):
         self.assertIn("https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/$CPU_MODEL_REVISION/$CPU_MODEL_NAME", source)
         self.assertIn("https://github.com/ggml-org/llama.cpp/releases/download/$CPU_RUNTIME_RELEASE/$CPU_RUNTIME_NAME", source)
 
-    def test_options_accept_owner_and_two_profiles_only(self):
+    def test_options_accept_owner_and_explicit_full_without_changing_default(self):
         result = b.local_cpu_options(["--profile=pi", "--name", "Example Owner"])
         self.assertEqual((result.profile, result.name), ("pi", "Example Owner"))
         self.assertEqual(b.local_cpu_options([]).profile, "agent")
-        for arguments in (["--profile", "full"], ["--offline"], ["--base-url", "http://localhost"],
+        self.assertEqual(b.local_cpu_options(["--profile=full"]).profile, "full")
+        for arguments in (["--profile", "core"], ["--offline"], ["--base-url", "http://localhost"],
                           ["--model=other"], ["--context-window=8192"], ["--max-output=32"],
                           ["--model-profile=llama-cpp-qwen"], ["--resume-install"], ["--source", "other"],
                           ["--profile=pi", "--profile=agent"], ["--name=one", "--name=two"],
@@ -92,11 +93,22 @@ class LocalCpuBootstrapTests(unittest.TestCase):
 
     def test_main_invalid_combinations_refuse_before_runtime_provision(self):
         prefix = ["--home", str(self.home), "--runtime-root", str(self.root), "--local-cpu", "--confirmed"]
-        for arguments in (["--resume-install"], ["--runtimes-only"], ["--", "--offline"], ["--", "--profile=full"]):
+        for arguments in (["--resume-install"], ["--runtimes-only"], ["--", "--offline"], ["--", "--profile=core"]):
             with self.subTest(arguments=arguments), patch.object(b, "provision") as native, \
                     contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(b.main(prefix + arguments), 1)
                 native.assert_not_called()
+        self.assertEqual(list(self.base.iterdir()), [])
+
+    def test_full_plan_discloses_nine_packages_capture_and_optional_labs_without_effects(self):
+        from harness import home
+        with self.capacity(), patch.object(model_service, "start") as start:
+            report = b.local_cpu_plan(self.home, profile="full")
+        self.assertEqual(report["full_bundle"]["selected_packages"], home.PINS)
+        self.assertEqual(report["full_bundle"]["experimental_labs"], ["harness2", "deepseek"])
+        self.assertIn("unqualified", report["full_bundle"]["acceptance"])
+        self.assertIn("shared home lease", report["full_bundle"]["observer"])
+        start.assert_not_called()
         self.assertEqual(list(self.base.iterdir()), [])
 
     def test_python_plan_needs_no_bootstrap_directory_or_consent(self):
@@ -150,12 +162,12 @@ class LocalCpuBootstrapTests(unittest.TestCase):
                 patch.object(model_service, "start", calls.start), patch.object(model_service_handoff, "capture", calls.capture), \
                 patch.object(model_service_setup, "create", calls.create), patch.object(b.subprocess, "run") as generic, \
                 contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(b.install_local_cpu(self.receipt, ["--profile=pi", "--name=Public Owner"]), 0)
+            self.assertEqual(b.install_local_cpu(self.receipt, ["--profile=full", "--name=Public Owner"]), 0)
         self.assertEqual([item[0] for item in calls.mock_calls], ["provision", "start", "capture", "create"])
         self.assertTrue(calls.provision.call_args.kwargs["allow_download"])
         self.assertEqual(calls.provision.call_args.args[1]["resources"]["threads"], 8)
         self.assertEqual(calls.start.call_args.kwargs, {"startup_timeout": 120})
-        self.assertEqual(calls.create.call_args.kwargs, {"selection": selection, "source": b.SOURCE, "profile": "pi",
+        self.assertEqual(calls.create.call_args.kwargs, {"selection": selection, "source": b.SOURCE, "profile": "full",
                          "name": "Public Owner", "python312": self.receipt["python"]["path"],
                          "managed_node": Path(self.receipt["node"]["path"])})
         generic.assert_not_called()
@@ -192,7 +204,12 @@ class LocalCpuBootstrapTests(unittest.TestCase):
         self.assertIn("no\naccepted agent task quality", result.stdout)
         self.assertIn("threads8/batch threads8", result.stdout)
         self.assertIn("total download bytes", result.stdout)
-        for arguments in (["--profile=full"], ["--offline"], ["--base-url=x"], ["--model=other"], ["--resume-install"],
+        full = subprocess.run(prefix + ["--plan", "--profile=full"], capture_output=True, text=True, timeout=20)
+        self.assertEqual(full.returncode, 0, full.stderr)
+        self.assertIn("FULL BUNDLE CANDIDATE", full.stdout)
+        self.assertIn("shared home lease", full.stdout)
+        self.assertIn("optional experimental labs", full.stdout)
+        for arguments in (["--profile=core"], ["--offline"], ["--base-url=x"], ["--model=other"], ["--resume-install"],
                           ["--runtimes-only"], ["--context-window=8192"], ["--model-profile=generic-local"]):
             result = subprocess.run(prefix + ["--yes", *arguments], capture_output=True, text=True, timeout=20)
             self.assertNotEqual(result.returncode, 0)
