@@ -11,6 +11,7 @@ import unittest
 from unittest import mock
 
 from harness import first_project, home, home_entry, managed_launch
+from tests.test_first_project import fixture_board
 
 
 class FirstProjectRunTests(unittest.TestCase):
@@ -51,7 +52,7 @@ class FirstProjectRunTests(unittest.TestCase):
     def fixtures(self, child):
         with mock.patch.object(first_project, "_facts", return_value=self.facts), \
              mock.patch.object(home, "check_package", return_value=None), \
-             mock.patch.object(home, "board", return_value={"fixture_board_admission": True}) as board, \
+             mock.patch.object(home, "board", side_effect=fixture_board) as board, \
              mock.patch.object(home, "launch", side_effect=child) as launch:
             yield launch, board
 
@@ -86,6 +87,10 @@ class FirstProjectRunTests(unittest.TestCase):
         self.assertIn("Original manifest SHA-256: " + result["manifest_sha256"], prompt)
         encoded = prompt.split("Original check_argv JSON: ", 1)[1].split("\n", 1)[0]
         self.assertEqual(json.loads(encoded), result["check_argv"])
+        template = json.loads(prompt.split("Writing action TEMPLATE JSON (replace ONLY its final string with your complete report body): ", 1)[1].split("\n", 1)[0])
+        self.assertEqual(template[1:4], ["-I", "-B", "-c"])
+        self.assertEqual(template[-1], first_project.REPORT_TEXT_PLACEHOLDER)
+        self.assertIn("not first_project.py run as a nested writing action", prompt)
         checked.assert_called_once_with(project, result["manifest_sha256"])
         self.assertEqual(before, ((self.agent / "home.json").read_bytes(), (self.agent / "agent/models.json").read_bytes()))
         self.assertEqual(result["reopen_argv"][:3], [str(managed_launch.command_file(self.agent / "bin", "harness-agent")),

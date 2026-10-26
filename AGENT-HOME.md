@@ -1053,6 +1053,18 @@ unknown. It writes `FIRST-PROJECT.md`, `hardware-facts.json` and a pinned
 reads relative to the project cwd, so an empty-directory negative control fails.
 Do not recompute a replacement pin after inputs change.
 
+Preparation also returns `action_argv_template`. Its fixed installed-Python
+`-I -B -c` program writes only `hardware-report.md` in the project cwd. The agent
+replaces only its final argv string with the complete model-authored report;
+quotes, newlines, dollar signs and Unicode remain data, without a shell. The
+writer refuses an occupied file or symlink. Preserve any existing output and
+inspect its failure before proposing a correction. `first_project.py run` is
+the outer agent launcher, not a report writer or a nested workflow action.
+The complete task instructions/template also appear in the fresh project's
+existing `PROJECT-SSOT.md`, which normal `project_context` already delivers.
+`AGENTS.md` keeps only a short route. The original task input/pin and checker
+remain unchanged in purpose; a writer execution does not prove report quality.
+
 Open the prepared project with the managed agent and request its report. The
 checker requires exact facts and units, unchanged inputs and250–400 Unicode word
 tokens. Semantic interpretation still needs review. A passed checker does not
