@@ -238,6 +238,19 @@ def environment(home, project_root=None):
             encoded = json.dumps(command, ensure_ascii=False, separators=(",", ":"))
             value["PI_WEB_RESEARCH_COMMAND"] = encoded
             value["PI_WEB_RESEARCH_COMMAND_SHA256"] = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    if config.get("profile") == "full":
+        helper = home / "runtime/adapters/pi/lab/harness_lab.py"
+        lab_python = executable(home / "envs/harness2")
+        value.update({"PI_HARNESS_LAB_PYTHON": str(lab_python), "PI_HARNESS_LAB_HELPER": str(helper),
+                      "PI_HARNESS_LAB_HELPER_SHA256": digest(helper)})
+        if lab_python.is_file():
+            from harness import home_entry
+            command = home_entry.guarded_command(home, [str(lab_python), "-s", "-B", str(home / "runtime/pi-task-worker.py"),
+                                                       "--guard", str(lab_python), "-I", "-B", str(helper), "--home", str(home)],
+                                                 python=str(lab_python))
+            encoded = json.dumps(command, ensure_ascii=False, separators=(",", ":"))
+            value["PI_HARNESS_LAB_COMMAND"] = encoded
+            value["PI_HARNESS_LAB_COMMAND_SHA256"] = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
     if config.get("framework_binding_sha256"):
         value["PI_FRAMEWORK_BINDING"] = str(home / "state/framework-binding.json")
         value["PI_FRAMEWORK_BINDING_SHA256"] = config["framework_binding_sha256"]
@@ -419,6 +432,7 @@ def scaffold(home, *, source=ROOT, profile="agent", base_url, model, name="Owner
         extensions.append(str(runtime / "adapters/pi/bounded-compaction.ts"))
         if profile == "full":
             extensions.append(str(runtime / "adapters/pi/claude-memory.ts"))
+            extensions.append(str(runtime / "adapters/pi/lab/harness-lab.ts"))
         if "research" in configuration["selected_packages"]:
             extensions.append(str(runtime / "adapters/pi/research/research-tools.ts"))
     write_json(home / "agent/settings.json", {

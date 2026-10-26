@@ -52,6 +52,25 @@ load the actual historical home module. The new board controller is explicitly
 refused by both older migration scopes; production hashes and guards stay fixed.
 Windows fixture paths use their canonical identity, as real project selection does.
 
+## Connect the optional deterministic component lab - 2026-10-26
+
+Parent commit: `3808ec7610d3e2d083cd68124c75d381e956a74d`.
+
+The full profile installed Harness2 and DeepSeek but exposed no portable lab
+status or demo. Add a full-profile-only Pi tool and status command, using the
+existing home lifecycle and descendant process guards. Check selected pins,
+recorded artifacts, local source checkout identity and installed Harness2 code.
+Invoke the pinned native scripted demo in both modes and independently verify
+the selected answers against both signed input ledgers. Keep unique run logs and
+partial failures. Model experiments stay held; no project authority is granted.
+
+Source adoption passed actual Pi 1.4 registration, status, demo, profile refusal,
+active abort and parent loss with owned descendant settlement and exclusive home
+lease release. The fixture copied public component dependencies and made no
+provider HTTP requests. It was not a fresh full install or an agent quality test.
+The environment wiring changes home.py outside the narrow existing core-source
+adoption frontier; that updater remains unchanged and may hold an older home.
+
 ## Explain how to repair invalid intake parts - 2026-10-26
 
 Parent commit: `ad18de9c7ecc5a6881d45ff2b94c17c43dd7e38f`.

@@ -863,10 +863,21 @@ separate fields. Locks/freezes and full command logs stay in the private home.
 | MemPalace | `mempalace==3.11.0` | Home-owned palace and loopback single-writer hub; synthetic connected capture/recall passed, new-host freshness remains separate |
 | Microsoft Agent Framework | `agent-framework-core==1.21.0` | Isolated environment and exact target-bound read-only decisions; native board remains canonical |
 | Public research | `ddgs==9.16.1`, `httpx==0.28.1`, `beautifulsoup4==4.15.0`, `playwright==1.64.1`; complete16-distribution plan in `harness/research_install.py` | Owned Python/cache/browser; source evidence and bounded project artifact views |
-| Harness2 | commit `1cfe254e8d25b15f37048c3730134686abe60335` | Experimental package; prior model quality hold still applies |
+| Harness2 | commit `1cfe254e8d25b15f37048c3730134686abe60335` | Optional full-profile status and deterministic demo; model experiments remain held |
 | Bun | `1.4.4`, explicit Linux CPU/libc artifact | Home-owned runtime for the observer; binary hash recorded |
 | Claude-mem | `claude-mem@13.29.0` | Isolated local provider/settings, owned worker checks and native Pi event hooks |
 | DeepSeek Harness | `@deepseek-ai/dsh@0.2.1-rc.2` | Isolated optional laboratory, not default task routing |
+
+On Linux, the full profile adds `/harness-lab` for package status and the
+`harness_lab` tool with `status` and `demo` actions. Demo runs the pinned native
+Harness2 scripted ledger workflow in both modes, retains logs in the home, and
+independently checks the selected signed totals. DeepSeek is inspected only.
+Actual Pi registration, demo, abort and parent-loss cleanup passed in an isolated
+component fixture without model calls. This is source adoption with copied public
+dependencies; it does not establish a fresh full install or agent quality.
+Model experiments remain held. See [the lab adapter](adapters/pi/lab/README.md).
+The new home environment wiring is outside the narrow core-source updater scope;
+do not assume an older home can adopt it through that reviewed scope.
 
 Claude-mem package installation alone supplies its SDK. This installer also
 writes the explicit local-compatible endpoint/model, disables hosted quota
