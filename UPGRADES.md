@@ -5,6 +5,79 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Count committed research evidence as retained-work progress - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+A native injected counterexample showed three distinct saved research artifacts
+and repeated cached reads both stopping at the third settlement. Intake counted
+neither as progress. Keep the original source failure and count search/fetch/render
+only after a matching tool result is committed. Reuse the existing guarded helper,
+ArtifactStore and source text projection to validate the actual model-facing JSON
+window, current project/session identity and nonempty evidence. Hidden details,
+metadata-only replies, malformed windows and altered artifacts cannot supply credit.
+
+Keep the existing execution sets, permission gates, failure/pause/wait states,
+settlement stop and task completion rules. Normalize search ordering and incidental
+rank/provider data; timestamps, artifact IDs and repeated content are not new work.
+Fingerprint the actual delivered text window, never unseen host text or hits.
+Incomplete/unparsable search-hit windows abstain. Focused counterexamples retained
+both unseen-tail and hidden-hit failures before this correction.
+Failed/empty/cached/read results abstain. Successful bounded browser text stays
+partial evidence. Mining/consensus accounting is deferred. Retain fingerprints in
+existing native intake snapshots and use a bounded recent cache only for lookup;
+eviction does not recount old content or cap new work after 256 results.
+Load the optional research validator only for a committed research candidate;
+the standalone minimal coordinator does not require the research directory.
+
+Focused validation passed 35 Linux controls, pinned Ruff 0.16.10 and 11 Windows
+helper controls. An actual Pi 1.4/guarded-helper/Hermes/Framework composition used
+synthetic fetch transport and injected native committed-result/turn-end/settlement
+events, with no network or inference. New evidence progressed 2/3/4 with continued
+unfinished work; unchanged cached reads still stopped. Metadata-only/altered content,
+artifact drift, new input and injected context abort earned no credit. A separate
+native-history membership fixture covered 301 snapshots beyond the 256-entry cache;
+it does not represent 301 research operations. Exact fixture cleanup reached EX and
+selected borrowed dependency hashes were unchanged. Target model behavior and
+installed runtime adoption remain separate acceptance.
+
+## Make failure refusals name the next supported call - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Reuse four existing recovery refusal messages in the public workflow adapter.
+Name the failed run, exact native read arguments, omitted offset/limit, installed
+skill contract and evidence-bound recovery fields. State that inspection, a
+skill read or a new prerequisite refusal does not resolve the prior failure.
+A registry observation does not establish tool health.
+
+Keep the complete-read, current-byte/hash, same-source recovery and exact
+host-verified success guards unchanged. The bounded source slice does not add
+an evidence API, replay, controller or completion ledger. Complete diagnostic
+records that fit native read are supported; oversized/truncated evidence is
+still held and is not qualified by these messages. Scripted native repair
+controls do not establish model-driven diagnosis or useful natural repair.
+
+## Explain installation before toolkit internals - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Lead the README with the local assistant, supported installation path, practical
+requirements and current task limits. Add one newcomer guide for the existing
+installer, personalization prompt, managed command, first report and continuation.
+Keep the low-level Python and project-control examples in `TOOLKIT.md`.
+
+The guide distinguishes the normal existing-model route from the explicit CPU
+candidate, default five packages from optional observer/labs, and Linux bootstrap
+from partial direct-install platforms. It states that a successful install or
+mechanical check is not an accepted useful task. Remove unsupported general
+truth and hallucination-detection promises from the front door and source-check
+example. No installer, prompt, permission, model, controller or runtime changes.
+
+Check local documentation targets and command spelling against the existing
+entries. Newcomer usability, a checked model report, complete backup/restore and
+uninstall, and a real recorded walkthrough remain separate release work.
+
 ## Give the first-report agent an exact writing template - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.

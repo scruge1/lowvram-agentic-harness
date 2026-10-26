@@ -15,6 +15,18 @@ const TERMINAL = new Set(['done', 'archived']);
 const EXECUTION = new Set(['workflow_step', 'run_step', 'run_ledger', 'write', 'edit']);
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const boardTitle = (summary: string) => Array.from(summary.trim()).slice(0, 200).join('').trim();
+
+// The bounded set is only a recent lookup cache. Older credits remain in the
+// existing native intake snapshots; eviction must never make old content new.
+export function rememberResearchCredit(recent: Set<string>, key: string) {
+  recent.delete(key); recent.add(key);
+  if (recent.size > 256) recent.delete(recent.values().next().value!);
+}
+export function researchCreditSeen(branch: any[], recent: Set<string>, key: string) {
+  if (recent.has(key)) return true;
+  if (!branch.some(entry => entry.type === 'custom' && entry.customType === STATE && entry.data?.research_credit?.key === key)) return false;
+  rememberResearchCredit(recent, key); return true;
+}
 type Project = { root: string; projectId: string; boardId: string };
 type Part = { kind: 'task' | 'amend' | 'held' | 'question' | 'control'; summary: string;
   task_id?: string; execute?: boolean; priority?: number; expandable?: boolean };
@@ -23,7 +35,9 @@ type Capture = { id: string; session: string; text: string; source: string; at: 
 type Work = { root: string; task: string; source: string };
 type State = { mode: 'running' | 'paused' | 'blocked' | 'waiting' | 'complete'; reason: string;
   wait?: { kind: 'user' | 'peer' | 'resource' | 'external'; trigger: string }; next_action?: string;
-  task_waits?: TaskWait[]; queue: Work[]; requests: number; started: number; progress: number; seen: number; stalls: number };
+  task_waits?: TaskWait[]; queue: Work[]; requests: number; started: number; progress: number; seen: number; stalls: number;
+  research_credit?: { key: string; fingerprint: string; session: string; root: string; task: string; source: string;
+    artifact_id: string; content_scope: string; coverage: string } };
 type Bindings = { project: () => Project | null; task: () => string | null;
   select: (id: string) => void; failed: () => boolean;
   call: (request: Record<string, unknown>, signal?: AbortSignal) => Promise<any> };
@@ -44,6 +58,9 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     requests: 0, started: Date.now(), progress: 0, seen: 0, stalls: 0 });
   let state = initial();
   let serial: Promise<unknown> = Promise.resolve();
+  let researchEpoch = 0;
+  const recentResearch = new Set<string>();
+  const researchCalls = new Map<string, { scope: string; candidate?: boolean; content?: string }>();
   const refreshStatus = () => liveUI?.setStatus?.('request-intake', `Work: ${state.mode}; ${pending().length} unrouted; ${state.queue.length} retained`);
   const save = () => { revision++; pi.appendEntry(STATE, structuredClone(state)); refreshStatus(); };
   const pending = () => [...captures.values()].filter(x => !routed.has(x.id));
@@ -84,6 +101,9 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   };
   const stamp = () => digest([revision, alive, state, pending().map(x => x.id),
     bindings.project(), bindings.task(), bindings.failed(), [...authorized], excluded]);
+  const researchScope = (ctx: any) => digest([researchEpoch, alive, ctx.sessionManager.getSessionId(),
+    bindings.project(), bindings.task(), bindings.failed(), captureOrdinal, pending().map(x => x.id),
+    state.mode, state.queue, state.task_waits, [...authorized], excluded]);
   const projectPacket = (ctx: any) => buildRetainedPacket({ state: structuredClone(state),
     project: structuredClone(bindings.project()), selected: bindings.task(), admissionFailed: bindings.failed(),
     pending: pending().map(x => x.id), authorized: new Set(authorized), excluded: structuredClone(excluded),
@@ -174,6 +194,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     }
   };
   const restore = (_event: any, ctx: any) => {
+    researchEpoch++; researchCalls.clear(); recentResearch.clear();
     cleanWatchers(); liveCtx = ctx;
     liveUI = ctx.ui;
     revision++; alive = true; authorized = new Set(); excluded = []; captureOrdinal = 0; captureOrder = new Map(); authorizationOrder = new Map();
@@ -195,6 +216,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
         if (entry.data.work?.length && state.mode === 'complete') state.mode = 'running';
       }
       if (entry.customType === STATE) {
+        if (/^[a-f0-9]{64}$/.test(entry.data?.research_credit?.key ?? '')) rememberResearchCredit(recentResearch, entry.data.research_credit.key);
         const saved = structuredClone(entry.data);
         const { reason, ...nonReason } = saved;
         const key = packetDigest(nonReason);
@@ -213,10 +235,11 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   };
   pi.on('session_start', restore);
   pi.on('session_tree', restore);
-  pi.on('session_shutdown', async () => { alive = false; revision++; cleanWatchers(); liveCtx = undefined; });
+  pi.on('session_shutdown', async () => { alive = false; revision++; researchCalls.clear(); cleanWatchers(); liveCtx = undefined; });
   pi.on('input', async (event: any, ctx: any) => {
     // Extension/peer messages are not fresh human approval. Raw Pi transcript is retained.
     if (event.source === 'extension') return { action: 'continue' as const };
+    researchEpoch++; researchCalls.clear();
     const capture: Capture = { id: randomUUID(), session: ctx.sessionManager.getSessionId(),
       text: event.text, source: event.source, at: Date.now(), project: structuredClone(bindings.project()),
       sha256: digest(event.text), images: event.images?.length ?? 0 };
@@ -479,6 +502,11 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     }
   });
   pi.on('tool_call', async (event: any, ctx: any) => {
+    if (event.toolName === 'web_research' && ['search', 'fetch', 'render'].includes(event.input?.action)) {
+      if (researchCalls.size < 32 && alive && !ctx.signal?.aborted)
+        researchCalls.set(event.toolCallId, { scope: researchScope(ctx) });
+      return; // Pure inspection never acquires execution authority from accounting.
+    }
     if (!EXECUTION.has(event.toolName) && event.toolName !== 'bash') return;
     if (pending().length) return { block: true, reason: 'New user input is not routed. Read kanban_intake_status and route every aspect before project execution.' };
     if (state.mode === 'paused' || state.mode === 'blocked' || (state.mode === 'waiting' && state.wait)) return { block: true, reason: `Work ${state.mode}: ${state.reason}. Route an explicit resume or record resolved dependency first.` };
@@ -535,10 +563,69 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     if (!alive || stamp() !== before) return { block: true, reason: 'Native input, selection or work changed during execution admission; inspect current intake before retrying.' };
   });
   pi.on('tool_result', async (event: any) => {
+    if (event.toolName === 'web_research') {
+      const call = researchCalls.get(event.toolCallId);
+      if (!call) return;
+      if (event.isError || event.details?.ok !== true || event.details?.cached !== false) researchCalls.delete(event.toolCallId);
+      else { call.candidate = true; call.content = digest([event.content, Boolean(event.isError)]); }
+      return;
+    }
     if (!EXECUTION.has(event.toolName) && event.toolName !== 'bash') return;
     if (event.isError || event.details?.ok === false) {
       state.mode = 'blocked'; state.reason = `Inspect failed/uncertain ${event.toolName} before retry; do not replay effects`; save();
     } else { state.progress++; save(); }
+  });
+  pi.on('turn_end', async (event: any, ctx: any) => {
+    for (const result of event.toolResults ?? []) {
+      const call = researchCalls.get(result.toolCallId);
+      researchCalls.delete(result.toolCallId);
+      if (!call?.candidate || ctx.signal?.aborted || !alive || call.scope !== researchScope(ctx)
+          || pending().length || ['paused', 'blocked', 'waiting', 'complete'].includes(state.mode)) continue;
+      const index = event.toolResults.findIndex((value: any) => value.toolCallId === result.toolCallId);
+      const entry = ctx.sessionManager.getBranch().find((value: any) => value.id === event.toolResultEntryIds?.[index]);
+      if (entry?.message?.role !== 'toolResult' || entry.message.toolName !== 'web_research'
+          || entry.message.toolCallId !== result.toolCallId
+          || digest([entry.message.content, Boolean(entry.message.isError)]) !== call.content) continue;
+      try {
+        const blocks = entry.message.content;
+        if (!Array.isArray(blocks) || blocks.length !== 1 || blocks[0].type !== 'text'
+            || typeof blocks[0].text !== 'string' || Buffer.byteLength(blocks[0].text) > 12 * 1024) continue;
+        // Hidden details cannot prove delivery. Validate the actual committed
+        // model-facing projection, including its source window, instead.
+        const delivery = JSON.parse(blocks[0].text);
+        const packet = await projectPacket(ctx);
+        if (ctx.signal?.aborted || call.scope !== researchScope(ctx) || !packet.coverage.complete
+            || packet.coverage.truncated || packet.coverage.missing.length) continue;
+        const project = bindings.project(), task = bindings.task();
+        const selected = packet.tasks.find((value: any) => value.id === task);
+        if (!project || !selected || !['ready', 'running'].includes(selected.status)) continue;
+        const seen = new Set<string>(); let current = selected, admitted = false;
+        for (let depth = 0; current && depth < 64; depth++) {
+          if (seen.has(current.id) || current.project_root !== project.root || current.source !== selected.source
+              || packet.excluded.some((value: any) => value.task === current.id && value.source === current.source)) break;
+          seen.add(current.id);
+          if (packet.anchors.some((value: any) => value.task === current.id && value.source === current.source)) { admitted = true; break; }
+          current = packet.tasks.find((value: any) => value.id === current.parent);
+        }
+        if (!admitted || blockedTaskIds(packet).has(task!)) continue;
+        // Research is optional in standalone/minimal coordinator installs.
+        // Resolve through the native extension loader only for real delivered
+        // research, rather than adding a mandatory startup dependency.
+        const { validateResearchProgress } = await import('../research/research-tools.ts');
+        const verified = await validateResearchProgress(delivery, ctx);
+        if (ctx.signal?.aborted || call.scope !== researchScope(ctx) || verified.ok !== true || verified.credit !== true
+            || !/^[a-f0-9]{64}$/.test(verified.fingerprint ?? '')) continue;
+        const session = ctx.sessionManager.getSessionId();
+        const key = digest([session, project.root, project.projectId, project.boardId, verified.fingerprint]);
+        if (researchCreditSeen(ctx.sessionManager.getBranch(), recentResearch, key)) continue;
+        state.research_credit = { key, fingerprint: verified.fingerprint, session, root: project.root,
+          task: task!, source: selected.source, artifact_id: verified.artifact_id,
+          content_scope: verified.content_scope, coverage: verified.coverage };
+        state.progress++; save(); rememberResearchCredit(recentResearch, key);
+      } catch { /* Missing/stale/unproved evidence earns no credit or permission. */ }
+    }
+    // A bounded parallel batch cannot keep abandoned candidates forever.
+    researchCalls.clear();
   });
   pi.on('agent_before_settle', async (event: any, ctx: any) => {
     // canContinue is a preview BEFORE our drafts. A final assistant message normally
