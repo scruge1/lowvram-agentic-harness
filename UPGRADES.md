@@ -38,6 +38,32 @@ it does not represent 301 research operations. Exact fixture cleanup reached EX 
 selected borrowed dependency hashes were unchanged. Target model behavior and
 installed runtime adoption remain separate acceptance.
 
+## Give the first-report agent an exact writing template - 2026-10-26
+
+Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
+
+A real failed report run repeatedly treated the first-project agent launcher
+as a report writer and supplied no report body. Give each newly prepared task
+a reviewed action argv template and put the same required instructions on its
+existing `PROJECT-SSOT.md` context surface. Keep `AGENTS.md` short and preserve
+the generated workspace text. A missing normal workspace refuses; preparation
+does not invent a replacement route or alter an existing failed project.
+
+The installed Python runs a fixed isolated program for only the relative
+`hardware-report.md`. The agent passes its complete report as a separate argv
+string; exclusive create mode refuses occupied files/symlinks and UTF-8 preserves
+literal text. This is no new writer CLI, controller, canned report or automatic
+execution. Keep the pinned checker, empty-directory negative control, project
+discovery/intake/context gates and separate semantic review.
+
+Source controls execute the generated template with quotes, newlines, dollar
+signs, backticks and Unicode, check exact bytes and unchanged inputs, and refuse
+missing/placeholder text, occupied outputs and dangling symlinks. Native context
+delivery and useful actual model output remain separate acceptance evidence.
+The first exact hosted Windows gate then exposed that Python3.13 exclusive open
+could follow a dangling symlink. Retain that failure and the native negative;
+the fixed writer explicitly refuses a symlink before its exclusive open.
+
 ## Bind declared research requests to immutable outcomes - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
