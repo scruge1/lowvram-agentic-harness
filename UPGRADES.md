@@ -58,6 +58,26 @@ records that fit native read are supported; oversized/truncated evidence is
 still held and is not qualified by these messages. Scripted native repair
 controls do not establish model-driven diagnosis or useful natural repair.
 
+## Explain installation before toolkit internals - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Lead the README with the local assistant, supported installation path, practical
+requirements and current task limits. Add one newcomer guide for the existing
+installer, personalization prompt, managed command, first report and continuation.
+Keep the low-level Python and project-control examples in `TOOLKIT.md`.
+
+The guide distinguishes the normal existing-model route from the explicit CPU
+candidate, default five packages from optional observer/labs, and Linux bootstrap
+from partial direct-install platforms. It states that a successful install or
+mechanical check is not an accepted useful task. Remove unsupported general
+truth and hallucination-detection promises from the front door and source-check
+example. No installer, prompt, permission, model, controller or runtime changes.
+
+Check local documentation targets and command spelling against the existing
+entries. Newcomer usability, a checked model report, complete backup/restore and
+uninstall, and a real recorded walkthrough remain separate release work.
+
 ## Give the first-report agent an exact writing template - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
