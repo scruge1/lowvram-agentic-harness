@@ -1127,6 +1127,24 @@ existing `PROJECT-SSOT.md`, which normal `project_context` already delivers.
 `AGENTS.md` keeps only a short route. The original task input/pin and checker
 remain unchanged in purpose; a writer execution does not prove report quality.
 
+New preparations also return `repair_action_argv_template` for an existing failed
+report. This Linux-only recipe does not resume work or clear a hold. Use the
+existing explicit resume, complete failure inspection and `workflow_step.recovery`
+fields first. Pass the inspected failed report's SHA-256 and the complete new
+body as its last two argv values. Declare both `hardware-report.md` and
+`hardware-report.failed-SHA256.md` as outputs, substituting the actual digest.
+Keep the original pinned checker and inputs unchanged.
+
+The repair retains the exact failed bytes with exclusive create. It serializes
+cooperating generated writers with a nonblocking directory flock, verifies the
+bounded owned regular preimage, fsyncs a temporary sibling, rechecks the preimage
+and atomically replaces the canonical report. An interrupted operation can retain
+a backup or stage. Inspect the actual saved outcome; occupied recovery artifacts
+refuse further execution. There is no automatic retry, deletion or evidence
+overwrite. This is not a universal file lock against unrelated writers. Existing
+prepared projects keep their original pinned instructions; this feature does
+not change or repair an earlier trial.
+
 Open the prepared project with the managed agent and request its report. The
 checker requires exact facts and units, unchanged inputs and250–400 Unicode word
 tokens. Semantic interpretation still needs review. A passed checker does not

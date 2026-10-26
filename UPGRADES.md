@@ -5,6 +5,40 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Preserve a failed report during explicit evidence-bound repair - 2026-10-26
+
+Parent commit: `5e65ba17b94b166db65e43a671cdbaf0af8059fd`.
+
+An occupied report can outlive a failed fixed predicate. A controlled native
+counter showed that an explicit owner resume, complete saved-failure read and
+bound recovery still reached an exclusive-create collision. Earlier recovery
+fixtures failed before creating their output, so they did not establish this
+case. The original real-model failure and blocked retries remain failed evidence;
+the counter is a separate synthetic task with no model request.
+
+Keep initial creation exclusive. New report preparations include a fixed
+Linux-only repair argv template with an explicit inspected preimage hash and
+complete agent-authored replacement body. Reuse the existing stage, fsync,
+preimage-recheck and atomic-replace filesystem sequence. A directory flock
+serializes cooperating generated writers without a new lockfile. Declare the
+canonical report and exact retained failed version as outputs; transient staging
+stays outside control state. Refuse stale hashes, symlinks, multiple links,
+oversize or foreign files, occupied recovery artifacts and unsupported platforms.
+Keep failed partials inspectable and preserve the original checker and inputs.
+No new writer CLI, transaction engine, ledger, automatic resume or model call is
+added. Existing pinned tasks are unchanged.
+
+Validation:22 Linux source/file controls pass; Windows passes with seven
+platform skips. Seven offline self-tests and Ruff0.16.10 pass. The original
+native occupied-output counter passes eight controls. Eleven later scripted
+native controls exercise explicit resume, complete evidence, retained preimage,
+the original independent predicate, empty-directory negative and matching latch
+release, with zero HTTP/model/service requests. An intervening fixture assertion
+expected the engine's status label instead of the public host label; retain that
+failed receipt separately from its successful action and the corrected fixture.
+These checks do not establish model diagnosis, semantic report quality, arbitrary
+writer exclusion or repair of a previous real trial.
+
 ## Read owned resource status without reserving or releasing it - 2026-10-26
 
 Parent commit: `150e96efeb1ecca8015f1918e9125a715630ded8`.
