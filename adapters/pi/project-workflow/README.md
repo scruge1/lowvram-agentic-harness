@@ -317,8 +317,10 @@ mean the whole attempt/history is present or its task is accepted.
 There is no saved child JSONL or child resume. After parent loss, an unmatched
 native child-start record holds effects and automatic continuation. Inspect the
 retained journal and partial host artifacts before routing a fresh explicit
-owner resume. A model work checkpoint cannot clear this uncertainty. Matching
-final records and existing failure/pause rules keep their separate meanings.
+owner resume. A model work checkpoint cannot clear this uncertainty. A matching
+`returned` result closes the start; failed, cancelled, deadline, delivery-held or
+unknown results keep the hold even if the parent failure hook was never saved.
+The existing failure/pause rules keep their separate meanings.
 Never automatically replay an interrupted child.
 
 `tests/test_pi_managed_child_native.mjs` qualifies the SDK/tool integration with

@@ -54,7 +54,9 @@ export function unresolvedChildCalls(branch: any[], root?: string) {
     }
     if (entry.customType === 'pi-managed-child-result/v1') {
       const start = starts.get(data?.id);
-      if (start && identity(start.data) === identity(data)) starts.delete(data.id);
+      // Failure can be journaled before the parent's tool_result failure hook.
+      // A crash there still requires inspection and fresh owner resume.
+      if (start && data.state === 'returned' && identity(start.data) === identity(data)) starts.delete(data.id);
     }
   }
   return [...starts].filter(([, start]) => (!root || start.data.project.root === root)

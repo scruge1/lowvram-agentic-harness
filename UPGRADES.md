@@ -20,6 +20,10 @@ A forced parent-loss fixture exposed running intake state with an unmatched
 child start. Restore and effect/settlement gates now retain an uncertainty hold;
 a model checkpoint cannot clear it. Fresh same-project owner resume uses the
 existing intake route. No child state is reconstructed or automatically replayed.
+A native history-only crash-window counterexample also exposed a failed final
+record clearing the start before the parent's failure hook was saved. Only a
+matching `returned` result now closes that hold; failed or unknown final states
+remain inspectable and require fresh owner resume. Original history is preserved.
 Native fixtures cover source/config/model changes, unknown recursive tools,
 actual guarded file output and independent checking, cancellation and parent
 loss. Kernel exit, unreaped zombies and final owner reaping are distinct evidence.

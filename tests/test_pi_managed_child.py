@@ -74,7 +74,7 @@ const sandbox={createHash};vm.createContext(sandbox);vm.runInContext(code,sandbo
 const project={root:'/owned/project',projectId:'p',boardId:'b'};
 const identity={id:'same-native-id',project,card:'child',parent_card:'root',source:'source',source_sha256:'a'.repeat(64),parent_session:'parent'};
 const row=(customType,data)=>({type:'custom',customType,data});
-const start=row('pi-managed-child-start/v1',identity),result=row('pi-managed-child-result/v1',identity);
+const start=row('pi-managed-child-start/v1',identity),result=row('pi-managed-child-result/v1',{...identity,state:'returned'});
 const pending=rows=>Array.from(sandbox.check(rows,project.root));
 assert.deepEqual(pending([start]),[identity.id]);
 assert.deepEqual(pending([start,result]),[]);
@@ -90,9 +90,12 @@ assert.deepEqual(pending([start,...resume('/other/project')]),[identity.id]);
 assert.deepEqual(pending([start,...resume(project.root,'extension')]),[identity.id]);
 assert.deepEqual(pending([start,...resume(project.root,'historical-unverified')]),[identity.id]);
 assert.deepEqual(pending([start,row('pi-request-work-state/v1',{mode:'running'})]),[identity.id]);
+for(const state of ['failed','deadline','cancelled','delivery_held','unknown',undefined])
+ assert.deepEqual(pending([start,row('pi-managed-child-result/v1',{...identity,state})]),[identity.id]);
+assert.deepEqual(pending([start,row('pi-managed-child-result/v1',{...identity,state:'failed'}),...resume()]),[]);
 assert.deepEqual(pending([row('pi-managed-child-start/v1',{...identity,project:{root:'/other/project'}})]),[]);
 assert.throws(()=>pending([row('pi-managed-child-start/v1',{})]),/Invalid managed-child/);
-console.log(JSON.stringify({checks:12,scope:'actual journal reducer, no alternate ledger or permission classifier'}));
+console.log(JSON.stringify({checks:19,scope:'actual journal reducer, no alternate ledger or permission classifier'}));
 """
         result = subprocess.run(
             [node, "--disable-warning=ExperimentalWarning", "--input-type=module", "-e", script,
@@ -100,7 +103,7 @@ console.log(JSON.stringify({checks:12,scope:'actual journal reducer, no alternat
             capture_output=True, text=True, timeout=20,
         )
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        self.assertEqual(json.loads(result.stdout)["checks"], 12)
+        self.assertEqual(json.loads(result.stdout)["checks"], 19)
 
 
     def test_bounded_projection_and_exact_journal_windows(self):
