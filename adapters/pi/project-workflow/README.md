@@ -144,6 +144,19 @@ status tools. Configure `PI_SYSTEM_TOOL_HELPER`, `PI_SYSTEM_TOOL_DATABASE`, and
 `PI_SYSTEM_TOOL_HELPER_SHA256`. Catalog results are retrieval guidance. They do
 not prove that a tool is installed, loaded, healthy, or authorized.
 
+Questions and draft plans can receive a normal answer without forced cards,
+checkpoints or intake polls. The existing native journal retains uncommitted
+conversation as deferred context. `kanban_intake_status` exposes up to twelve
+160-character previews; `source_id` retrieves a complete captured source.
+Deferred context is not approval. Bind new work or controls to the current
+explicit owner source. Legacy pending inputs and frozen uncertain routing
+intents remain pending and recover through their existing route.
+
+An ordinary status answer does not pause or replace approved work. The existing
+retained-task decision can continue its authorized ready task after the answer.
+Explicit pause, scope/failure/dependency holds stay independent. Neither the
+conversation phase nor deferral creates progress or root acceptance.
+
 The coordinator can answer questions and inspect with native read-only tools.
 Project and task selection persist in the native session branch. Startup and
 branch navigation revalidate project, board and card identities through the
