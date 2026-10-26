@@ -13,7 +13,7 @@ for (let i = 2; i < process.argv.length; i += 2) {
   options[process.argv[i].slice(2)] = process.argv[i + 1];
 }
 for (const name of ['source', 'pi-package', 'python', 'fixture-parent']) assert.ok(options[name], `Missing --${name}`);
-if (options.case !== undefined) assert.equal(options.case, 'continuity', 'Only the explicit continuity development filter is supported');
+if (options.case !== undefined) assert.ok(['continuity', 'recovery'].includes(options.case), 'Use only an explicit continuity or recovery development filter');
 assert.equal(process.platform, 'linux', 'Actual process ownership requires Linux');
 const started = Date.now(), source = fs.realpathSync(options.source);
 const piPackage = fs.realpathSync(options['pi-package']), python = path.resolve(options.python);
@@ -252,6 +252,67 @@ async function executeCase(label, actionCode, output, expected) {
     verifier_calls_before_standalone: callsBeforeStandalone, standalone_predicate_exit: standalonePredicate?.status });
   await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
 }
+async function recoveryCase() {
+  const p = await profile('evidence-bound-recovery');
+  const verifier = path.join(p.base, 'repair-predicate.py'), counter = path.join(p.base, 'repair-checks.jsonl');
+  const body = '{"output": "result.txt"}\n';
+  fs.writeFileSync(verifier, `from pathlib import Path\nimport json,os\np=Path('result.txt')\nwith Path(${JSON.stringify(counter)}).open('a') as f: f.write(json.dumps({'cwd':os.getcwd(),'exists':p.exists()})+'\\n')\nraise SystemExit(0 if p.is_file() and p.read_text()==${JSON.stringify(body)} else 1)\n`);
+  const request = { objective: 'Serialize the owned relative output path as JSON and verify exact output content', cwd: p.project,
+    action: [python, '-c', "import json; from pathlib import Path; Path('result.txt').write_text(json.dumps({'output':Path('result.txt')})+'\\n')"],
+    verify: [python, verifier], outputs: ['result.txt'] };
+  const failed = await tool(p, 'workflow_step', request, true);
+  const finalPath = path.join(p.project, '.enforcement/runs', failed.details.host.run_id, 'final.json');
+  const finalBefore = hash(finalPath), original = readJson(finalPath);
+  check('recovery-actual-pathlike-serialization-failure', failed.isError === true && original.status === 'failed'
+    && !fs.existsSync(path.join(p.project, 'result.txt')));
+  await p.session.extensionRunner.emitInput('Fix this same owned serialization task and resume it. Preserve the failed attempt; diagnose before a bound repair.', undefined, 'interactive');
+  const status = (await tool(p, 'kanban_intake_status', {})).details.result;
+  const taskId = status.queue[0].task;
+  await tool(p, 'kanban_intake_route', { source_id: status.pending.at(-1).id, control: 'resume',
+    parts: [{ kind: 'amend', task_id: taskId, summary: 'Resume the same task with an evidence-bound serialization repair', execute: true }] });
+  const probe = async input => p.session.extensionRunner.emitToolCall({ type: 'tool_call', toolCallId: 'recovery-probe-' + (++sequence), toolName: 'workflow_step', input });
+  let held = await probe(request);
+  check('recovery-unread-refusal-exact-supported-next-call', held?.block === true
+    && held.reason.includes(JSON.stringify({ path: finalPath })) && held.reason.includes(failed.details.host.run_id)
+    && held.reason.includes('Omit offset and limit') && held.reason.includes('Inspection does not clear this failure'));
+  await tool(p, 'read', { path: finalPath, offset: 1, limit: 1 });
+  held = await probe(request);
+  check('recovery-actual-partial-read-stays-held', held?.block === true && held.reason.includes('complete saved failure record'));
+  const complete = await tool(p, 'read', { path: finalPath });
+  check('recovery-actual-complete-read-is-exact-current-source', !complete.details?.truncation
+    && complete.content.length === 1 && complete.content[0].text === fs.readFileSync(finalPath, 'utf8'));
+  const processPath = path.join(p.project, original.attempts[0].process_trace);
+  const diagnostic = await tool(p, 'read', { path: processPath });
+  check('recovery-native-diagnostic-identifies-real-api-defect', !diagnostic.details?.truncation
+    && diagnostic.content.length === 1 && diagnostic.content[0].text === fs.readFileSync(processPath, 'utf8')
+    && /TypeError: Object of type PosixPath is not JSON serializable/.test(readJson(processPath).stderr));
+  held = await probe(request);
+  check('recovery-inspected-source-still-needs-bound-repair', held?.block === true
+    && held.reason.includes('recovery.source_run_id=' + failed.details.host.run_id)
+    && held.reason.includes('Only the exact successful host-verified recovery resolves this failure'));
+  const repair = { ...request,
+    action: [python, '-c', "import json; from pathlib import Path; Path('result.txt').write_text(json.dumps({'output':str(Path('result.txt'))})+'\\n')"],
+    recovery: { source_run_id: failed.details.host.run_id, failure_class: 'invalid_input',
+      changed_assumption: 'JSON cannot encode a Path object; encode its relative string value.',
+      new_evidence: 'The complete saved final and process failure identify a JSON serialization exception.',
+      expected_observation: 'The repaired action writes the exact JSON output path and passes the independent predicate.',
+      stop_condition: 'Stop if serialization still fails or exact output content differs; preserve every attempt.' } };
+  const accepted = await tool(p, 'workflow_step', repair);
+  const acceptedPath = path.join(p.project, '.enforcement/runs', accepted.details.host.run_id, 'final.json');
+  const acceptedFinal = readJson(acceptedPath), calls = fs.readFileSync(counter, 'utf8').trim().split('\n').map(JSON.parse);
+  check('recovery-real-output-and-meaningful-predicate', accepted.details.host.status === 'supplied_predicate_passed'
+    && acceptedFinal.status === 'accepted' && fs.readFileSync(path.join(p.project, 'result.txt'), 'utf8') === body);
+  check('recovery-real-negative-control-before-positive', calls.length === 2 && !calls[0].exists
+    && calls[0].cwd !== p.project && calls[1].exists && calls[1].cwd === p.project
+    && acceptedFinal.attempts[0].negative_control_exit_code === 0 && acceptedFinal.attempts[0].verifier_exit_code === 0);
+  check('recovery-original-failure-preserved-not-relabelled', hash(finalPath) === finalBefore && readJson(finalPath).status === 'failed');
+  check('recovery-exact-success-releases-only-its-inspected-failure', !(await probe(request))?.block);
+  check('recovery-no-native-extension-errors', p.errors.length === 0, { errors: p.errors });
+  cases.push({ label: p.label, project: p.project, request, repair, failed_final: finalPath, failed_final_sha256: finalBefore,
+    accepted_final: acceptedPath, accepted_final_sha256: hash(acceptedPath), verifier_calls: calls,
+    scope: 'Scripted native same-session evidence-bound repair, not model diagnosis or natural self-repair acceptance. Complete failure fits native read; oversized evidence remains an explicit unqualified limit.' });
+  await p.session.extensionRunner.emit({ type: 'session_shutdown' }); p.session.dispose(); p.closed = true;
+}
 async function continuityCase() {
   const p = await profile('wrong-summary-continuity', true);
   const facts = { ram_total_gb: 32.5, gpu_vram_mib: null, storage_total_gb: 1000,
@@ -337,8 +398,9 @@ try {
     await executeCase('ordinary-success', 0, 'accepted fixture\n', true);
     await executeCase('predicate-fails', 0, 'rejected fixture\n', false);
   }
-  await continuityCase();
-  check('continuity-zero-http-and-one-synthetic-summary', networkRequests === 0 && syntheticSummaries === 1);
+  if (options.case !== 'recovery') await continuityCase();
+  if (options.case !== 'continuity') await recoveryCase();
+  check('native-zero-http-and-declared-synthetic-summary-count', networkRequests === 0 && syntheticSummaries === (options.case === 'recovery' ? 0 : 1));
 } catch (error) {
   checks.push({ name: 'qualification-execution', passed: false, error: String(error?.stack || error) });
 } finally {
@@ -355,8 +417,8 @@ try {
     elapsed_ms: Date.now() - started,
     network_requests: networkRequests, synthetic_summary_requests: syntheticSummaries,
     selected_cases: options.case ?? 'all',
-    limits: (options.case ? 'Continuity development filter only. ' : 'Three original isolated action fixtures plus one persistent continuity fixture. ')
-      + 'Actual Pi/Hermes/context/owned host workflow and real subprocesses. Original three use explicit validated-memory readiness fixture; continuity uses the actual empty validated registry and synthetic system catalog, not memory qualification. Controlled wrong summary/readFiles, no real summary generation. Existing managed picker and native reopen, no expanded writer ownership claim. Verifier counter is outside project. No private/live board, production profile, MCP, hub, service, model or root-product acceptance.' };
+    limits: (options.case ? 'Explicit development case only. ' : 'Three original action fixtures, persistent continuity, and same-session evidence-bound repair. ')
+      + 'Actual Pi/Hermes/context/owned host workflow and real subprocesses. Original three use explicit validated-memory readiness fixture; continuity uses the actual empty validated registry and synthetic system catalog, not memory qualification. Controlled wrong summary/readFiles, no real summary generation. Existing managed picker and native reopen, no expanded writer ownership claim. Scripted repair does not qualify model diagnosis; complete evidence fits native read, oversized evidence unqualified. Verifier counter is outside project. No private/live board, production profile, MCP, hub, service, model or root-product acceptance.' };
   writeJson(path.join(fixture, 'native-trace.json'), trace); writeJson(path.join(fixture, 'receipt.json'), receipt);
   console.log(JSON.stringify(receipt, null, 2)); process.exitCode = receipt.status === 'passed' ? 0 : 1;
 }
