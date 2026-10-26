@@ -39,6 +39,13 @@ failed receipt separately from its successful action and the corrected fixture.
 These checks do not establish model diagnosis, semantic report quality, arbitrary
 writer exclusion or repair of a previous real trial.
 
+Root source review then found that default exclusive creation could broaden a
+private report's permissions under a permissive umask. Create retained backup
+and stage with explicit mode0600 before writing. Six affected filesystem
+controls pass, including successful replacement and interrupted staging with a
+600 preimage and umask000. Prior native receipts remain bound to their earlier
+source; this correction adds filesystem evidence, not a new model/native run.
+
 ## Distinguish retained source capture from its short view - 2026-10-26
 
 Parent commit: `61600f0b73e0e1304ff0f1e96edc3e0c1a9a4bff`.

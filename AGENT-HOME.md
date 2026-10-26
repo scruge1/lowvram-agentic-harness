@@ -1135,7 +1135,9 @@ body as its last two argv values. Declare both `hardware-report.md` and
 `hardware-report.failed-SHA256.md` as outputs, substituting the actual digest.
 Keep the original pinned checker and inputs unchanged.
 
-The repair retains the exact failed bytes with exclusive create. It serializes
+The repair retains the exact failed bytes with exclusive create. Both backup
+and replacement stage start with mode `0600`, independent of a permissive umask.
+It serializes
 cooperating generated writers with a nonblocking directory flock, verifies the
 bounded owned regular preimage, fsyncs a temporary sibling, rechecks the preimage
 and atomically replaces the canonical report. An interrupted operation can retain

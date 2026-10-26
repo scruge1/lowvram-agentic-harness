@@ -89,7 +89,8 @@ if hashlib.sha256(old).hexdigest() != expected:
 if backup.exists() or backup.is_symlink() or stage.exists() or stage.is_symlink():
     raise SystemExit('Retained backup or stage already exists; inspect it, do not replay')
 for path, raw in ((backup, old), (stage, body)):
-    with path.open('xb') as stream:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'wb') as stream:
         stream.write(raw)
         stream.flush()
         os.fsync(stream.fileno())

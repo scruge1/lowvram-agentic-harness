@@ -224,6 +224,36 @@ class FirstProjectTests(unittest.TestCase):
         self.assertEqual((project / ("hardware-report.failed-" + expected + ".md")).read_bytes(), b"original failure")
         self.assertEqual((project / (".hardware-report.repair-" + expected + ".tmp")).read_bytes(), b"corrected body")
 
+    @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses Linux file permissions")
+    def test_repair_keeps_backup_stage_and_replacement_private_under_permissive_umask(self):
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted):
+                project, result = self.prepare("private-interrupted" if interrupted else "private-success")
+                output = project / first_project.OUTPUT
+                output.write_bytes(b"private synthetic failed report")
+                output.chmod(0o600)
+                expected = hashlib.sha256(output.read_bytes()).hexdigest()
+                prefix = "import os\nos.umask(0)\n"
+                if interrupted:
+                    prefix += ("_real_fsync=os.fsync\n_calls=0\n"
+                               "def _fault(fd):\n    global _calls\n    _real_fsync(fd)\n    _calls+=1\n"
+                               "    if _calls==2: raise OSError('controlled failure after stage fsync')\n"
+                               "os.fsync=_fault\n")
+                ran = self.repair(project, result, expected, "new private synthetic report", prefix)
+                self.assertEqual(ran.returncode == 0, not interrupted, ran.stderr)
+                backup = project / ("hardware-report.failed-" + expected + ".md")
+                self.assertEqual(backup.read_bytes(), b"private synthetic failed report")
+                for path in (output, backup):
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                stage = project / (".hardware-report.repair-" + expected + ".tmp")
+                if interrupted:
+                    self.assertEqual(output.read_bytes(), b"private synthetic failed report")
+                    self.assertEqual(stage.read_bytes(), b"new private synthetic report")
+                    self.assertEqual(stage.stat().st_mode & 0o777, 0o600)
+                else:
+                    self.assertEqual(output.read_bytes(), b"new private synthetic report")
+                    self.assertFalse(stage.exists())
+
     @unittest.skipUnless(sys.platform == "linux", "Qualified repair uses a Linux directory flock")
     def test_directory_lease_blocks_generated_initial_and_repair_writers(self):
         import fcntl
