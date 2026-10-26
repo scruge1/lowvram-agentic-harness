@@ -5,6 +5,31 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Retry transient bootstrap transfers - 2026-10-26
+
+Parent commit: `381b22cf2a390ff665f28f7f46360a59d1be0f76`.
+
+The initial uv transfer and managed runtime download now use native curl's two
+transient retries. Keep HTTPS, certificate checks, proxy exclusion, exact pins,
+size limits, existing partial handling and absent-only promotion. Do not retry
+certificate, integrity or conflicting-file failures. No all-error retry, mirror,
+IP override or new recovery controller is added.
+
+Allocate 45 seconds to retry admission and 555 seconds to each attempt within the
+prior 600-second transfer envelope; retain the Python 620-second command limit
+and existing outer owner budgets. Curl's retry cutoff limits when another
+attempt can start, rather than timing out an already started attempt. See the
+[native curl retry documentation](https://curl.se/docs/manpage.html#--retry).
+
+Actual local TLS fixtures exercise a stalled handshake followed by resumed
+transfer, exhausted retries with retained bytes, certificate refusal without
+retry and integrity/conflict refusal. A copied shell fragment changes only its
+URL, pin, test certificate and short fixture deadlines, then stops before uv
+extraction. These controls perform no public download, package installation or
+model request. They qualify the bounded source behavior, not normal fresh
+installation. Prior failed native attempts and diagnostic-only bytes remain
+separate; another real factory or archive adoption requires reviewed execution.
+
 ## Record installer-owned local board assets - 2026-10-26
 
 Parent commit: `a47dab60701bb407da8b405add0ab2163414fda8`.

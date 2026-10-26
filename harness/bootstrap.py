@@ -121,10 +121,12 @@ def process_api_preflight(source=SOURCE):
 
 
 def download(url, destination, expected_sha256, expected_bytes, *, env, runner=command):
-    """Native curl resume; exact size/hash gate promotion, never overwrite conflict.
+    """Native transient retry/resume; exact size/hash gate absent-only promotion.
 
     This transfers the accepted private download recipe's conflict/resume/hash/
     free-space rules, not its Rig paths, six-service queue or model selection.
+    Reserve 45s for admitting retries and 555s per attempt; the outer 620s command
+    limit stays unchanged. Certificate/hash/conflict failures are not retried.
     """
     if destination.exists() or destination.is_symlink():
         safe_file(destination)
@@ -139,7 +141,8 @@ def download(url, destination, expected_sha256, expected_bytes, *, env, runner=c
             "Download would cross the runtime free-space reserve")
     if not partial.exists() or partial.stat().st_size != expected_bytes:
         runner(["/usr/bin/curl", "-q", "--fail", "--silent", "--show-error", "--location",
-                "--continue-at", "-", "--connect-timeout", "20", "--max-time", "600",
+                "--continue-at", "-", "--connect-timeout", "20", "--max-time", "555",
+                "--retry", "2", "--retry-max-time", "45",
                 "--max-filesize", str(expected_bytes), "--proto", "=https", "--proto-redir", "=https",
                 "--noproxy", "*", "--output", str(partial), url], env=env, timeout=620)
     safe_file(partial)

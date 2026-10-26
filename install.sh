@@ -141,8 +141,10 @@ else
   [[ ! -L "$partial" && (! -e "$partial" || -f "$partial") ]] || die 'uv partial file is redirected'
   [[ ! -e "$partial" || $(stat -c %s "$partial") -le 52428800 ]] || die 'Oversized uv partial preserved'
   if [[ ! -e "$partial" || "$(sha256sum "$partial" | cut -d ' ' -f1)" != "$UV_SHA" ]]; then
+    # Native transient retries only: 45s admission plus 555s attempt allocation.
     env -i HOME="$HOME" PATH=/usr/bin:/bin TMPDIR="$runtime_root/tmp" \
-      curl -q --fail --silent --show-error --location --continue-at - --connect-timeout 20 --max-time 600 \
+      curl -q --fail --silent --show-error --location --continue-at - --connect-timeout 20 --max-time 555 \
+      --retry 2 --retry-max-time 45 \
       --max-filesize 52428800 --proto '=https' --proto-redir '=https' --noproxy '*' --output "$partial" "$UV_URL"
   fi
   [[ "$(sha256sum "$partial" | cut -d ' ' -f1)" == "$UV_SHA" ]] || die 'uv archive hash differs; failed partial retained'
