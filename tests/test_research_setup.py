@@ -5,12 +5,16 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 import warnings
 
 from harness import research_config as config, research_setup as setup
+from harness import home, home_entry
 
 
 class ResearchSetupTests(unittest.TestCase):
@@ -199,6 +203,87 @@ class ResearchSetupTests(unittest.TestCase):
             setup.guided(self.home, "tavily")
         self.assertEqual(config.resolve_provider(self.home, "tavily", {}).credential, self.secret)
         self.assertNotIn(self.secret, output.getvalue())
+
+    def install_fixture_entry(self):
+        bound = home_entry.install(self.home)
+        selected = self.home / "home.json"
+        settings = json.loads(selected.read_text())
+        settings["lifecycle_guard_sha256"] = bound["guard_sha256"]
+        selected.write_text(json.dumps(settings))
+
+    def test_grouped_home_cli_retains_skip_revisit_and_redacted_status(self):
+        self.install_fixture_entry()
+        out, err = io.StringIO(), io.StringIO()
+        base = ["--home", str(self.home), "research"]
+        with patch.object(setup, "_terminal"), patch("builtins.input", return_value="e"), \
+                patch.object(setup.getpass, "getpass", return_value=self.secret), \
+                redirect_stdout(out), redirect_stderr(err):
+            self.assertEqual(home.main(base + ["setup", "--provider", "tavily"]), 0)
+            self.assertEqual(home.main(base + ["skip", "--provider", "tavily"]), 0)
+            self.assertEqual(config.resolve_provider(self.home, "tavily", {"TAVILY_API_KEY": self.secret}).state, "skipped")
+            self.assertEqual(home.main(base + ["revisit", "--provider", "tavily"]), 0)
+        view = io.StringIO()
+        with redirect_stdout(view), redirect_stderr(err):
+            self.assertEqual(home.main(base + ["status"]), 0)
+        status = json.loads(view.getvalue())["providers"]["tavily"]
+        self.assertEqual(status["state"], "ready")
+        self.assertFalse(status["tested"])
+        self.assertNotIn(self.secret, out.getvalue() + err.getvalue() + view.getvalue())
+
+    @unittest.skipUnless(sys.platform == "linux", "Native terminal and lifecycle lease control is Linux-specific")
+    def test_real_terminal_hidden_key_entry_skip_and_blank_revisit(self):
+        import pty
+        import select
+
+        self.install_fixture_entry()
+
+        def terminal(action, answers):
+            master, slave = pty.openpty()
+            child = None
+            received, pending = bytearray(), list(answers)
+            try:
+                child = subprocess.Popen([sys.executable, "-B", "-m", "harness.home", "--home", str(self.home),
+                                          "research", action, "--provider", "tavily"],
+                                         cwd=Path(__file__).resolve().parents[1], stdin=slave, stdout=slave, stderr=slave)
+                os.close(slave)
+                slave = None
+                deadline = time.monotonic() + 8
+                while time.monotonic() < deadline:
+                    if select.select([master], [], [], 0.05)[0]:
+                        try:
+                            chunk = os.read(master, 65536)
+                        except OSError:
+                            break
+                        if not chunk:
+                            break
+                        received.extend(chunk)
+                    while pending and pending[0][0] in received:
+                        _, answer = pending.pop(0)
+                        os.write(master, answer)
+                    if child.poll() is not None:
+                        break
+                self.assertEqual(child.wait(timeout=1), 0, bytes(received).decode(errors="replace"))
+                self.assertFalse(pending, "The normal terminal did not request the expected setup fields")
+                self.assertNotIn(self.secret.encode(), received, "A synthetic key must never be echoed")
+                return received.decode(errors="replace")
+            finally:
+                if child is not None and child.poll() is None:
+                    child.kill()
+                    child.wait(timeout=2)
+                if slave is not None:
+                    os.close(slave)
+                os.close(master)
+
+        prompt = b"[e/s/r/Enter]: "
+        hidden = b"API key (hidden; Enter keeps the saved key): "
+        output = terminal("setup", [(prompt, b"e\n"), (hidden, self.secret.encode() + b"\n")])
+        self.assertIn("monthly limit", output)
+        self.assertEqual(config.resolve_provider(self.home, "tavily", {}).credential, self.secret)
+        terminal("skip", [])
+        self.assertEqual(config.resolve_provider(self.home, "tavily", {"TAVILY_API_KEY": self.secret}).state, "skipped")
+        terminal("revisit", [(prompt, b"e\n"), (hidden, b"\n")])
+        self.assertEqual(config.resolve_provider(self.home, "tavily", {}).credential, self.secret)
+        self.assertFalse(config.provider_status(self.home, {})["providers"]["tavily"]["tested"])
 
 
 if __name__ == "__main__":

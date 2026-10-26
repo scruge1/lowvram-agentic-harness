@@ -5,6 +5,26 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Explain optional provider keys and actual fallback limits - 2026-10-26
+
+Parent commit: `da75ecfe763612a5b30754a4a65840bb277f1eab`.
+
+Refresh the existing provider catalog and terminal guidance from current official
+sources. Explain where to create keys, the selected Brave Search plan and its
+usage/auto-reload controls, Tavily basic-search credit use, and the owned SearXNG
+root/JSON requirement. Retain Brave's explicit storage-rights hold for both
+artifacts and native history. Setup still performs no account or provider call.
+
+Document first-success search separately from URL retrieval and bounded clean
+browser rendering. Keys do not grant destination login access, enable hosted
+answer/research products, guarantee fallback success or establish corroboration.
+Reuse the same catalog, resolver, protected files and skip/revisit/remove paths.
+
+Focused source controls exercise the grouped home CLI and a real Linux terminal
+with a synthetic key: hidden entry, skip dominance, blank revisit and redacted
+status. No actual account, credential, paid API, browser or model is used. These
+controls do not establish live provider acceptance or whole research parity.
+
 ## Give the first-report agent an exact writing template - 2026-10-26
 
 Parent commit: `ca167a6bcdfb98444dc7c87edc17a31163cb49a8`.
