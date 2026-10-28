@@ -979,6 +979,22 @@ selected packages remained uninstalled. Full installation/profile admission,
 generated capture and useful recall remain separate acceptance requirements.
 An empty queue does not establish generation or recall quality.
 
+Stopping the observer reports metadata settlement separately from port readiness.
+`restart_ready` requires both a settled native registry and the same strict port
+bind used by startup; `port_ready` reports that bind result. A stopped worker can
+leave TCP TIME_WAIT and remain temporarily unavailable for restart. Startup
+continues to refuse that port. Only an exact known exited PIDFD lifetime can
+qualify matching leftover metadata for retained retirement. Unknown, changed,
+live or reused process metadata remains held; startup does not prune it.
+
+A fresh component regression completed two real Bun stop/restart cycles. Each
+stop correctly reported settled metadata but unavailable port readiness during
+TIME_WAIT. One bounded test wait reached strict readiness after 62.7 seconds
+before the second start. Bun cleaned its own metadata in these cycles; separate
+owned CPU/PIDFD/TCP controls prove exact leftover retirement and active-listener
+refusal. The earlier failed second-start case remains retained. This does not
+qualify capture, generated recall, a fresh full install or active-session adoption.
+
 The existing private preservation fork is not stock13.29.
 Never migrate an existing store during fresh-home setup. Such a migration needs
 complete SQL/vector/project-identity parity, shadow-generation testing and native

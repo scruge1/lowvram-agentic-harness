@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager, nullcontext
 import hmac
+import hashlib
 import http.client
 import json
 import os
@@ -182,7 +183,8 @@ def worker_proof(home, root, config, bun, worker, observed, *, require_lease=Fal
         lease = model_service_handoff._home_lease({"home": str(home)}, pid)
         if lease.get("lease_scope") != "home_shared":
             raise HomeError("Capture requires the foreground worker's actual home READ lease; stop and restart it explicitly.")
-    return {"pid": pid, "process": process, "port": config["claude_memory_port"], "listener_required": require_listener}
+    return {"pid": pid, "process": process, "port": config["claude_memory_port"], "listener_required": require_listener,
+            "root": str(root), "home": str(home), "worker_sha256": hashlib.sha256(worker.read_bytes()).hexdigest()}
 
 
 def recheck(proof):
@@ -278,22 +280,173 @@ def foreground_start(home, root, config, bun, worker, env):
                 os.close(descriptor)
 
 
+def _native_metadata(path):
+    """Read bounded owned native process metadata, never settings or requests."""
+    info = path.lstat()
+    if (path.resolve() != path or not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+            or info.st_nlink != 1 or info.st_size > 65536):
+        raise HomeError("Native observer metadata ownership differs.")
+    raw = path.read_bytes()
+    return raw, (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
+def _restart_readiness(root, selected_port):
+    result = {"restart_ready": False, "registry_review": "required"}
+    try:
+        claude_memory_patch.require_empty_registry(root)
+        if os.path.lexists(root / "worker.pid"):
+            result["registry_review"] = "pid_metadata_remains"
+        else:
+            result["registry_review"] = "settled"
+    except (OSError, ValueError):
+        pass
+    # Match foreground_start's strict bind, not the metadata retirement guard.
+    with socket.socket() as port:
+        try:
+            port.bind(("127.0.0.1", selected_port))
+            result["port_ready"] = True
+        except OSError as error:
+            result.update(port_ready=False, port_errno=error.errno)
+    result["restart_ready"] = (
+        result["registry_review"] == "settled" and result["port_ready"]
+    )
+    return result
+
+
+def _capture_stop_metadata(proof):
+    """Only this already verified live worker can authorize later retirement."""
+    root = Path(proof["root"])
+    registry = _native_metadata(root / "supervisor.json")
+    identity = _native_metadata(root / "worker.pid")
+    value, pid = json.loads(registry[0]), json.loads(identity[0])
+    entries = value.get("processes") if isinstance(value, dict) else None
+    if (not isinstance(value, dict) or set(value) != {"processes"} or not isinstance(entries, dict) or set(entries) != {"worker"}
+            or not isinstance(entries["worker"], dict)
+            or set(entries["worker"]) != {"pid", "type", "startedAt"}
+            or type(entries["worker"]["pid"]) is not int
+            or entries["worker"]["pid"] != proof["pid"] or entries["worker"]["type"] != "worker"
+            or not isinstance(entries["worker"]["startedAt"], str)
+            or not isinstance(pid, dict) or set(pid) != {"pid", "port", "startToken", "startedAt"}
+            or type(pid["pid"]) is not int or type(pid["port"]) is not int
+            or pid["pid"] != proof["pid"] or pid["port"] != proof["port"]
+            or pid["startToken"] != proof["process"]["start_ticks"] or not isinstance(pid["startedAt"], str)
+            or entries["worker"]["startedAt"] != pid["startedAt"]):
+        raise HomeError("Native observer metadata does not match the owned worker.")
+    return {"supervisor.json": registry, "worker.pid": identity}
+
+
+def _owned_lifetime_exited(proof, descriptor):
+    """A ready known PIDFD plus absent or same-lifetime zombie permits retirement.
+
+    A separate stop helper cannot reap the original parent's child. Never treat
+    an unrelated/live/reused PID or a historical PID without this FD as exited.
+    """
+    try:
+        if descriptor is None or not select.select([descriptor], [], [], 0)[0]:
+            return False
+        directory = Path("/proc") / str(proof["pid"])
+        try:
+            info = directory.stat()
+            fields = (directory / "stat").read_text().rsplit(")", 1)[1].split()
+        except (FileNotFoundError, ProcessLookupError):
+            return True
+        return (fields[0] in {"Z", "X"} and fields[19] == proof["process"]["start_ticks"]
+                and info.st_uid == proof["process"]["uid"])
+    except (OSError, ValueError, IndexError, KeyError):
+        return False
+
+
+def _settle_stop_metadata(proof, captured, *, exited_descriptor):
+    """Retain exact known-owned leftovers after PIDFD exit; never prune at start.
+
+    The normal invoke caller holds operation(root) throughout proof/stop/settle.
+    Unknown/drift metadata stays untouched. This is independent of capture drain.
+    """
+    root = Path(proof["root"])
+    result = _restart_readiness(root, proof["port"])
+    if captured is None or result["registry_review"] != "settled":
+        if captured is None:
+            return result
+        candidates = []
+        try:
+            for name, snapshot in captured.items():
+                path = root / name
+                if not os.path.lexists(path):
+                    continue  # Native graceful cleanup removed it.
+                current = _native_metadata(path)
+                if name == "supervisor.json" and json.loads(current[0]) == {"processes": {}}:
+                    continue  # Preserve the native empty registry.
+                if current != snapshot:
+                    raise HomeError("Native metadata changed after owned stop.")
+                candidates.append(name)
+            if not candidates:
+                return _restart_readiness(root, proof["port"])
+            if not _owned_lifetime_exited(proof, exited_descriptor):
+                raise HomeError("Owned lifetime exit is not confirmed by its PIDFD.")
+            with socket.socket() as port:
+                # Retirement may pass TIME_WAIT; start/readiness still use strict bind.
+                port.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                port.bind(("127.0.0.1", proof["port"]))
+                directory = root / ("stopped-worker-" + str(proof["pid"]) + "-" + proof["process"]["start_ticks"])
+                directory.mkdir(mode=0o700)  # A prior/uncertain operation is never overwritten.
+                provenance = {"schema": "agent-home-observer-stop/v1", "home": proof["home"],
+                              "pid": proof["pid"], "start_ticks": proof["process"]["start_ticks"],
+                              "port": proof["port"], "worker_sha256": proof["worker_sha256"],
+                              "lifetime": "pidfd_exited", "preimages": {
+                                  name: hashlib.sha256(pair[0]).hexdigest() for name, pair in captured.items()}}
+                descriptor = os.open(directory / "stop.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                    json.dump(provenance, stream, sort_keys=True)
+                    stream.write("\n")
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                for name in candidates:
+                    if (_native_metadata(root / name) != captured[name]
+                            or not _owned_lifetime_exited(proof, exited_descriptor)):
+                        raise HomeError("Native metadata or process changed during settlement.")
+                    os.rename(root / name, directory / (name + ".original"))
+                    claude_memory_patch._fsync_directory(directory)
+                    claude_memory_patch._fsync_directory(root)
+            result = {**_restart_readiness(root, proof["port"]), "retained_stop": str(directory)}
+        except (OSError, ValueError):
+            result = {**_restart_readiness(root, proof["port"]),
+                      "restart_ready": False, "registry_review": "required"}
+            if "directory" in locals():
+                result["retained_stop"] = str(directory)
+    return result
+
+
 def stop_worker(proof):
     """A stale model nonce cannot prevent stopping this exact owned process."""
     native = model_service._pidfd()
     descriptor = native.pidfd_open(proof["pid"], 0)
+    captured = None
     try:
         recheck(proof)
+        try:
+            captured = _capture_stop_metadata(proof)
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # Unknown metadata cannot prevent exact owned lifetime stop.
         native.pidfd_send_signal(descriptor, signal.SIGTERM)
         stopped = bool(select.select([descriptor], [], [], 15)[0])
+        child = CHILDREN.get(proof["pid"])
+        if stopped and child is not None:
+            child.wait(timeout=1)
+            CHILDREN.pop(proof["pid"], None)
+        result = {"status": "stopped" if stopped else "stop_unconfirmed"}
+        if stopped:
+            result.update(_settle_stop_metadata(proof, captured, exited_descriptor=descriptor))
+            result["owned_stop"] = {"pid": proof["pid"], "start_ticks": proof["process"]["start_ticks"],
+                                    "port": proof["port"], "home": proof["home"],
+                                    "worker_sha256": proof["worker_sha256"],
+                                    "preimages": {name: hashlib.sha256(pair[0]).hexdigest()
+                                                  for name, pair in (captured or {}).items()}}
+        else:
+            result.update(restart_ready=False, registry_review="lifetime_unconfirmed",
+                          pending_capture="not_discarded; inspect native queue before explicit recovery")
+        return result
     finally:
         os.close(descriptor)
-    child = CHILDREN.get(proof["pid"])
-    if stopped and child is not None:
-        child.wait(timeout=1)
-        CHILDREN.pop(proof["pid"], None)
-    return {"status": "stopped" if stopped else "stop_unconfirmed",
-            **({} if stopped else {"pending_capture": "not_discarded; inspect native queue before explicit recovery"})}
 
 
 def drain(home, root, config, worker, proof):
@@ -371,7 +524,7 @@ def dispatch(home, root, config, bun, worker, env, expected_key, action, payload
         if alive:
             raise HomeError("Observer process remains alive but unhealthy; no stopped state or automatic respawn was inferred.")
         if action == "stop":
-            return {"status": "stopped", "effect": "none"}
+            return {"status": "stopped", "effect": "none", **_restart_readiness(root, config["claude_memory_port"])}
         return {"status": "held", "reason": "observer_stopped", "capture_completion": "unknown"}
     proof = worker_proof(home, root, config, bun, worker, observed, require_lease=action in {"start", "hook"})
     if action == "start":
