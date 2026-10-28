@@ -223,7 +223,8 @@ async function exercise(source){
  .catch(()=>process.exit(1));"""
         result = subprocess.run([shutil.which("node"), "-e", script],
                                 input=json.dumps({"old": self.original[start:end].decode(), "patched": self.policy["replacement"]}),
-                                text=True, capture_output=True, timeout=5, check=True)
+                                # Include Node startup and pipe I/O on shared CI runners.
+                                text=True, capture_output=True, timeout=30, check=True)
         observed = json.loads(result.stdout)
         self.assertEqual((observed["old"]["reads"], observed["old"]["killed"]), (1, [99123]))
         self.assertEqual((observed["patched"]["reads"], observed["patched"]["killed"]), (0, []))
