@@ -244,6 +244,26 @@ export default function (pi: ExtensionAPI) {
   pi.on('session_tree', restoreSelection);
 
   const contextDelivery = registerProjectContext(pi, { project: () => activeProject });
+  pi.on('before_agent_start', (event: any) => {
+    // Dynamic model context is navigation evidence, never an execution grant.
+    // Pi updates this named section only when the selected project/task changes.
+    const sections = event?.systemPromptOptions?.sections;
+    if (!sections || typeof sections !== 'object') return;
+    if (!activeProject) {
+      delete sections.pi_kanban_selection;
+      return;
+    }
+    sections.pi_kanban_selection =
+      'Kanban selection persists across turns. Reuse the admitted project and current card; ' +
+      'select a new card with kanban_select and never treat selection as permission or completion. ' +
+      'Inspect current project sources and independent verifier receipts before changing files. ' +
+      'Current navigation: ' + JSON.stringify({
+        project_id: activeProject.projectId,
+        board_id: activeProject.boardId,
+        card_id: activeTask?.cardId ?? null,
+        admission_failed: boardAdmissionFailed,
+      });
+  });
   let runningChild: string | undefined;
   const intake = registerRequestIntake(pi, {
     child: () => runningChild,

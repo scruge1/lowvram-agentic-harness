@@ -18,8 +18,13 @@ must reach a later model-input `context` hook. Same-batch reads, partial results
 path-only claims and changed sources do not establish delivery. Native-injected
 instructions count only when both their path and exact current body occur in
 the system prompt. Reload, branch navigation and compaction clear delivery
-evidence. Project roots and instruction subtrees remain separate. Declared
-execution directories and output subtrees must also have their context read.
+evidence. Stable policy text is supplied through Pi 1.4's named
+`systemPromptOptions.sections.pi_project_context_policy` instead of a full
+prompt rewrite; a legacy prompt-only fallback remains for older fixtures.
+Leaving an admitted project deletes its section. Re-entry and compaction
+must not reuse stale source-delivery evidence. Project roots and instruction
+subtrees remain separate. Declared execution directories and output subtrees
+must also have their context read.
 
 ## Native API binding
 
