@@ -8,7 +8,6 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import mock
 import json
-import os
 import unittest
 
 from harness import model_inventory as inventory
