@@ -10,6 +10,27 @@ candidates**, and **proposals**. Nothing described as a candidate is silently
 installed by the public bootstrap. There is no claim that all private
 experiments, their test suites, or their performance transfer to another host.
 
+## Public source adoption postscript — later on 8 November 2026
+
+This was initially a **26 October baseline** summary and proposal; the
+following changes have now been committed, independently reviewed against
+source and merged after full Linux/Windows offline CI:
+
+- Cross-assistant handoff guide/JSON packet: PR #77, `2ecf689`.
+- Source-pinned, bounded Pi system-tool projection: PR #78, `75c4e6d`.
+- Native Pi 1.4 stable prompt sections and append-only synthetic large
+  compaction lifecycle: PR #80, `237cc68`.
+- Opt-in bounded GGUF and physical multi-GPU discovery: PR #81, `f891157`.
+
+These are **public source releases**, not a claim of parity with the
+installed private Pi harness or a new release of the desktop Agent Home.
+Actual independent model-generated long-compaction quality, host-scoped
+unattended task acceptance, dynamic GPU lease-safe loads and complete
+cross-provider chat archives remain unqualified. The initial historical
+table below is preserved as evidence of the gaps identified before these
+merges. The latest source-level parity is in
+[PI-HARNESS-PARITY-2026-11.md](PI-HARNESS-PARITY-2026-11.md).
+
 ## Primary objective
 
 Deliver a small-footprint, **model-independent agentic workflow** capable of
