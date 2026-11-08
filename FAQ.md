@@ -1,5 +1,14 @@
 # FAQ / Install Troubleshooting
 
+> [!IMPORTANT]
+> These are **legacy manual llama.cpp / standalone-harness diagnostics**,
+> not the current managed Agent Home installation and acceptance checklist.
+> Use [Getting started](GETTING-STARTED.md) for the managed Home and
+> [Diagnostics](DIAGNOSTICS.md) for source-bound task investigations.
+> An inference smoke test does not establish accepted agent task quality.
+> Verify every model filename, command flag and resource assumption against
+> the installed version before attempting the steps below.
+
 Written so that **another AI coding agent** (Claude Code, Codex, etc.) can install this
 for a non-technical user and fix problems without guessing. Each entry is
 **Q: symptom → A: exact diagnostic command → exact fix command**. Run the diagnostic
@@ -8,8 +17,10 @@ versions — read them from the diagnostic output or the model repo's Files tab.
 
 > Agent operating note: never fabricate a success. If a step's verification command
 > does not print the expected output, report the actual output — do not proceed as if
-> it passed. The one command that must pass before declaring the install done is
-> `python example_run.py --config config.yaml` against a live server.
+> it passed. For this standalone/manual example, `python example_run.py`
+> with the reviewed configuration is a **smoke test only**. The current
+> managed Home requires its separate installation and task-acceptance checks;
+> no single successful example call declares the full product qualified.
 
 ---
 
