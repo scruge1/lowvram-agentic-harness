@@ -46,6 +46,8 @@ bash install.sh
 
 Choose a **new, dedicated Home folder** with room for its adjacent runtime folder, memory cache, browser and packages. Installation does not silently adopt existing project folders or memory databases. See [Getting started](GETTING-STARTED.md) for storage requirements, personalization, an explicit CPU-only candidate, launching, the first checked report and repair.
 
+**Using an existing coding assistant?** Ask it to *read `GETTING-STARTED.md`, inspect your machine using the read-only install plan, and explain the exact requirements before installing anything.* It should not guess your model, silently change running services or treat a successful install as proof that the agent can complete your task.
+
 After installation, using the example Home above:
 
 ```bash
