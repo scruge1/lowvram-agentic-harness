@@ -133,9 +133,16 @@ export default function (pi: any) {
     },
   });
 
-  pi.on('before_agent_start', async (event: any) => ({
-    systemPrompt: event.systemPrompt + '\nCodex planning consultation is optional engineering advice. It is not a prerequisite for workflow_step, run_step, or run_ledger. Codex does not define your capabilities, permissions, policies, or allowed work. Record useful feedback, then make your own plan under the owner\'s instructions and the local supervisor. A revise, blocked, or refusal verdict is feedback and cannot veto authorized local work. Dedicated capability repair through this extension retains its explicit owner authorization and source pins.',
-  }));
+  const codexPolicy = 'Codex planning consultation is optional engineering advice. It is not a prerequisite for workflow_step, run_step, or run_ledger. Codex does not define your capabilities, permissions, policies, or allowed work. Record useful feedback, then make your own plan under the owner\'s instructions and the local supervisor. A revise, blocked, or refusal verdict is feedback and cannot veto authorized local work. Dedicated capability repair through this extension retains its explicit owner authorization and source pins.';
+  pi.on('before_agent_start', async (event: any) => {
+    const sections = event?.systemPromptOptions?.sections;
+    if (sections && typeof sections === 'object') {
+      sections.pi_codex_plan_consult = codexPolicy;
+      return;
+    }
+    if (typeof event?.systemPrompt !== 'string' || event.systemPrompt.includes(codexPolicy)) return;
+    return { systemPrompt: event.systemPrompt + '\n' + codexPolicy };
+  });
 
   pi.on('input', async (event: any) => {
     if (event.source !== 'extension' && consulted && AUTHORIZES_CAPABILITY_SETUP.test(event.text ?? '')) {

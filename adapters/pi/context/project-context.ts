@@ -215,7 +215,17 @@ export function registerProjectContext(pi: any, bindings: { project(): Project |
 
   pi.on('before_agent_start', (event: any) => {
     const project = bindings.project();
-    if (!project || event.systemPrompt.includes(POLICY)) return;
+    const sections = event?.systemPromptOptions?.sections;
+    if (sections && typeof sections === 'object') {
+      // A stable named contribution changes only when the admitted project
+      // changes. Pi owns prompt diffing and replay; a model cannot confer authority.
+      if (project) sections.pi_project_context_policy = POLICY;
+      else delete sections.pi_project_context_policy;
+      return;
+    }
+    // Older harness fixtures may not expose structured prompt sections.
+    // Preserve the established fail-closed policy rather than dropping it.
+    if (!project || typeof event?.systemPrompt !== 'string' || event.systemPrompt.includes(POLICY)) return;
     return { systemPrompt: event.systemPrompt + '\n' + POLICY };
   });
 

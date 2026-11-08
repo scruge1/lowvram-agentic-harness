@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Stable Pi 1.4 prompt sections and context redelivery — 2026-11-08
+
+Parent: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.
+
+Convert three existing full-prompt policy rewriters (admitted project,
+request intake, optional Codex engineering adviser) into separately named
+Pi `systemPromptOptions.sections`. Add a fourth lightweight named section
+for already-admitted project/card navigation; an absent project deletes
+that section instead of retaining stale selection. Unchanged turns keep
+stable section bytes and do not force a replacement system prompt.
+Older prompt-only fixtures keep an idempotent fallback where required.
+
+This refactor does not alter owner/source gates, independently validated
+project-context tool delivery, native `context` intake status, task permission,
+model selection, or the bounded compaction implementation. Synthetic
+conversation, coordinator, and optional consultation checks plus an
+isolated real Pi 1.4 project-context native-loader fixture are required.
+No installed private Pi agent is changed by this public source port.
+
+Exact contracts, commands and remaining full-compaction acceptance gap are
+in `PI-STRUCTURED-CONTEXT-2026-11.md`. Passing hook/redelivery checks is
+not evidence that a long model session survived native summarisation, nor
+permission to promote a local chief or remove host effect restrictions.
+
 ## Bounded Pi system-tool model replies and November parity — 2026-11-08
 
 Parent: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.

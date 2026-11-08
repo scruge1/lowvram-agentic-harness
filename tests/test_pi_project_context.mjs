@@ -276,11 +276,29 @@ fs.writeFileSync(selectionFile, JSON.stringify(identityBefore));
 assert.equal((await readGate(scope('source.txt'))).length, 0);
 checks.push('Project switches keep source delivery scoped to exact project roots and identities');
 
+const structured = { systemPrompt: 'Fixture base.', systemPromptOptions: { sections: {} } };
+const firstStructured = await emit('before_agent_start', structured);
+assert(firstStructured.every(value => value === undefined), 'Native sections should not return a full prompt');
+assert.match(structured.systemPromptOptions.sections.pi_project_context_policy, /Project context: use project_context/);
+const currentSections = JSON.stringify(structured.systemPromptOptions.sections);
+const secondStructured = await emit('before_agent_start', structured);
+assert(secondStructured.every(value => value === undefined));
+assert.equal(JSON.stringify(structured.systemPromptOptions.sections), currentSections,
+  'Identical project selection must not change a rendered section');
+fs.writeFileSync(selectionFile, 'null');
+await emit('before_agent_start', structured);
+assert.equal(structured.systemPromptOptions.sections.pi_project_context_policy, undefined,
+  'Leaving the project must remove the old instruction section');
+fs.writeFileSync(selectionFile, JSON.stringify(identityBefore));
+await emit('before_agent_start', structured);
+assert.equal(JSON.stringify(structured.systemPromptOptions.sections), currentSections,
+  'Re-admitting the original project restores the stable section');
+checks.push('Named project policy is stable, removes on project exit, and returns without forcing the entire prompt');
 const firstHint = (await emit('before_agent_start', { systemPrompt: 'Fixture base.' })).find(r => r?.systemPrompt?.includes('Project context: use project_context'));
 assert(firstHint);
 const repeatedHints = await emit('before_agent_start', { systemPrompt: firstHint.systemPrompt });
 assert(!repeatedHints.some(r => (r?.systemPrompt?.split('Project context: use project_context').length ?? 0) > 2));
-checks.push('Repeated startup processing does not duplicate the context policy');
+checks.push('Legacy prompt-only processing remains nonduplicating');
 await emit('session_shutdown');
 const wrongPackage = path.join(base, 'wrong-pi-package');
 fs.mkdirSync(path.join(wrongPackage, 'dist/core/tools'), { recursive: true });
