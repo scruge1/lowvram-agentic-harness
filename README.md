@@ -59,6 +59,11 @@ the guide links an explicit CPU candidate and its resource and quality limits.
 - Supervised actions with separate output checks and visible failures. Time
   budgets belong to the task; managed sessions have no universal ten-minute cap.
 
+For hardware exploration, the opt-in [read-only dynamic model inventory](DYNAMIC-MODEL-INVENTORY.md)
+can inspect GGUF assets and physical GPUs without granting resource ownership or
+changing any running model. It does not yet replace the private rig's dynamic
+model and GPU selector.
+
 The default profile includes Pi, Hermes, MemPalace, Microsoft Agent Framework
 and research. The Claude-mem observer and experimental Harness2/DeepSeek packages
 are optional. The full profile is a separate route with different readiness
