@@ -35,6 +35,15 @@ future maintainers identify changes that need individual upstream review
 without relying on AI chat memory. Use a private mapping and keep private
 source hashes out of public issue reports.
 
+## Continue an approved Pi task after answering a question
+
+The [answer/resume contract](PI-ANSWER-RESUME.md) preserves the exact
+previously approved task and its original source while Pi answers a question.
+An optional pure-question classification can record an answer-and-return
+marker; **routing alone does not execute work**. The normal source, pause,
+dependency, child and independent acceptance gates still apply after the
+answer. Mixed or unclassified questions settle without an automatic resume.
+
 ## Bounded request-intake replies
 
 The [intake model-view contract](PI-INTAKE-MODEL-VIEW.md) preserves the
