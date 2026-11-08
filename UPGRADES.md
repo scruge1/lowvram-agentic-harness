@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Read-only Dream review through managed Agent Home — 2026-11-08
+
+Parent: `e549d81456970446924478e4d77428c396f604d8`.
+
+Expose the already-released deterministic `harness.memory_dream` review
+through the existing Home CLI as `memory dream-preview --project ...`.
+Reuse exact Home identity, source-bound project validation and the existing
+Home consumer lease; no new memory storage, model call, writer, side effect,
+background scheduler or promotion authority is introduced.
+
+Reject missing projects and additional query arguments before invoking
+any Home consumer. Reject `--project` on unrelated memory observer actions,
+preserving the original Claude-mem start/stop/status/search semantics.
+Exact-source, privacy, and bad-project refusal are tested through the
+actual command dispatcher, including a fixture using the real Home consumer.
+See `MEMORY-DREAM.md` and `tests/test_home_dream_preview.py`.
+Existing private installed Homes are not changed by this source update.
+
 ## Source-bound bidirectional memory Dream review — 2026-11-08
 
 Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.

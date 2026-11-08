@@ -26,6 +26,22 @@ python -m harness.memory_dream \
   --project /absolute/existing-admitted-project < private-evidence.json
 ```
 
+After installing this public version, the same deterministic preview is
+available via the **existing Agent Home CLI**:
+
+```sh
+/absolute/managed-home/agent-home.py memory dream-preview \
+  --project /absolute/existing-admitted-project < private-evidence.json
+```
+
+This uses the existing managed Home consumer lease and the same
+`memory_dream.main` source/provenance checks. It neither starts the
+Claude-mem observer nor creates a second memory store. The `--project`
+argument is accepted only for `memory dream-preview`; passing it to
+`memory status/search/start/stop` refuses before touching those operations.
+The Home entry path is illustrative; existing installed Home files are never
+silently replaced when this source is published.
+
 The input is a bounded JSON envelope with schema
 `agent-home-dream-evidence/v1`, an exact existing `project_id`, and
 1–64 explicitly supplied evidence records. Every record needs a source ID,
