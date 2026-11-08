@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Read-only installed/public Pi source parity audit — 2026-11-08
+
+Public parent: `17bb0fe7d36629535f132e592d2ee98123b81b82`.
+
+Add an explicitly mapped, path-safe, hash-only source parity CLI to compare
+an installed local Pi extension tree with this Git repository. Reports
+byte-identical, changed and missing files without disclosing source
+bodies or absolute paths. Strict mode rejects any drift for automation,
+but neither hash differences nor matching bytes grant feature promotion
+or safe source replacement.
+
+The audit reads bounded ordinary source files only, refuses traversal,
+symlinks, same-root false parity, duplicate paths and changing files.
+No model calls, changes to installed files, session history, Git commits
+or GPU/model operations are made by the checker. The example mapping
+uses generic paths; actual local version names are private inputs.
+See PI-SOURCE-PARITY.md and the synthetic unit controls.
+
 ## Bounded Pi runtime context telemetry - 2026-11-08
 
 Parent: `237cc68538ad5de6998ef4a23ed085a409f33299`.
