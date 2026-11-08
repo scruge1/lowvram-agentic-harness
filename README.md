@@ -1,105 +1,103 @@
 # Low-VRAM Agentic Harness
 
-A local AI assistant for research, files and ongoing projects. **Early development.**
+**Local-first agents for projects that outlive a chat session.**
 
-This repository installs a Pi assistant in a folder you choose. The default setup
-includes web research, project Git and task boards, memory tools, and checks for
-supervised file work. It uses your configured local model.
+Your model can change. Your project's decisions, evidence and verification rules should not.
 
-The complete assistant is still being qualified. Installation and individual
-tool checks have passed in recorded environments; the local CPU candidate has
-not yet produced an accepted first report. Expect setup and model limitations,
-and review important results.
+[![Offline release checks](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml/badge.svg)](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-555555.svg)](LICENSE)
 
-## Keep a project portable across AI coding assistants
+A development-stage, self-hostable toolkit for running **supervised AI agents with locally served models**. The managed assistant uses [Pi](https://github.com/earendil-works/pi); an independent, harness-neutral project controller preserves the task contract, source evidence and verification receipts. Low-VRAM inference guidance and hardware inspection are included, but no model weights or universal performance claims are bundled.
 
-Switching from Gemini to Codex, Claude, Pi or a local model should not erase
-architectural decisions or validated work. The [cross-assistant continuity
-guide](CROSS-ASSISTANT-CONTINUITY.md) explains how to recover Gemini CLI and
-IDE histories, distinguish Google Takeout from local sessions, create a
-reviewed handoff packet, and verify the first task on the incoming assistant.
-The [candidate handoff template](examples/continuity/handoff.template.json)
-records sources, decisions and pending work **without pretending exported chats
-are authoritative project state**. No automatic session importer is shipped.
+**[Get started](GETTING-STARTED.md) · [How it works](#how-it-works) · [Current limits](#what-is-and-isnt-ready) · [Developer toolkit](TOOLKIT.md)**
 
-The [8 November 2026 engineering status](NOV-2026-ENGINEERING-STATUS.md)
-records recent private work on Pi context lifecycle, repeated tool output,
-GPU resource planning and long-running local agents. Those candidates are
-not part of this public release until independently qualified.
+> **Development status:** The portable controller has passing offline acceptance tests. The complete managed assistant and its first useful local-model report remain under qualification. This is not a production-ready autonomous agent or a finished desktop app.
 
-## Review long-project memory without trusting the newest summary
+## Why this exists
 
-The opt-in [bidirectional memory Dream review](MEMORY-DREAM.md)
-compares source-linked historical claims in both chronological directions,
-flags conflicting or stale evidence, and retains separate ownership for
-Claude-mem, Pi sessions, MemPalace and ICM. It only produces **unverified
-candidates**; no local model can promote its own memory or grant task
-permission. Automatic ingestion and scheduled promotion are not released.
+Many agent workflows lose the reasoning behind a project when the model changes, context compacts, or a session ends. A successful tool call can also be mistaken for a completed task.
 
-## Inspect existing Pi sessions safely
+This project separates **remembering, doing and accepting work**. Sessions and memory are retrieval evidence; the task and its current source files define what is allowed; an independent host-side verifier checks actual outputs. A model cannot approve its own completion.
 
-For an already-admitted Linux project, the opt-in
-[native Pi session catalogue](NATIVE-SESSION-CATALOG.md) can list native
-JSONL session headers without reading conversation bodies, creating
-another writer or acquiring tool execution authority. It is a local
-continuity aid, not a ChatGPT/Gemini/Claude account-history importer.
+| Problem | Included public capability |
+| --- | --- |
+| A long project outlives a model session | Managed Pi sessions, project identity, task board, explicit resume and [cross-assistant handoff](CROSS-ASSISTANT-CONTINUITY.md) |
+| Tool output consumes too much context | Stable Pi prompt sections, bounded source-hash-paginated tool replies and native compaction lifecycle checks |
+| Old memories contradict newer ones | Opt-in [bidirectional Dream review](MEMORY-DREAM.md) and a [validated retrieval interface](adapters/pi/memory/README.md); review suggestions **do not** overwrite accepted memory |
+| An agent says "done" before work is verified | [Independent SSOT controller](BLESSED-SSOT.md), source-bound receipts and [supervised task enforcement](ENFORCEMENT.md) |
+| A large model may not fit available VRAM | [Hardware probing and measured CPU/MoE offload](TOOLKIT.md) plus [read-only GGUF/GPU inventory](DYNAMIC-MODEL-INVENTORY.md) |
 
-## Start here
+The individual components can be used independently. You do not need the experimental full profile to use the default assistant or the offline verification toolkit.
 
-The complete installer currently supports **Linux x86_64 with glibc**. Windows
-and macOS have a smaller direct-install route; they do not have the same tested
-bootstrap or complete lifecycle support.
+## Quick start
+
+The **complete bootstrap is for Linux x86_64 with glibc**. It attaches to an *existing* local OpenAI-compatible model endpoint; supply the exact server address and model ID. Model downloads are separate from the default installation.
 
 ```bash
 git clone https://github.com/scruge1/lowvram-agentic-harness.git
 cd lowvram-agentic-harness
+
+# Inspect the plan before creating a home.
+bash install.sh --home /data/my-agent --plan
+
+# Then run the interactive install when ready.
 bash install.sh
 ```
 
-Setup asks where to create your assistant's home, your name, and the address and
-exact name of an existing local model. It installs its own Python and Node
-runtimes in a permanent folder beside the home. Leave both folders in place.
-Model downloads are separate from this default route.
+Choose a **new, dedicated Home folder** with room for its adjacent runtime folder, memory cache, browser and packages. Installation does not silently adopt existing project folders or memory databases. See [Getting started](GETTING-STARTED.md) for storage requirements, personalization, an explicit CPU-only candidate, launching, the first checked report and repair.
 
-Follow [Getting started](GETTING-STARTED.md) for requirements, personalization,
-launch, the first report and reopening work. If you do not have a model server,
-the guide links an explicit CPU candidate and its resource and quality limits.
+After installation, using the example Home above:
 
-## What is included
+```bash
+/data/my-agent/bin/harness-agent --status
+/data/my-agent/bin/harness-agent
+```
 
-- Web search without a paid key, page retrieval, a managed browser and saved
-  research sources. Optional providers have [signup and key guidance](RESEARCH-SETUP.md).
-- Project files under Git, a project task board, retained work and explicit
-  continuation of a selected project.
-- Memory tools and a prompt for your current assistant to fill supported personal
-  context. Saved memories still need source and accuracy checks.
-- Supervised actions with separate output checks and visible failures. Time
-  budgets belong to the task; managed sessions have no universal ten-minute cap.
+**Windows and macOS:** The [smaller direct-install route](AGENT-HOME.md#run-from-a-repository-checkout) has different capabilities and lifecycle qualifications. Do not assume parity with the Linux bootstrap.
 
-For hardware exploration, the opt-in [read-only dynamic model inventory](DYNAMIC-MODEL-INVENTORY.md)
-can inspect GGUF assets and physical GPUs without granting resource ownership or
-changing any running model. It does not yet replace the private rig's dynamic
-model and GPU selector.
+### Try the verification contract without a model
 
-The default profile includes Pi, Hermes, MemPalace, Microsoft Agent Framework
-and research. The Claude-mem observer and experimental Harness2/DeepSeek packages
-are optional. The full profile is a separate route with different readiness
-requirements; it is not needed to try the default assistant.
+The repository also contains an offline, harness-neutral source/receipt example. With Python and the repository's test dependencies configured, run:
 
-A browser workspace, complete Library and recorded everyday walkthrough remain
-release work. The current entry is the managed command-line assistant.
+```bash
+python scripts/verify_ssot_release.py
+```
 
-## Help and technical detail
+That checks the portable project's controlled execution and independent acceptance path, without requiring a GPU or paid model API. It **does not** prove a useful end-to-end response from whichever model you later configure. GitHub's [offline release workflow](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml) runs the release gate and lint on Ubuntu/Python 3.11 and Windows/Python 3.13.
 
-- [Getting started](GETTING-STARTED.md): install, personalize, launch and reopen.
-- [Agent-home guide](AGENT-HOME.md): profiles, repair, updates, lifecycle and exact
-  qualification limits.
-- [Research setup](RESEARCH-SETUP.md): keyless search, optional free keys and provider limits.
-- [Diagnostics](DIAGNOSTICS.md): investigate slow or unreliable work from evidence.
-- [Toolkit and developer reference](TOOLKIT.md): low-VRAM inference, Python modules
-  and the independent project controller.
-- [Upgrade notes](UPGRADES.md) and [release checklist](RELEASE-CHECKLIST.md): changes
-  and remaining acceptance work.
+## How it works
 
-Core code is [MIT licensed](LICENSE). Installed third-party packages retain their
-own licences; see the [runtime notices](harness/BOOTSTRAP-NOTICES.md).
+```mermaid
+flowchart TD
+    U[Owner and project requirements] --> P[Managed Pi assistant]
+    M[Original sessions and memory evidence] -. "retrieval only" .-> P
+    P --> T[Task contract and allowed frontier]
+    T --> W[Local model or command-line worker]
+    W --> V[Independent host verifier]
+    V --> R[Source-bound result and test receipts]
+    R --> S[Harness-neutral SSOT controller]
+    S -. "verified next stage" .-> P
+```
+
+**Pi runs the conversation and tools; the project-owned controller decides what the evidence establishes.** An independently tested local result is capped at `tested`; it cannot self-promote to externally `blessed`. See the [SSOT trust boundary](BLESSED-SSOT.md), [supervised enforcement](ENFORCEMENT.md) and [Pi adapter documentation](adapters/pi/project-workflow/README.md).
+
+## What is and isn't ready
+
+| Available in public source | Not claimed or not yet qualified |
+| --- | --- |
+| Managed Pi CLI, explicit project selection, bounded context, safe resume and task-board adapters | A finished ChatGPT-style desktop/mobile application |
+| Source-bound memory retrieval and deterministic Dream candidate review | Automatic memory promotion, a fully trained autonomous memory chief or complete ChatGPT/Gemini/Claude history import |
+| Read-only inventory of model files and NVIDIA GPUs; optional measured offload tooling | Automatic GPU leasing, eviction, model swapping or universal low-VRAM fit |
+| Offline SSOT/verifier gates and model-independent task contracts | Unattended project completion across arbitrary hosts or independently accepted first-report quality from the local CPU candidate |
+
+The default agent profile includes Pi, Hermes, MemPalace, Microsoft Agent Framework and research tools; the Claude-mem observer and experimental additional packages are opt-in. Web research may contact external sites when enabled. The local-first model does **not** mean every optional tool is offline.
+
+## Continue, inspect and contribute
+
+**User guidance:** [Getting started](GETTING-STARTED.md) · [Agent Home and lifecycle](AGENT-HOME.md) · [Project continuity](CROSS-ASSISTANT-CONTINUITY.md) · [Diagnostics](DIAGNOSTICS.md)
+
+**Developer reference:** [Toolkit](TOOLKIT.md) · [SSOT and trust boundary](BLESSED-SSOT.md) · [Current release checks](RELEASE-CHECKLIST.md) · [Upgrade history](UPGRADES.md) · [Research setup](RESEARCH-SETUP.md)
+
+Contributions and reproducible failure reports are welcome. See [Contributing](CONTRIBUTING.md) and [Security policy](SECURITY.md). Please do not put private conversations, credentials, rig-specific source maps or model weights into public issues or pull requests.
+
+Core code is [MIT licensed](LICENSE). Installed third-party packages retain their own licenses; see the [runtime notices](harness/BOOTSTRAP-NOTICES.md).
