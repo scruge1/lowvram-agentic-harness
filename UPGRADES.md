@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bounded Pi runtime context telemetry - 2026-11-08
+
+Parent: `237cc68538ad5de6998ef4a23ed085a409f33299`.
+
+Retain the already-public home ownership, resource-status and registry
+capability controls, and port only the private Pi context-profile observation
+mechanism. Report prompt length/hash, tool-schema lengths/hashes, SDK-reported
+context usage and hashed model identity as optional host-side tool details.
+Keep normal model-facing `agent_capabilities` content unchanged.
+
+Default operation does not even compute the optional context profile.
+`PI_CONTEXT_PROFILE_ENABLE=1` enables read-only details; additionally
+`PI_CONTEXT_PROFILE_PERSIST=1` retains the hash-only record in native Pi
+session JSONL. Either option remains independent of tool/owner authority.
+Test unknown values, drift, cyclic schemas and privacy exclusions. This
+does not intercept provider payloads, export ChatGPT chats, prove model
+quality or grant execution authority. See PI-CONTEXT-TELEMETRY.md.
+
 ## Stable Pi 1.4 prompt sections and context redelivery — 2026-11-08
 
 Parent: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.

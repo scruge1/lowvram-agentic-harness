@@ -24,6 +24,18 @@ The included local controller cannot grant the external `blessed` authority.
 See [current qualification](AGENT-HOME.md#current-qualification) before making
 claims about the complete assistant.
 
+## Pi context telemetry (optional)
+
+The [context telemetry contract](PI-CONTEXT-TELEMETRY.md) exposes
+read-only, hashed prompt and active-tool schema sizes in the existing
+`agent_capabilities` result details when explicitly enabled with
+`PI_CONTEXT_PROFILE_ENABLE=1`. It reports unknown values as null and does
+not emit original prompt text or schema bodies. The public default neither
+computes nor persists this additional profile; an operator can enable
+local-only custom entries by additionally setting
+`PI_CONTEXT_PROFILE_PERSIST=1`. Neither mode captures ChatGPT account
+history or the exact serialized inference request.
+
 ## Pi harness parity and bounded system-tool replies
 
 The [November Pi parity audit](PI-HARNESS-PARITY-2026-11.md) separates

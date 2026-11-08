@@ -44,6 +44,87 @@ export function collectCapabilities(pi: Pick<ExtensionAPI, 'getAllTools' | 'getA
   return snapshot;
 }
 
+/** Bounded, privacy-preserving read of the currently visible Pi context metadata.
+ * Raw system prompts, tool descriptions, schema bodies, and model identities
+ * are never returned by this projection. SDK usage values are observations,
+ * not a provider-serialized request or an effective context guarantee.
+ */
+export function collectContextProfile(
+  pi: Pick<ExtensionAPI, 'getAllTools' | 'getActiveTools'>, ctx: any, snapshot: any,
+) {
+  const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+  const finite = (value: unknown, positive = false): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && (positive ? value > 0 : value >= 0) ? value : null;
+  const profile = {
+    schema: 'pi-context-profile/v1',
+    observed_at_ms: Date.now(),
+    snapshot_sha256: hash(JSON.stringify(snapshot)),
+    system_prompt_utf8_bytes: null as number | null,
+    system_prompt_sha256: null as string | null,
+    configured_tool_count: snapshot.configured_tools.length,
+    active_tool_count: snapshot.configured_tools.filter((tool: any) => tool.active).length,
+    active_parameter_schema_utf8_bytes: null as number | null,
+    active_parameter_schema_sha256: null as string | null,
+    active_declaration_metadata_utf8_bytes: null as number | null,
+    active_declaration_metadata_sha256: null as string | null,
+    native_reported_context_tokens: null as number | null,
+    native_reported_context_window: null as number | null,
+    model_identity_sha256: null as string | null,
+    effective_provider_payload_captured: false,
+    authority: 'none',
+  };
+  try {
+    const prompt = ctx?.getSystemPrompt?.();
+    if (typeof prompt === 'string') {
+      profile.system_prompt_utf8_bytes = Buffer.byteLength(prompt, 'utf8');
+      profile.system_prompt_sha256 = hash(prompt);
+    }
+  } catch { /* Unknown is not zero. */ }
+  try {
+    const usage = ctx?.getContextUsage?.();
+    profile.native_reported_context_tokens = finite(usage?.tokens);
+    profile.native_reported_context_window = finite(usage?.contextWindow, true);
+  } catch { /* Context usage may be unavailable. */ }
+  try {
+    const { provider, id } = ctx?.model ?? {};
+    if (typeof provider === 'string' && typeof id === 'string'
+        && provider.length <= 256 && id.length <= 512) {
+      profile.model_identity_sha256 = hash(JSON.stringify({ provider, id }));
+    }
+  } catch { /* Never serialize an entire provider/model object. */ }
+  try {
+    const all = pi.getAllTools();
+    const active = names(pi.getActiveTools());
+    const expectedActive = snapshot.configured_tools.filter((tool: any) => tool.active).map((tool: any) => tool.name).sort();
+    const expectedAll = snapshot.configured_tools.map((tool: any) => tool.name).sort();
+    if (!Array.isArray(all) || all.length > 10000
+        || JSON.stringify(names(all.map(tool => tool?.name))) !== JSON.stringify(expectedAll)
+        || JSON.stringify(active) !== JSON.stringify(expectedActive)) return profile;
+    const selected = all.filter(tool => active.includes(tool.name)).sort((a, b) => a.name.localeCompare(b.name));
+    const schemas: string[] = [];
+    const declarations: string[] = [];
+    let schemaBytes = 0, declarationBytes = 0;
+    for (const tool of selected) {
+      if (!tool.parameters || typeof tool.parameters !== 'object' || Array.isArray(tool.parameters)
+          || typeof tool.description !== 'string') return profile;
+      const schema = JSON.stringify(tool.parameters);
+      const declaration = JSON.stringify({ name: tool.name, description: tool.description, parameters: tool.parameters });
+      schemaBytes += Buffer.byteLength(schema);
+      declarationBytes += Buffer.byteLength(declaration);
+      if (schemaBytes > 8 * 1024 * 1024 || declarationBytes > 8 * 1024 * 1024) return profile;
+      schemas.push(schema);
+      declarations.push(declaration);
+    }
+    const schemaText = '[' + schemas.join(',') + ']';
+    const declarationText = '[' + declarations.join(',') + ']';
+    profile.active_parameter_schema_utf8_bytes = Buffer.byteLength(schemaText);
+    profile.active_parameter_schema_sha256 = hash(schemaText);
+    profile.active_declaration_metadata_utf8_bytes = Buffer.byteLength(declarationText);
+    profile.active_declaration_metadata_sha256 = hash(declarationText);
+  } catch { /* Missing or cyclic metadata cannot break capability discovery. */ }
+  return profile;
+}
+
 export function resourceWaits(branch: any[]) {
   const selected = branch.findLast(entry => entry.type === 'custom' && entry.customType === 'pi-kanban-selection/v1')?.data?.project?.root;
   const state = branch.findLast(entry => entry.type === 'custom' && entry.customType === 'pi-request-work-state/v1')?.data;
@@ -162,7 +243,21 @@ export default function (pi: ExtensionAPI) {
       if (signal?.aborted) return { content: [{ type: 'text', text: 'Capability read cancelled.' }], details: { ok: false, error: 'cancelled' }, isError: true };
       try {
         const snapshot = collectCapabilities(pi, ctx.sessionManager.getSessionId());
-        return { content: [{ type: 'text', text: JSON.stringify(snapshot) }], details: { ok: true, snapshot } };
+        let contextProfile: ReturnType<typeof collectContextProfile> | undefined;
+        // Disabled by default: hashing large tool declarations on every
+        // capability refresh would itself increase CPU/context overhead.
+        if (process.env.PI_CONTEXT_PROFILE_ENABLE === '1') {
+          try {
+            contextProfile = collectContextProfile(pi, ctx, snapshot);
+            // Separate opt-in to retain the hash-only local telemetry.
+            if (process.env.PI_CONTEXT_PROFILE_PERSIST === '1') {
+              try { pi.appendEntry('pi-context-profile/v1', contextProfile); }
+              catch { /* Optional telemetry cannot gate capability discovery. */ }
+            }
+          } catch { /* Preserve original capabilities on telemetry error. */ }
+        }
+        return { content: [{ type: 'text', text: JSON.stringify(snapshot) }],
+          details: { ok: true, snapshot, ...(contextProfile ? { context_profile: contextProfile } : {}) } };
       } catch {
         // Do not expose exceptions from a stale runtime or custom metadata.
         return { content: [{ type: 'text', text: 'Capability read failed: no valid snapshot. Retry after checking runtime state.' }], details: { ok: false, error: 'invalid_or_unavailable_registry' }, isError: true };
