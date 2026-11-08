@@ -11,6 +11,22 @@ tool checks have passed in recorded environments; the local CPU candidate has
 not yet produced an accepted first report. Expect setup and model limitations,
 and review important results.
 
+## Keep a project portable across AI coding assistants
+
+Switching from Gemini to Codex, Claude, Pi or a local model should not erase
+architectural decisions or validated work. The [cross-assistant continuity
+guide](CROSS-ASSISTANT-CONTINUITY.md) explains how to recover Gemini CLI and
+IDE histories, distinguish Google Takeout from local sessions, create a
+reviewed handoff packet, and verify the first task on the incoming assistant.
+The [candidate handoff template](examples/continuity/handoff.template.json)
+records sources, decisions and pending work **without pretending exported chats
+are authoritative project state**. No automatic session importer is shipped.
+
+The [8 November 2026 engineering status](NOV-2026-ENGINEERING-STATUS.md)
+records recent private work on Pi context lifecycle, repeated tool output,
+GPU resource planning and long-running local agents. Those candidates are
+not part of this public release until independently qualified.
+
 ## Start here
 
 The complete installer currently supports **Linux x86_64 with glibc**. Windows
