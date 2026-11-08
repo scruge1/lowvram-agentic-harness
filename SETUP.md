@@ -1,7 +1,15 @@
 # SETUP — step by step
 
+> [!IMPORTANT]
+> **Manual low-VRAM inference guide, not the managed Agent Home installer.**
+> This document is for serving a 30B-A3B MoE candidate with llama.cpp on
+> constrained hardware. For the currently supported assistant installation,
+> start with [Getting started](GETTING-STARTED.md) and inspect the
+> read-only installation plan first. Hardware fit, command flags, model
+> revisions and task quality all need host-specific verification.
+
 Goal: a local OpenAI-compatible server running a 30B-A3B MoE model on your 8 GB GPU,
-with the harness talking to it. Roughly 30–60 minutes, most of it model download.
+with the standalone harness example talking to it. Resource needs and setup duration vary by host and model revision.
 
 Two paths for step 1:
 - **A (easiest): prebuilt llama.cpp binaries** — no compiler needed.
