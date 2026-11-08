@@ -568,6 +568,119 @@ def from_claude_mem_tool_window(
     }
 
 
+def from_validated_mempalace_result(reply, *, project_id, claim_key, result_index=0):
+    """Convert one source-bound *retrieval* hit into an unverified Dream window.
+
+    A reviewed MemPalace registry binds the search to its original source.
+    That is not equivalent to proving the source belongs to the selected ICM
+    project or that the claim is currently correct. Do not carry a source_path
+    or source_quote into the Dream envelope without independent original-file
+    verification. No memory backend is called by this conversion.
+    """
+    require(
+        isinstance(project_id, str) and 1 <= len(project_id) <= 128,
+        "Exact selected project identity required",
+    )
+    require(
+        isinstance(claim_key, str) and KEY.fullmatch(claim_key) is not None,
+        "Unknown source topic key",
+    )
+    require(
+        isinstance(reply, dict)
+        and reply.get("schema") == "validated-memory-query/v1"
+        and reply.get("authority") == "verified_retrieval_only"
+        and reply.get("abstained") is False
+        and reply.get("reason") is None,
+        "MemPalace validated retrieval has no admissible candidates",
+    )
+    rows = reply.get("results")
+    bound = reply.get("bound_result_count")
+    raw = reply.get("raw_result_count")
+    require(
+        isinstance(rows, list)
+        and 1 <= len(rows) <= 50
+        and type(result_index) is int
+        and 0 <= result_index < len(rows)
+        and type(bound) is int
+        and len(rows) <= bound <= 10000
+        and type(raw) is int
+        and bound <= raw <= 10000,
+        "MemPalace retrieval counts or page index invalid",
+    )
+    item = rows[result_index]
+    allowed = {
+        "identity",
+        "text",
+        "claim_sha256",
+        "source_path",
+        "source_sha256",
+        "state",
+        "valid_to",
+        "evidence_class",
+        "observed_at",
+        "semantic_score",
+        "matched_via",
+        "registry_receipt_sha256",
+    }
+    require(
+        isinstance(item, dict) and set(item) <= allowed,
+        "MemPalace result includes unsupported authority fields",
+    )
+    identity, text = item.get("identity"), item.get("text")
+    source = item.get("source_path")
+    digest = item.get("source_sha256")
+    original_claim = item.get("claim_sha256")
+    require(
+        isinstance(identity, str)
+        and REF.fullmatch(identity) is not None
+        and not identity.startswith("unbound:")
+        and isinstance(text, str)
+        and 8 <= len(text) <= 800
+        and len(text.encode("utf-8")) <= 1600
+        and not SECRET.search(text)
+        and isinstance(digest, str)
+        and HASH.fullmatch(digest) is not None
+        and isinstance(original_claim, str)
+        and HASH.fullmatch(original_claim) is not None
+        and item.get("state") == "current"
+        and not item.get("valid_to")
+        and item.get("evidence_class")
+        in ("current_source", "verified_closeout", "validated_lesson", "raw_history"),
+        "MemPalace candidate lacks valid source-bound reviewed metadata",
+    )
+    require(
+        isinstance(source, str) and 1 <= len(source) <= 4096 and "\x00" not in source,
+        "Invalid MemPalace original source identity",
+    )
+    drawer_uri = (
+        re.fullmatch(r"mempalace://drawer/[A-Za-z0-9._-]{1,128}", source) is not None
+    )
+    require(
+        drawer_uri or ("://" not in source and Path(source).is_absolute()),
+        "MemPalace original source identity is not a local path or drawer",
+    )
+    timestamp = item.get("observed_at")
+    observed(timestamp)
+    # Do not expose the original path or drawer ID in a Dream review response.
+    identity_hash = sha(
+        json.dumps(
+            [identity, source, original_claim, digest, timestamp],
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    )
+    return {
+        "project_id": project_id,
+        "source_id": "mp-" + identity_hash[:40],
+        "source_kind": "mempalace",
+        "claim_key": claim_key,
+        "claim_text": text,
+        "observed_at": timestamp,
+        "source_sha256": digest,
+        "verification": "retrieval_only",
+    }
+
+
 def main(argv=None):
     """Read a bounded JSON evidence envelope from stdin; preview only."""
     import argparse
