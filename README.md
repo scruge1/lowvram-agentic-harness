@@ -27,6 +27,14 @@ records recent private work on Pi context lifecycle, repeated tool output,
 GPU resource planning and long-running local agents. Those candidates are
 not part of this public release until independently qualified.
 
+## Inspect existing Pi sessions safely
+
+For an already-admitted Linux project, the opt-in
+[native Pi session catalogue](NATIVE-SESSION-CATALOG.md) can list native
+JSONL session headers without reading conversation bodies, creating
+another writer or acquiring tool execution authority. It is a local
+continuity aid, not a ChatGPT/Gemini/Claude account-history importer.
+
 ## Start here
 
 The complete installer currently supports **Linux x86_64 with glibc**. Windows

@@ -5,6 +5,28 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Read-only project-bound native Pi session catalogue — 2026-11-08
+
+Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
+
+Port a read-only native Pi 1.4 session-header catalogue into the public
+Python toolkit. Reuse the managed launcher's session-directory convention
+and existing project/board/Home identity, without creating a bucket or a
+second session database. The bounded listing exposes only session IDs,
+timestamps and file sizes; SHA-pinned paging rejects changed session sets.
+
+Native owner UID, regular single-link file, exact project cwd, stable
+header and no-symlink constraints prevent unrelated session discovery.
+Listing never opens the conversation body, creates a session writer,
+resumes an agent, dispatches work or grants authority. Source/history
+content is not a substitute for the original ChatGPT account export.
+The public installer does not activate this command automatically.
+
+Source adapted from the private Agent Home session-header reader; private
+desktop read-view tests remain separate. Exact synthetic tests, CLI no-write
+controls and Linux-native symlink tests are required before release.
+See NATIVE-SESSION-CATALOG.md.
+
 ## Read-only installed/public Pi source parity audit — 2026-11-08
 
 Public parent: `17bb0fe7d36629535f132e592d2ee98123b81b82`.
