@@ -68,11 +68,14 @@ type Project = { root: string; projectId: string; boardId: string };
 type Part = { kind: 'task' | 'amend' | 'held' | 'question' | 'control'; summary: string;
   task_id?: string; execute?: boolean; priority?: number; expandable?: boolean };
 type Capture = { id: string; session: string; text: string; source: string; at: number;
-  project: Project | null; sha256: string; images: number };
+  project: Project | null; sha256: string; images: number;
+  prior_scope?: { work: Work[]; sha256: string; project: Project; no_progress_held: boolean } };
 type Work = { root: string; task: string; source: string };
 type State = { mode: 'running' | 'paused' | 'blocked' | 'waiting' | 'complete'; reason: string;
   wait?: { kind: 'user' | 'peer' | 'resource' | 'external'; trigger: string }; next_action?: string;
-  conversation?: { source_id: string; phase: 'review' | 'discussion' | 'execution' };
+  conversation?: { source_id: string; phase: 'review' | 'discussion' | 'execution' | 'answered' };
+  question_return?: { source_id: string; work: Work[]; scope_sha256: string; phase: 'pending' | 'answered' };
+  execution_scope?: Work[];
   task_waits?: TaskWait[]; queue: Work[]; requests: number; started: number; progress: number; seen: number; stalls: number;
   research_credit?: { key: string; fingerprint: string; session: string; root: string; task: string; source: string;
     artifact_id: string; content_scope: string; coverage: string } };
@@ -101,7 +104,33 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   let researchEpoch = 0;
   const recentResearch = new Set<string>();
   const researchCalls = new Map<string, { scope: string; candidate?: boolean; content?: string }>();
-  const refreshStatus = () => liveUI?.setStatus?.('request-intake', `Work: ${state.mode}; ${pending().length} unrouted; ${state.queue.length} retained`);
+  const validQuestionReturn = () => {
+    const q = state.question_return, source = q && captures.get(q.source_id);
+    const intent = q && intents.get(q.source_id), prior = source?.prior_scope;
+    const project = bindings.project();
+    const latest = [...captures.values()].filter(item => item.source !== 'historical-unverified').at(-1);
+    return !!q && !!source && !!prior && !!project && !bindings.failed()
+      && !prior.no_progress_held && prior.work.length > 0 && prior.work.length <= 128
+      && ['interactive', 'rpc'].includes(source.source)
+      && latest?.id === source.id && source.sha256 === digest(source.text)
+      && state.conversation?.source_id === source.id && routed.has(source.id)
+      && !deferred.has(source.id) && pending().length === 0
+      && state.mode === 'running' && !state.wait && state.stalls < 2
+      && intent?.control === 'preserve' && intent.cancel_task_ids.length === 0
+      && intent.parts.length > 0 && intent.parts.every(part => part.kind === 'question'
+        && !part.execute && !part.task_id)
+      && digest(prior.project) === digest(project)
+      && prior.sha256 === digest(prior.work) && prior.sha256 === q.scope_sha256
+      && q.scope_sha256 === digest(q.work) && q.scope_sha256 === digest(state.execution_scope ?? [])
+      && q.work.every(work => work.root === project.root && authorized.has(workKey(work))
+        && state.queue.some(retained => workKey(retained) === workKey(work))
+        && !excluded.some(cancelled => workKey(cancelled) === workKey(work)));
+  };
+  const conversationHeld = () => !!state.conversation && state.conversation.phase !== 'execution'
+    && !(state.conversation.phase === 'answered' && state.question_return?.phase === 'answered'
+      && validQuestionReturn());
+  const refreshStatus = () => liveUI?.setStatus?.('request-intake',
+    `${conversationHeld() ? 'Discussion; execution held' : 'Work: ' + state.mode}; ${pending().length} unrouted; ${state.queue.length} retained`);
   const save = () => { revision++; pi.appendEntry(STATE, structuredClone(state)); refreshStatus(); };
   const pending = () => [...captures.values()].filter(x => !routed.has(x.id) && !deferred.has(x.id));
   const effectFree = (intent: any) => intent?.control === 'preserve'
@@ -114,6 +143,8 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
         || work.some(item => item.root !== project.root)) return;
     // Navigation follows this fresh approval, without cancelling older work or
     // clearing a pause, failed action, dependency or child uncertainty.
+    state.execution_scope = structuredClone(work);
+    delete state.question_return;
     if (state.mode !== 'paused') state.conversation.phase = 'execution';
     bindings.select(work[0].task); save();
   };
@@ -133,7 +164,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     deferred.add(capture.id);
     return true;
   };
-  const status = () => ({ ...state, dependency_protocol: 'task-waits/v1', conversation_protocol: 'plan-first/v2',
+  const status = () => ({ ...state, dependency_protocol: 'task-waits/v1', conversation_protocol: 'answer-resume/v3',
     deferred_total: deferred.size, deferred_truncated: deferred.size > 12,
     deferred: [...captures.values()].filter(x => deferred.has(x.id)).slice(-12).map(x => ({ id: x.id, sha256: x.sha256,
       excerpt: x.text.slice(0, 160), truncated: x.text.length > 160 })),
@@ -198,7 +229,9 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   const researchScope = (ctx: any) => digest([researchEpoch, alive, ctx.sessionManager.getSessionId(),
     bindings.project(), bindings.task(), bindings.failed(), captureOrdinal, pending().map(x => x.id),
     state.mode, state.queue, state.task_waits, [...authorized], excluded]);
-  const projectPacket = (ctx: any) => buildRetainedPacket({ state: structuredClone(state),
+  const projectPacket = (ctx: any, focusQuestionScope = false) => buildRetainedPacket({
+    state: structuredClone(focusQuestionScope
+      ? { ...state, queue: state.question_return?.work ?? [] } : state),
     project: structuredClone(bindings.project()), selected: bindings.task(), admissionFailed: bindings.failed(),
     pending: pending().map(x => x.id), authorized: new Set(authorized), excluded: structuredClone(excluded),
     authorizationOrder: new Map(authorizationOrder),
@@ -210,13 +243,13 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       complete: packet.coverage.complete, truncated: packet.coverage.truncated,
       missing: packet.coverage.missing.length },
   });
-  const decide = async (ctx: any) => {
+  const decide = async (ctx: any, focusQuestionScope = false) => {
     const before = stamp();
-    const packet = await projectPacket(ctx);
+    const packet = await projectPacket(ctx, focusQuestionScope);
     if (!alive || stamp() !== before) throw new Error('STALE_RETAINED_DECISION: native input or work changed during projection');
     const decision = await decideRetainedWork(packet);
     if (!alive || stamp() !== before) throw new Error('STALE_RETAINED_DECISION: native input or work changed during helper execution');
-    const readback = await projectPacket(ctx);
+    const readback = await projectPacket(ctx, focusQuestionScope);
     if (!alive || stamp() !== before || packetDigest(readback) !== packetDigest(packet))
       throw new Error('STALE_RETAINED_DECISION: retained board or native state changed before use');
     return { decision, packet };
@@ -230,7 +263,8 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   const maybeWake = async (wait: TaskWait, ctx: any, allowWake: boolean) => {
     // A receipt verifies its registered condition; it is never owner approval.
     if (!allowWake || wait.notice || !alive || !ctx || bindings.project()?.root !== wait.root
-        || pending().length || userInputPending(ctx) || bindings.failed() || state.mode === 'paused' || state.mode === 'blocked' || state.wait) return;
+        || pending().length || conversationHeld() || userInputPending(ctx) || bindings.failed()
+        || state.mode === 'paused' || state.mode === 'blocked' || state.wait) return;
     const { decision, packet } = await decide(ctx);
     if (userInputPending(ctx) || decision.decision !== 'continue' || wait.status !== 'resolved') return;
     let admitted = packet.tasks.find((t: any) => t.id === wait.task && t.source === wait.source);
@@ -342,6 +376,18 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
         + '. Inspect retained start/tool/output evidence; fresh owner resume is required, never automatic replay.';
       save();
     }
+    // Recover only a previously journaled, exact question-only route when
+    // the process crashed between its ROUTED append and state snapshot.
+    // Pending still requires an actual answer boundary; never auto-run on reload.
+    const latest = [...captures.values()].filter(item => item.source !== 'historical-unverified').at(-1);
+    const routedQuestion = latest && routingResults.get(latest.id)?.question_return;
+    if (!state.question_return && routedQuestion?.phase === 'pending'
+        && state.conversation?.source_id === latest?.id
+        && latest?.sha256 === digest(latest.text)) {
+      state.question_return = structuredClone(routedQuestion);
+      if (state.conversation.phase === 'review') state.conversation.phase = 'discussion';
+      save();
+    }
     // Repair only the retired diagnostic. Preserve every non-reason field and write back once.
     if (repairedCurrentReason) save();
     // Restart/reload never starts inference by itself.
@@ -355,9 +401,31 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     if (event.source === 'extension') return { action: 'continue' as const };
     researchEpoch++; researchCalls.clear();
     deferUncommitted('superseded_uncommitted_conversation');
+    const project = bindings.project();
+    // A question may refer back only to an existing, source-authorised
+    // exact execution scope. Snapshot the scope before creating this input.
+    // Capture never transfers authority to the new user text.
+    const scope = state.execution_scope;
+    const safeScope = !!project && !conversationHeld() && pending().length === 0
+      && Array.isArray(scope) && scope.length > 0 && scope.length <= 128
+      && scope.every(work => work.root === project.root && authorized.has(workKey(work))
+        && state.queue.some(retained => workKey(work) === workKey(retained))
+        && !excluded.some(cancelled => workKey(work) === workKey(cancelled)));
+    const hasUnsettledChild = (() => {
+      try { return unresolvedChildCalls(ctx.sessionManager.getBranch(), project?.root).length > 0; }
+      catch { return true; }
+    })();
+    const prior = safeScope ? { work: structuredClone(scope), sha256: digest(scope),
+      project: structuredClone(project!),
+      no_progress_held: state.mode !== 'running' || !!state.wait || bindings.failed()
+        || state.stalls >= 2 || hasUnsettledChild || (state.task_waits ?? [])
+          .some(wait => wait.status === 'waiting' && scope!.some(work => work.task === wait.task
+            && work.root === wait.root)) } : undefined;
     const capture: Capture = { id: randomUUID(), session: ctx.sessionManager.getSessionId(),
-      text: event.text, source: event.source, at: Date.now(), project: structuredClone(bindings.project()),
-      sha256: digest(event.text), images: event.images?.length ?? 0 };
+      text: event.text, source: event.source, at: Date.now(), project: structuredClone(project),
+      sha256: digest(event.text), images: event.images?.length ?? 0,
+      ...(prior && ['interactive', 'rpc'].includes(event.source) ? { prior_scope: prior } : {}) };
+    delete state.question_return;
     pi.appendEntry(CAPTURE, capture);
     captures.set(capture.id, capture);
     captureOrder.set(capture.id, ++captureOrdinal);
@@ -370,10 +438,10 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   });
   pi.on('before_agent_start', async (_event: any, ctx: any) => { liveCtx = ctx; syncWatchers(false); });
   const policy = 'Persistent request intake policy: answer ordinary questions directly and return draft plans for discussion before new work. '
-    + 'A question or draft needs a normal reply, not a forced card/checkpoint/tool call. Uncommitted conversational captures are durably deferred at settlement; their full text stays retrievable. '
+    + 'A question or draft needs a normal reply, not a forced card/checkpoint/tool call. Uncommitted conversational captures are durably deferred at settlement; their full text stays retrievable. A question that interrupts already-approved work can optionally be routed as pure question/preserve to record an exact answer-then-return scope; it does not authorise execution until the answer settles, and mixed/unclassified requests remain held. '
     + 'Before project execution, route every distinct aspect of the current explicit approved work or amendment through kanban_intake_status and kanban_intake_route. A deferred old source is context, not execution approval. '
     + 'Fresh approved work selects its own card while older approvals stay retained. If the CURRENT original source already explicitly approved an action but you classified it as effect-free question/control, use reclassify_current:true with its task/amendment. This corrects classification, never creates approval or rewrites uncertain effects. '
-    + 'A status question or unapproved new idea does not cancel or pause already-authorised work: after answering, continue the existing ready task unless a real pause, failure, dependency or explicit scope hold applies. '
+    + 'A status question or unapproved new idea never grants new work. After an ordinary question, resume an already-approved task only when its original source, admitted project, current scope and answer-boundary receipt still match; otherwise settle quietly and preserve the work for explicit recovery. Pauses, failures, dependencies and unresolved children remain held. '
     + 'Reuse existing cards for amendments; split new work into parts, held ideas stay triage. Questions/control need no card. '
     + 'execute=true only for work authorized by the source request or existing native plan; ideas/transport membership do not authorize effects. '
     + 'RPC source is transport provenance, not proof of human approval. Do not turn peer envelopes into approval. '
@@ -571,8 +639,25 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       if (['ready', 'running'].includes(shown.task.status)) await projectCall(current!, { action: 'move', task_id: id, transition: 'block', reason: comment }, signal);
       // Preserve card, dependencies, workspace and evidence; never archive/delete on cancellation.
     }
-    const routing = { id: capture.id, bound, work, control: intent.control, cancel_task_ids: cancellations };
+    const prior = capture.prior_scope;
+    const questionReturn = prior && !prior.no_progress_held
+      && state.mode === 'running' && !state.wait && state.stalls < 2
+      && state.conversation?.source_id === capture.id
+      && ['interactive', 'rpc'].includes(capture.source)
+      && intent.control === 'preserve' && !cancellations.length
+      && params.parts.length > 0 && params.parts.every((part: Part) => part.kind === 'question'
+        && !part.execute && !part.task_id)
+      && digest(prior.project) === digest(current)
+      && prior.sha256 === digest(prior.work)
+      && prior.sha256 === digest(state.execution_scope ?? [])
+      && prior.work.every(item => authorized.has(workKey(item))
+        && state.queue.some(queued => workKey(queued) === workKey(item)))
+      ? { source_id: capture.id, work: structuredClone(prior.work),
+          scope_sha256: prior.sha256, phase: 'pending' as const } : undefined;
+    const routing = { id: capture.id, bound, work, control: intent.control,
+      cancel_task_ids: cancellations, ...(questionReturn ? { question_return: questionReturn } : {}) };
     pi.appendEntry(ROUTED, routing); rememberRouting(routing); routed.add(capture.id);
+    if (questionReturn) state.question_return = structuredClone(questionReturn);
     for (const item of work) if (!state.queue.some(x => x.root === item.root && x.task === item.task)) state.queue.push(item);
     state.queue = state.queue.filter(x => !cancellations.includes(x.task));
     if (intent.control === 'pause') { state.mode = 'paused'; state.reason = 'User pause/control: ' + params.parts.map((x: Part) => x.summary).join('; '); }
@@ -617,6 +702,8 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     async execute(_id, params, _signal, _update, ctx) {
       try {
         if (pending().length) throw new Error('Route pending input before a work checkpoint');
+        if (conversationHeld() && ['continue', 'complete'].includes(params.disposition))
+          throw new Error('A conversational answer has not crossed its source-bound boundary. Checkpoint cannot release execution.');
         if (state.mode === 'paused' && params.disposition !== 'paused') throw new Error('Explicit user resume required before changing a user pause');
         if (['blocked', 'paused', 'needs_user', 'waiting'].includes(params.disposition) && !params.resume_trigger) throw new Error('Specify the exact resume trigger');
         if (params.disposition === 'waiting' && !params.waiting_for) throw new Error('Specify waiting_for: user, peer, resource or external');
@@ -697,6 +784,11 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     if (unresolved.some(id => id !== activeChild || event.parentToolCallId !== activeChild))
       return { block: true, reason: 'An active or unsettled managed child owns this scope. Inspect retained evidence; only its own native nested tools may run. After parent loss, route a fresh explicit owner resume before another attempt.' };
     if (pending().length) return { block: true, reason: 'New user input is not routed. Read kanban_intake_status and route every aspect before project execution.' };
+    if (conversationHeld()) {
+      return { block: true, reason: state.question_return?.phase === 'pending'
+        ? 'ANSWER_FIRST: finish the ordinary question now. The exact approved prior scope remains held; no tool execution before the answer boundary. No extra task or new approval is implied.'
+        : 'CONVERSATION_ONLY: answer or clarify the current uncommitted input. An effect-free source can only return to previously approved scope after exact question-only routing and settlement. Fresh work needs explicit owner source approval.' };
+    }
     if (state.mode === 'paused' || state.mode === 'blocked' || (state.mode === 'waiting' && state.wait)) return { block: true, reason: `Work ${state.mode}: ${state.reason}. Route an explicit resume or record resolved dependency first.` };
     const before = stamp();
     if ((state.task_waits ?? []).some(w => w.status === 'waiting') && bindings.task()) {
@@ -740,6 +832,21 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
         }
         if (!admitted)
           return { block: true, reason: 'Selected task is outside retained source-authorized scope. Route the actual request or select its admitted task; board readiness and selection grant no permission.' };
+        if (state.conversation?.phase === 'answered' && validQuestionReturn()) {
+          const prior = state.question_return!.work;
+          // Do not silently select another older authorised task after the
+          // question. Permit only this scope or a native same-source child.
+          let scopeNode = selected, scopeAdmitted = false;
+          const lineage = new Set<string>();
+          for (let depth = 0; scopeNode && depth < 64; depth++) {
+            if (lineage.has(scopeNode.id) || scopeNode.source !== selected.source) break;
+            lineage.add(scopeNode.id);
+            if (prior.some(work => work.task === scopeNode.id && work.source === scopeNode.source
+                && work.root === project.root)) { scopeAdmitted = true; break; }
+            scopeNode = packet.tasks.find((task: any) => task.id === scopeNode.parent);
+          }
+          if (!scopeAdmitted) return { block: true, reason: 'The answered question retained one exact approved scope. Select its source-bound task/descendant; older approved work is preserved but not automatically substituted.' };
+        }
         const shown = await projectCall(project, { action: 'show', task_id: bindings.task() });
         if (!['ready', 'running'].includes(shown.task.status)) return { block: true, reason: 'Selected card is not runnable. Select an authorized ready leaf, not triage/blocked/review/terminal work.' };
         for (const id of shown.parents) {
@@ -768,7 +875,7 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       const call = researchCalls.get(result.toolCallId);
       researchCalls.delete(result.toolCallId);
       if (!call?.candidate || ctx.signal?.aborted || !alive || call.scope !== researchScope(ctx)
-          || pending().length || ['paused', 'blocked', 'waiting', 'complete'].includes(state.mode)) continue;
+          || pending().length || conversationHeld() || ['paused', 'blocked', 'waiting', 'complete'].includes(state.mode)) continue;
       const index = event.toolResults.findIndex((value: any) => value.toolCallId === result.toolCallId);
       const entry = ctx.sessionManager.getBranch().find((value: any) => value.id === event.toolResultEntryIds?.[index]);
       if (entry?.message?.role !== 'toolResult' || entry.message.toolName !== 'web_research'
@@ -835,9 +942,15 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       const changed = deferUncommitted('settled_without_committed_execution');
       if (state.conversation.phase === 'review') { state.conversation.phase = 'discussion'; save(); }
       else if (changed) save();
-      // Answer-only turns create no work. Existing approved tasks still use the
-      // normal source-bound decision below; discussion itself is not progress.
-      if (pending().length || !state.queue.length) return;
+      // No automatic work from an unclassified conversation. An explicitly
+      // routed pure question can return only to its exact pre-question scope.
+      if (state.question_return?.phase === 'pending' && validQuestionReturn()
+          && state.conversation.phase === 'discussion') {
+        state.question_return.phase = 'answered';
+        state.conversation.phase = 'answered';
+        save(); // native answer boundary, never routing as a permission grant
+      }
+      if (state.conversation.phase !== 'answered' || !validQuestionReturn()) return;
     }
     // Explicit holds keep their original reason. A wall-clock/count cap is not progress evidence.
     if (!pending().length && (state.mode === 'paused' || state.mode === 'blocked' || state.mode === 'waiting')) { save(); return; }
@@ -847,8 +960,29 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     let instruction: string | undefined;
     try {
       const before = stamp();
-      const { decision, packet } = await decide(ctx);
-      if (userInputPending(ctx) || stamp() !== before) return;
+      const returning = state.conversation?.phase === 'answered' && validQuestionReturn();
+      const { decision, packet } = await decide(ctx, returning);
+      if (userInputPending(ctx) || stamp() !== before
+          || (returning && !validQuestionReturn())) return;
+      if (returning && decision.decision === 'continue'
+          && !state.question_return!.work.some(work =>
+            work.task === decision.selected.task && work.source === decision.selected.source)) {
+        // The task may be a legitimate child in the same source; the native
+        // admission gate performs containment checks before tools run.
+        const selected = packet.tasks.find((task: any) =>
+          task.id === decision.selected.task && task.source === decision.selected.source);
+        let cursor = selected;
+        const visited = new Set<string>();
+        let matched = false;
+        for (let depth = 0; cursor && depth < 64; depth++) {
+          if (visited.has(cursor.id) || cursor.source !== selected.source) break;
+          visited.add(cursor.id);
+          if (state.question_return!.work.some(work =>
+              work.task === cursor.id && work.source === cursor.source)) { matched = true; break; }
+          cursor = packet.tasks.find((task: any) => task.id === cursor.parent);
+        }
+        if (!matched) return;
+      }
       recordDecision(decision, packet);
       if (decision.decision === 'route_pending') instruction = 'Route the pending user input before finishing. Do not execute it first. ' + liveGuidance();
       else if (decision.decision === 'continue') {

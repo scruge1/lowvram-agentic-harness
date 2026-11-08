@@ -286,20 +286,36 @@ try {
   check('fresh-approval-binds-new-task-to-current-source-not-deferred-draft', approvedB.source === approval
     && shownB.body.includes(approval) && !shownB.body.includes(draft));
 
+  const unclassified = await profile('unclassified-task-status'); await approved(unclassified);
+  const heldQueue = JSON.stringify(snapshot(unclassified).queue);
+  const unclassifiedId = await capture(unclassified,
+    'A status question without classification should not silently resume the earlier task.');
+  check('unclassified-status-preserves-prior-task-but-does-not-continue',
+    !(await answer(unclassified)).continue
+    && JSON.stringify(snapshot(unclassified).queue) === heldQueue
+    && (await tool(unclassified, 'kanban_intake_status', { source_id: unclassifiedId })).details.result.disposition === 'deferred');
   const a = await profile('approved-task-status'); await approved(a);
   const originalQueue = JSON.stringify(snapshot(a).queue), progress = snapshot(a).progress;
   const statusId = await capture(a, 'What is the current status? Answer briefly and keep doing the approved task.');
+  // A pure, explicitly classified question can preserve the old approval,
+  // but routing itself never unlocks work before the answer boundary.
+  await tool(a, 'kanban_intake_route', {
+    source_id: statusId, parts: [{ kind: 'question', summary: 'Pure status question about existing approved A' }]
+  });
+  check('question-routing-is-not-execution-approval', (await a.session.extensionRunner.emitToolCall({
+    type: 'tool_call', toolCallId: 'pre-answer-refusal', toolName: 'workflow_step', input: {}
+  }))?.block === true);
   const statusBoundary = await answer(a);
   check('approved-A-status-answer-continues-existing-source-bound-task', statusBoundary.continue === true
     && JSON.stringify(snapshot(a).queue) === originalQueue && snapshot(a).progress === progress);
   check('status-answer-does-not-promote-new-task', calls(a).filter(call => call.action === 'create').length === 1
-    && (await tool(a, 'kanban_intake_status', { source_id: statusId })).details.result.disposition === 'deferred');
+    && (await tool(a, 'kanban_intake_status', { source_id: statusId })).details.result.disposition === 'routed');
   const routedQuestion = await capture(a, 'What is the status again? This is a question only.');
   await tool(a, 'kanban_intake_route', { source_id: routedQuestion, parts: [{ kind: 'question', summary: 'Status question only; no new work' }] });
   check('explicit-question-routing-does-not-manufacture-progress', snapshot(a).progress === progress && (await answer(a)).continue === true
     && JSON.stringify(snapshot(a).queue) === originalQueue);
   const draftId = await capture(a, 'Draft a possible task B. Discuss it; do not start B or cancel A.');
-  check('draft-B-does-not-stop-or-replace-approved-A', (await answer(a, 'Controlled draft B only.')).continue === true
+  check('draft-B-without-approval-holds-A-without-cancelling-it', !(await answer(a, 'Controlled draft B only.')).continue
     && JSON.stringify(snapshot(a).queue) === originalQueue && calls(a).filter(call => call.action === 'create').length === 1);
   const pause = await capture(a, 'Pause the approved work while we discuss scope.');
   await tool(a, 'kanban_intake_route', { source_id: pause, control: 'pause', parts: [{ kind: 'control', summary: 'Explicit owner pause for scope discussion' }] });
