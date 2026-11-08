@@ -5,6 +5,29 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Portable handoff and November development ledger — 2026-11-08
+
+Parent commit: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.
+
+Add CROSS-ASSISTANT-CONTINUITY.md, a candidate JSON handoff template,
+and NOV-2026-ENGINEERING-STATUS.md. Explain recovery of Gemini CLI sessions,
+Gemini Code Assist history and distinct Google Takeout app exports; require
+a checked repository revision, reviewed decision provenance, explicit
+unknowns, and independent qualification of an incoming assistant.
+
+The engineering ledger separates currently public capabilities from
+privately tested but uninstalled Pi prompt/compaction candidates, read-only
+GPU-planner prototypes, streaming-service ideas and future local control
+plane work. It documents acceptance gates and explicitly excludes private
+transcripts, machine locators, source files and secrets.
+
+This update is **documentation and a non-executable example only**. It does
+not install hooks, import user sessions, change memory policies, promote
+model recommendations, release a desktop app, or qualify live migration.
+Only the existing public harness and control plane are represented as
+shipped. Run repository self-tests before marking the PR ready; live
+target adoption still requires independent evidence.
+
 ## Complete the optional search provider catalog - 2026-10-26
 
 Parent: `ab7a637cdf140ca14f3dafb37c5d4b38cfc35777`.
