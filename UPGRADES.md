@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Provenance-preserving MemPalace → Dream evidence conversion — 2026-11-08
+
+Parent: `e549d81456970446924478e4d77428c396f604d8`.
+
+Convert exact already-validated MemPalace `validated-memory-query/v1`
+results to deterministic, untrusted Dream evidence windows. Require
+current registry-bound source and claim digests, bounded source metadata,
+a source timestamp and a successful retrieval-only response. Reject
+unbound/superseded/secret/foreign-action candidate fields. Hide original
+source paths behind a stable pseudonymous reference; the conversion cannot
+assert current original-file verification, project ownership or task authority.
+
+An integration fixture runs the actual validated-memory query on synthetic
+source/registry bytes and a complete native Claude-mem tool-field packet.
+A later contradictory retrieval remains `CONTRADICTION_REVIEW_REQUIRED`;
+no new memory database, background poller, model call or ICM promotion is
+introduced. See MEMORY-SOURCE-ADAPTERS.md.
+
 ## Source-bound bidirectional memory Dream review — 2026-11-08
 
 Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
