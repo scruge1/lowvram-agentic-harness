@@ -13,11 +13,15 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
 import { createHash, randomUUID } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 const [file, which] = process.argv.slice(1);
+const {projectIntakeModelView}=await import(pathToFileURL(join(dirname(file), 'intake-model-view.mjs')).href);
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 let decisions=0,onProjection,typed='',queued=false,editorError=false,crashAt;
 const Type=new Proxy({},{get:()=>()=>({})});
 const dependencies={typebox:{Type},'node:crypto':{createHash,randomUUID},
+ './intake-model-view.mjs':{projectIntakeModelView},
  './read-loop-079.ts':{registerReadLoopGuard:()=>({warning:()=>''})},
  './dependency-receipts-138.ts':{checkedReceipt:()=>{},inspectReceipt:()=>({verified:false}),watchReceipt:()=>()=>{},blockedTaskIds:()=>new Set()},
  './retained-packet-138.ts':{workKey:x=>x.root+'\0'+x.task,nativeCompletionOrder:()=>new Map(),cancelledSelection:async()=>false,
@@ -46,7 +50,41 @@ const state=async()=> (await tool('kanban_intake_status',{})).details.result;
 const capture=async text=>{await fire('input',{text,source:'interactive'});return entries.findLast(x=>x.customType==='pi-request-capture/v1').data.id;};
 const settle=()=>fire('agent_before_settle',{outcome:'completed',continue:false,context:{pendingMessages:[]}});
 await fire('session_start');
-if(which==='structured'){
+if(which==='bounded-model-view'){
+ const original='🚀lambda-source-'.repeat(2500);
+ const id=await capture(original);
+ const first=await tool('kanban_intake_status',{source_id:id});
+ assert.equal(first.details.result.source.text,original,'Original native source remains unmodified in details');
+ const firstView=JSON.parse(first.content[0].text);
+ assert.equal(firstView.authority,'PRESENTATION_ONLY_NOT_APPROVAL');
+ assert.ok(Buffer.byteLength(first.content[0].text)<=6144,'Model-visible status source must be bounded');
+ assert.equal(firstView.source.id,id);
+ let offset=0,body='',rounds=0;
+ const pin=firstView.raw_reply_sha256;
+ const sourcePin=firstView.source.source_text.sha256;
+ do {
+   const page=await tool('kanban_intake_status',{source_id:id,source_offset:offset,
+     source_limit:777,expected_reply_sha256:pin,expected_source_sha256:sourcePin});
+   assert.equal(page.details.result.source.text,original,'Page retrieval must never rewrite native source');
+   assert.ok(Buffer.byteLength(page.content[0].text)<=6144);
+   const visible=JSON.parse(page.content[0].text);
+   assert.equal(visible.raw_reply_sha256,pin);
+   assert.notEqual(visible.stale_cursor,true);
+   const current=visible.source.source_text;
+   assert.equal(current.offset,offset);
+   body+=current.text;rounds++;
+   if(current.next_offset===null)break;
+   offset=current.next_offset;
+   assert.ok(rounds<100,'Bounded source paging must terminate');
+ } while(true);
+ assert.equal(body,original,'Full Unicode captured source must be recoverable');
+ const wrong=await tool('kanban_intake_status',{source_id:id,
+   expected_source_sha256:'0'.repeat(64)});
+ assert.equal(JSON.parse(wrong.content[0].text).source.stale_source,true);
+ const none=await tool('kanban_intake_status',{source_offset:1});
+ assert.equal(none.isError,true,'Paging without source identity must refuse');
+ assert.equal(calls.length,0,'Bounded observation must not mutate board or authorize work');
+}else if(which==='structured'){
  const event={systemPrompt:'Native base',systemPromptOptions:{sections:{}}};
  assert.equal(await fire('before_agent_start',event),undefined,
    'Named stable policy must not return an opaque prompt');
@@ -182,6 +220,9 @@ class ConversationModuleTests(unittest.TestCase):
         result = subprocess.run([self.node, "--experimental-vm-modules", "--input-type=module", "-e", SCRIPT, str(SOURCE), name],
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_bounded_model_facing_source_is_losslessly_recoverable(self):
+        self.run_case("bounded-model-view")
 
     def test_named_request_policy_stays_stable_while_live_guidance_changes(self):
         self.run_case("structured")

@@ -37,7 +37,7 @@ for (const name of fs.readdirSync(source)) {
 const intake = path.join(fixture, 'intake');
 fs.mkdirSync(intake);
 for (const name of fs.readdirSync(path.join(source, '../intake'))) {
-  if (/\.(ts|py)$/.test(name)) fs.copyFileSync(path.join(source, '../intake', name), path.join(intake, name));
+  if (/\.(ts|py|mjs)$/.test(name)) fs.copyFileSync(path.join(source, '../intake', name), path.join(intake, name));
 }
 const context = path.join(fixture, 'context');
 fs.mkdirSync(context);

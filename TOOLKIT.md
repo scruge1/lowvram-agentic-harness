@@ -25,6 +25,14 @@ The included local controller cannot grant the external `blessed` authority.
 See [current qualification](AGENT-HOME.md#current-qualification) before making
 claims about the complete assistant.
 
+## Bounded request-intake replies
+
+The [intake model-view contract](PI-INTAKE-MODEL-VIEW.md) preserves the
+complete native intake result while limiting repeated model-facing status
+and source text. Long original sources are readable through Unicode
+codepoint pages with source/reply hash pins. This is presentation-only;
+the existing approval, retained-work and effect gates are unchanged.
+
 ## Pi context telemetry (optional)
 
 The [context telemetry contract](PI-CONTEXT-TELEMETRY.md) exposes
