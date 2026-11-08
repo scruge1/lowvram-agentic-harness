@@ -1,0 +1,40 @@
+{
+  "schema": "pi-source-parity-map/v1",
+  "components": [
+    {
+      "id": "kanban-coordinator",
+      "public": "adapters/pi/project-workflow/pi-kanban.ts",
+      "installed": "pi-kanban.ts"
+    },
+    {
+      "id": "request-intake",
+      "public": "adapters/pi/intake/request-intake-138.ts",
+      "installed": "intake/request-intake.ts"
+    },
+    {
+      "id": "project-context",
+      "public": "adapters/pi/context/project-context.ts",
+      "installed": "context/project-context.ts"
+    },
+    {
+      "id": "capability-discovery",
+      "public": "adapters/pi/project-workflow/agent-capabilities.ts",
+      "installed": "agent-capabilities.ts"
+    },
+    {
+      "id": "bounded-compaction",
+      "public": "adapters/pi/bounded-compaction.ts",
+      "installed": "bounded-compaction.ts"
+    },
+    {
+      "id": "kanban-projector",
+      "public": "adapters/pi/project-workflow/kanban-reply-projector.mjs",
+      "installed": "context/kanban-replies.mjs"
+    },
+    {
+      "id": "system-tool-knowledge",
+      "public": "adapters/pi/project-workflow/system-tool-knowledge.ts",
+      "installed": "system-tool-knowledge.ts"
+    }
+  ]
+}

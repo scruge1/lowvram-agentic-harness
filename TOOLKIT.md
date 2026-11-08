@@ -25,6 +25,16 @@ The included local controller cannot grant the external `blessed` authority.
 See [current qualification](AGENT-HOME.md#current-qualification) before making
 claims about the complete assistant.
 
+## Detect private/public Pi source drift
+
+The [source-parity audit](PI-SOURCE-PARITY.md) compares exact bytes across
+an explicitly mapped installed Pi tree and this public repository. It
+returns a redacted hash/status inventory, refuses missing or escaped
+sources and never copies, patches or reloads active extensions. It lets
+future maintainers identify changes that need individual upstream review
+without relying on AI chat memory. Use a private mapping and keep private
+source hashes out of public issue reports.
+
 ## Bounded request-intake replies
 
 The [intake model-view contract](PI-INTAKE-MODEL-VIEW.md) preserves the
