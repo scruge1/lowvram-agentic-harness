@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "record_type": "candidate_cross_assistant_handoff_NOT_SSOT",
+  "status": "unreviewed",
+  "project": {
+    "name": "REPLACE_PROJECT_NAME",
+    "repository": "REPLACE_REPOSITORY_URL",
+    "revision": "REPLACE_FULL_COMMIT_SHA",
+    "branch": "REPLACE_BRANCH",
+    "worktree_status": "unknown",
+    "scope": "REPLACE_BOUNDED_SCOPE"
+  },
+  "workers": {
+    "previous": "Gemini CLI | Gemini Code Assist | other",
+    "incoming": "Codex | Claude | Pi | other",
+    "harness": "REPLACE_EXECUTION_HARNESS"
+  },
+  "canonical_sources": [
+    {
+      "id": "PRD-01",
+      "path": "PRD.md",
+      "sha256": "REPLACE_EXACT_SHA256",
+      "role": "requirements",
+      "reviewed": false
+    },
+    {
+      "id": "ARCH-01",
+      "path": "ARCHITECTURE.md",
+      "sha256": "REPLACE_EXACT_SHA256",
+      "role": "architecture",
+      "reviewed": false
+    }
+  ],
+  "private_history_inventory": [
+    {
+      "id": "HISTORY-01",
+      "product": "Gemini CLI | Code Assist | Gemini Apps",
+      "export_format": "JSON | JSONL | other",
+      "source_digest_sha256": "REPLACE_SHA256",
+      "private_reference": "REDACTED_LOCAL_ONLY",
+      "complete": false,
+      "retention_checked": false
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR-001",
+      "status": "unverified",
+      "statement": "REPLACE_WITH_SOURCE_BOUND_DECISION",
+      "evidence_ids": [
+        "HISTORY-01",
+        "PRD-01"
+      ],
+      "validated_against_revision": false
+    }
+  ],
+  "executed_checks": [
+    {
+      "command": "REPLACE_COMMAND",
+      "revision": "REPLACE_FULL_COMMIT_SHA",
+      "result": "not_run",
+      "evidence_id": "REPLACE_CHECK_RECEIPT"
+    }
+  ],
+  "work_frontier": [
+    {
+      "id": "WORK-001",
+      "status": "unreviewed",
+      "objective": "REPLACE_OBJECTIVE",
+      "depends_on": [],
+      "acceptance": "REPLACE_INDEPENDENT_CHECK",
+      "authority": "review_required"
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "UNKNOWN-001",
+      "question": "REPLACE_WITH_MISSING_OR_CONFLICTING_FACT",
+      "blocks": [
+        "WORK-001"
+      ]
+    }
+  ],
+  "transition": {
+    "first_mode": "read_only_audit",
+    "first_task": "Compare packet claims to the pinned repository and real tests. Do not edit.",
+    "next_test": "REPLACE_WITH_BOUNDED_IMPLEMENTATION_TEST",
+    "rollback_reference": "REPLACE_WITH_VERIFIED_REVISION"
+  },
+  "safety": {
+    "secrets_review": "not_done",
+    "private_data_review": "not_done",
+    "human_approval": "pending",
+    "production_authority": "none",
+    "accepted_as_ssot": false
+  }
+}
