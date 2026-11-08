@@ -46,7 +46,24 @@ const state=async()=> (await tool('kanban_intake_status',{})).details.result;
 const capture=async text=>{await fire('input',{text,source:'interactive'});return entries.findLast(x=>x.customType==='pi-request-capture/v1').data.id;};
 const settle=()=>fire('agent_before_settle',{outcome:'completed',continue:false,context:{pendingMessages:[]}});
 await fire('session_start');
-if(which==='question'){
+if(which==='structured'){
+ const event={systemPrompt:'Native base',systemPromptOptions:{sections:{}}};
+ assert.equal(await fire('before_agent_start',event),undefined,
+   'Named stable policy must not return an opaque prompt');
+ const policy=event.systemPromptOptions.sections.pi_request_intake_policy;
+ assert.ok(policy?.includes('Persistent request intake policy'));
+ assert.equal(event.systemPrompt,'Native base');
+ assert.equal(await fire('before_agent_start',event),undefined);
+ assert.equal(event.systemPromptOptions.sections.pi_request_intake_policy,policy);
+ const live=await fire('context',{messages:[]});
+ assert.equal(live.messages.length,1,'Dynamic status still reaches every provider request');
+ assert.match(live.messages[0].content,/Live request intake/);
+ const legacy=await fire('before_agent_start',{systemPrompt:'Native base'});
+ assert.ok(legacy.systemPrompt.includes(policy));
+ const repeated=await fire('before_agent_start',{systemPrompt:legacy.systemPrompt});
+ assert.equal(repeated.systemPrompt,legacy.systemPrompt,'Legacy shim must not repeat policy');
+ assert.equal(calls.length,0,'A policy section does not dispatch any task');
+}else if(which==='question'){
  const q=await capture('What does this do?');assert.equal(await settle(),undefined);
  const draft=await capture('Draft B only; no implementation.');assert.equal(await settle(),undefined);
  let value=await state();assert.equal(value.pending_total,0);assert.equal(value.deferred_total,2);assert.equal(value.progress,0);assert.equal(value.retained_total,0);
@@ -165,6 +182,9 @@ class ConversationModuleTests(unittest.TestCase):
         result = subprocess.run([self.node, "--experimental-vm-modules", "--input-type=module", "-e", SCRIPT, str(SOURCE), name],
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_named_request_policy_stays_stable_while_live_guidance_changes(self):
+        self.run_case("structured")
 
     def test_answer_only_deferral_and_reload_need_no_board_or_framework(self):
         self.run_case("question")

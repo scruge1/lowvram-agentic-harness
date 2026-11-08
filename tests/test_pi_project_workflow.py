@@ -142,6 +142,14 @@ const admit = () => invoke('project_admit',{project_root:'/project'});
 const execute = () => fire('tool_call',{toolName:'workflow_step'});
 assert.equal((await execute()).block,true);
 await admit(); await invoke('kanban_create',{title:'Owner-authorized task'});
+const promptEvent={systemPrompt:'Native base',systemPromptOptions:{sections:{}}};
+assert.equal(await fire('before_agent_start',promptEvent),undefined);
+const firstNavigation=promptEvent.systemPromptOptions.sections.pi_kanban_selection;
+assert.ok(firstNavigation.includes('project-1') && firstNavigation.includes('board-1'));
+assert.equal(promptEvent.systemPrompt,'Native base','Selection never forces a new full prompt');
+await fire('before_agent_start',promptEvent);
+assert.equal(promptEvent.systemPromptOptions.sections.pi_kanban_selection,firstNavigation);
+
 let held = await execute();
 for (const name of ['agent_capabilities','system_tool_query','validated_memory_query','project_knowledge_query'])
   assert.ok(held.reason.includes(name),'all unobserved prerequisites must be actionable: '+name);
@@ -197,6 +205,10 @@ await invoke('kanban_create',{title:'Another queued task'});
 assert.equal(branch.at(-1).data.task.cardId,'task-1'); // Creation does not replace selection.
 await invoke('kanban_select',{task_id:'task-2'});
 assert.equal(branch.at(-1).data.task.cardId,'task-2');
+await fire('before_agent_start',promptEvent);
+assert.ok(promptEvent.systemPromptOptions.sections.pi_kanban_selection.includes('"card_id":"task-2"'));
+assert.notEqual(promptEvent.systemPromptOptions.sections.pi_kanban_selection,firstNavigation,
+  'Changing the selected card must update only its named section');
 await fire('session_start');
 assert.equal((await execute()).block,true); // Reload invalidates discovery readiness.
 await discover(); assert.equal(await execute(),undefined);
@@ -226,6 +238,9 @@ const missing = (await execute()).reason;
 for (const name of ['agent_capabilities','system_tool_query','validated_memory_query','project_knowledge_query']) assert.ok(missing.includes(name));
 createFailure=true; assert.equal((await invoke('project_create',{name:'partial'})).isError,true); createFailure=false;
 selected=branch.at(-1).data; assert.equal(selected.project,null);assert.equal(selected.task,null);assert.equal(selected.boardAdmissionFailed,true);
+await fire('before_agent_start',promptEvent);
+assert.equal(promptEvent.systemPromptOptions.sections.pi_kanban_selection,undefined,
+  'Failed project creation must remove stale navigation from the model prompt');
 const beforeExtra=creations.length;
 assert.equal((await invoke('project_create',{name:'extra',project_root:'/arbitrary'})).isError,true);
 assert.equal(creations.length,beforeExtra,'unknown args refuse before helper');

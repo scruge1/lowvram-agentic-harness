@@ -372,8 +372,18 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
       project: bindings.project()?.root ?? null, task: bindings.task(),
       ...(['paused', 'blocked', 'waiting'].includes(state.mode) ? { hold_reason: state.reason } : {}) });
   };
-  pi.on('before_agent_start', async (event: any) => ({ systemPrompt: event.systemPrompt.includes(policy)
-    ? event.systemPrompt : event.systemPrompt + '\n' + policy }));
+  pi.on('before_agent_start', async (event: any) => {
+    const sections = event?.systemPromptOptions?.sections;
+    if (sections && typeof sections === 'object') {
+      // Stable request policy: mid-turn queue/hold changes continue through the
+      // existing context event. Do not force the full system prompt each turn.
+      sections.pi_request_intake_policy = policy;
+      return;
+    }
+    if (typeof event?.systemPrompt !== 'string') return;
+    return { systemPrompt: event.systemPrompt.includes(policy)
+      ? event.systemPrompt : event.systemPrompt + '\n' + policy };
+  });
   // Mid-turn steering still reaches EVERY provider request. Policy stays in the system prompt.
   pi.on('context', async (event: any) => ({ messages: [...event.messages, { role: 'custom',
     customType: 'pi-request-context/v1', content: liveGuidance() + readLoop.warning(), display: false, timestamp: Date.now() }] }));
