@@ -23,7 +23,7 @@ This project separates **remembering, doing and accepting work**. Sessions and m
 | --- | --- |
 | A long project outlives a model session | Managed Pi sessions, project identity, task board, explicit resume and [cross-assistant handoff](CROSS-ASSISTANT-CONTINUITY.md) |
 | Tool output consumes too much context | Stable Pi prompt sections, bounded source-hash-paginated tool replies and native compaction lifecycle checks |
-| Old memories contradict newer ones | Opt-in [bidirectional Dream review](MEMORY-DREAM.md) and a [validated retrieval interface](adapters/pi/memory/README.md); review suggestions **do not** overwrite accepted memory |
+| Old memories contradict newer ones | Opt-in [bidirectional Dream review](MEMORY-DREAM.md), [validated retrieval](adapters/pi/memory/README.md) and [source-owned memory adapters](MEMORY-SOURCE-ADAPTERS.md); suggestions **do not** overwrite accepted memory |
 | An agent says "done" before work is verified | [Independent SSOT controller](BLESSED-SSOT.md), source-bound receipts and [supervised task enforcement](ENFORCEMENT.md) |
 | A large model may not fit available VRAM | [Hardware probing and measured CPU/MoE offload](TOOLKIT.md) plus [read-only GGUF/GPU inventory](DYNAMIC-MODEL-INVENTORY.md) |
 
