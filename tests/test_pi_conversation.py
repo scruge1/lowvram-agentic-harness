@@ -112,15 +112,109 @@ if(which==='bounded-model-view'){
 }else if(which==='approved'){
  project={root:'/owned-fixture',projectId:'p',boardId:'b'};
  const id=await capture('Owner approves only A.');await tool('kanban_intake_route',{source_id:id,parts:[{kind:'task',summary:'Approved task A',execute:true}]});
- const before=await state(),queue=JSON.stringify(before.queue);await capture('Status? Keep doing A.');
- const boundary=await settle();assert.equal(boundary.continue,true);let value=await state();assert.equal(JSON.stringify(value.queue),queue);assert.equal(value.progress,before.progress);
- assert.equal(calls.filter(x=>x.action==='create').length,1);assert.equal(value.deferred_total,1);
+ const before=await state(),queue=JSON.stringify(before.queue);
+ const question=await capture('Status? Keep doing A.');
+ const routed=await tool('kanban_intake_route',{source_id:question,
+   parts:[{kind:'question',summary:'Status of current approved A only'}]});
+ assert.equal(routed.isError,undefined);
+ assert.equal((await fire('tool_call',{toolName:'workflow_step',input:{}})).block,true,
+   'Routing a question is not permission to execute before answering');
+ const pendingQuestion=await state();
+ assert.ok(pendingQuestion.question_return, 'Pure question return needs prior approval source: '+JSON.stringify(pendingQuestion));
+ assert.equal(pendingQuestion.question_return.phase,'pending');
+ const boundary=await settle();assert.equal(boundary?.continue,true,'Expected exact-scope post-answer continuation: '+JSON.stringify(await state()));
+ let value=await state();assert.equal(JSON.stringify(value.queue),queue);
+ assert.equal(value.progress,before.progress);
+ assert.equal(value.question_return.phase,'answered');
+ assert.equal(value.conversation.phase,'answered');
+ assert.equal(calls.filter(x=>x.action==='create').length,1);
+ assert.equal(value.deferred_total,0);
  const routedQuestion=await capture('Another status question, explicitly classified as question.');
  await tool('kanban_intake_route',{source_id:routedQuestion,parts:[{kind:'question',summary:'Status only, no new work'}]});
  assert.equal((await state()).progress,before.progress,'Routing a question must not manufacture progress');
  assert.equal((await settle()).continue,true);
  const pause=await capture('Explicit owner pause.');await tool('kanban_intake_route',{source_id:pause,control:'pause',parts:[{kind:'control',summary:'Pause now'}]});
  assert.equal(await settle(),undefined);await capture('Paused status?');assert.equal(await settle(),undefined);assert.equal((await state()).mode,'paused');
+}else if(which==='answer-focus'){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};
+ const a=await capture('Owner approves task A as the initial objective.');
+ await tool('kanban_intake_route',{source_id:a,parts:[{kind:'task',summary:'Approved task A',execute:true}]});
+ const b=await capture('Owner explicitly switches current objective to task B, keep A for later.');
+ await tool('kanban_intake_route',{source_id:b,parts:[{kind:'task',summary:'Approved task B',execute:true}]});
+ assert.equal(created.size,2);assert.equal(selected,'B');
+ const before=await state();
+ assert.equal(before.queue.length,2);
+ const q=await capture('Status of B? Continue the previously approved B after answering.');
+ const route=await tool('kanban_intake_route',{source_id:q,parts:[{kind:'question',summary:'Status of current approved task B'}]});
+ assert.equal(route.isError,undefined);
+ assert.equal((await fire('tool_call',{toolName:'workflow_step',input:{}})).block,true);
+ const continuation=await settle();
+ assert.equal(continuation?.continue,true);
+ assert.match(continuation.entries[0].content,/task B/,'Question must not resume older A from retained queue');
+ assert.doesNotMatch(continuation.entries[0].content,/task A/);
+ assert.equal(selected,'B');
+ assert.equal(created.size,2);
+ assert.equal((await state()).queue.length,2);
+ assert.equal((await state()).question_return?.phase,'answered');
+}else if(which==='answer-reload' || which==='answer-direct' || which.startsWith('answer-deny-')){
+ project={root:'/owned-fixture',projectId:'p',boardId:'b'};
+ const source=await capture('Explicit approval to execute scoped A only.');
+ const originalApproved='Explicit approval to execute scoped A only.';
+ await tool('kanban_intake_route',{source_id:source,parts:[{kind:'task',summary:'Scoped A',execute:true}]});
+ assert.equal(created.size,1);
+ if(which==='answer-deny-wait'){
+  const hold=await tool('kanban_work_checkpoint',{
+    disposition:'waiting',reason:'An independently verified peer receipt is outstanding',
+    resume_trigger:'Require receipt identity before resumption',waiting_for:'peer',wait_scope:'session'
+  });
+  assert.equal(hold.isError,undefined,'Peer hold fixture must register on native state');
+ }
+ const q=await capture('What is the status of A? Please answer first.');
+ if(which!=='answer-deny-unclassified'){
+  const parts=which==='answer-deny-mixed'
+    ?[{kind:'question',summary:'Status only'},{kind:'control',summary:'Control classification'}]
+    :[{kind:'question',summary:'Status only'}];
+  const routeResult=await tool('kanban_intake_route',{source_id:q,parts,
+    ...(which==='answer-deny-pause'?{control:'pause'}:{})});
+  assert.equal(routeResult.isError,undefined);
+ }
+ const before=which==='answer-direct'?null:await state();
+ if(which==='answer-reload'||which==='answer-direct'){
+  if(which==='answer-reload'){
+   assert.equal(before.question_return?.phase,'pending');
+   await fire('session_tree');
+   assert.equal((await state()).question_return?.phase,'pending','Reload retains only pending answer');
+  }
+  const resumed=await settle();
+  assert.equal(resumed?.continue,true,'Exact approved A must resume after answer and reload');
+  assert.match(resumed.entries[0].content,/task A/);
+  assert.equal((await state()).question_return?.phase,'answered');
+ }else{
+  if(which==='answer-deny-unclassified') assert.equal(before.pending_total,1);
+  if(which==='answer-deny-mixed') assert.equal(before.question_return,undefined);
+  if(which==='answer-deny-foreign') project={...project,boardId:'new-identity'};
+  if(which==='answer-deny-failure')
+    await fire('tool_result',{toolName:'workflow_step',isError:true,details:{ok:false}});
+  if(which==='answer-deny-child'){
+    entries.push({type:'custom',customType:'pi-managed-child-start/v1',
+      data:{id:'child-on-pause',project:{...project},card:'A',parent_card:'A',
+        source,source_sha256:digest(originalApproved),parent_session:'unit-only-session'}});
+  }
+  if(which==='answer-deny-newsource') await capture('A newer owner message.');
+  if(which==='answer-deny-typed') typed='Draft input still being written';
+  if(which==='answer-deny-tampered'){
+    const captured=entries.find(e=>e.customType==='pi-request-capture/v1'&&e.data.id===q);
+    captured.data.text+=' [modified after capture]';
+    await fire('session_tree');
+  }
+  assert.equal(await settle(),undefined,'No automatic work when the question boundary or scope is invalid: '+which);
+  const denied=await fire('tool_call',{toolName:'workflow_step',input:{}});
+  assert.equal(denied?.block,true,'Unsettled question/hold cannot authorize execution: '+which);
+ }
+ const after=await state();
+ assert.equal(after.queue.length,1,'No duplicate work card');
+ assert.equal(created.size,1,'Question processing never writes a second task card');
+ assert.ok(after.progress>=1 && after.progress<=2,'Retained task progress cannot be manufactured by the question');
 }else if(which==='uncertain'){
  project={root:'/owned-fixture',projectId:'p',boardId:'b'};loseCreate=true;
  const id=await capture('Approved task with uncertain routing.');const parts=[{kind:'task',summary:'Approved A',execute:true}];
@@ -232,6 +326,21 @@ class ConversationModuleTests(unittest.TestCase):
 
     def test_status_answer_preserves_and_continues_approved_work(self):
         self.run_case("approved")
+
+    def test_answer_return_is_focused_on_latest_exact_source_not_older_task(self):
+        self.run_case("answer-focus")
+
+    def test_answer_resume_without_status_poll_or_intermediate_tool(self):
+        self.run_case("answer-direct")
+
+    def test_answer_resume_survives_native_branch_reload(self):
+        self.run_case("answer-reload")
+
+    def test_unqualified_question_cannot_release_execution(self):
+        for case in ("unclassified", "mixed", "pause", "wait", "foreign", "failure",
+                     "child", "newsource", "typed", "tampered"):
+            with self.subTest(case=case):
+                self.run_case("answer-deny-" + case)
 
     def test_frozen_uncertain_route_is_not_deferred_or_replayed(self):
         self.run_case("uncertain")

@@ -27,6 +27,24 @@ desktop read-view tests remain separate. Exact synthetic tests, CLI no-write
 controls and Linux-native symlink tests are required before release.
 See NATIVE-SESSION-CATALOG.md.
 
+## Source-bound answer-first continuation across questions — 2026-11-08
+
+Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
+
+Port a narrowed version of the private Pi `answer-resume/v3` mechanism
+to the public native intake journal. A previously approved, retained
+work scope can be hash-pinned when a genuine user question interrupts it.
+Only an exactly routed pure question/preserve intent can regain that scope
+**after** the model's completed answer settles. An unclassified question
+may simply be answered and left held without another card or new approval.
+
+The existing retained decision helper, task authorization graph and
+OS/host guard remain the execution authorities. Scope mismatch, changed
+project, new user input, failed child, pause, dependency, stale source
+and incomplete approval cannot be bypassed. Full native Pi, child and
+intake negative tests and GitHub Linux/Windows offline release gate
+are required before promotion. See PI-ANSWER-RESUME.md.
+
 ## Read-only installed/public Pi source parity audit — 2026-11-08
 
 Public parent: `17bb0fe7d36629535f132e592d2ee98123b81b82`.
