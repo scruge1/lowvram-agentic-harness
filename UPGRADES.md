@@ -5,6 +5,25 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Source-bound bidirectional memory Dream review — 2026-11-08
+
+Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
+
+Add a local-first, opt-in memory review operation that reconciles
+explicitly supplied claims both oldest-to-newest and newest-to-oldest,
+refusing foreign project identities, changed source bytes, absent
+excerpts and unsafe input. Preserve untrusted retrieval labels even for
+consistent, current source-pinned candidates. No memory, ICM, Git,
+Kanban, scheduler or model weights are mutated.
+
+The optional library-only model reviewer accepts a bounded local
+IP-literal endpoint and only source-ID-cited suggestions. This is
+untrusted candidate analysis, not automatic memory promotion or
+completion authority. Preserve existing Claude-mem/MemPalace/Pi journal
+source ownership and keep the original transcripts outside this repo.
+Native history/field adapters are evidence converters, not new stores.
+See MEMORY-DREAM.md and its deterministic/loopback tests.
+
 ## Read-only installed/public Pi source parity audit — 2026-11-08
 
 Public parent: `17bb0fe7d36629535f132e592d2ee98123b81b82`.

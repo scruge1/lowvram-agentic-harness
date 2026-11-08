@@ -13,6 +13,7 @@ The components can be used independently:
 | `harness/paired_gate.py` | Compare a change against a labelled baseline. |
 | `harness/research_ground.py` | Search, retrieve and compare supplied source claims. |
 | `harness/model_catalog.py` | Select an explicitly configured model candidate. |
+| [Memory Dream review](MEMORY-DREAM.md) | Compare oldest and newest source-bound evidence, identify contradictions and propose reviewed memory improvements without writing a new memory store. |
 | [Read-only dynamic model inventory](DYNAMIC-MODEL-INVENTORY.md) | Enumerate explicit GGUF directories, complete shards and physical NVIDIA GPUs without starting or reserving models. |
 | `harness/hardware_probe.py` and `scripts/autotune_offload.py` | Inspect hardware and measure a selected local inference configuration. |
 | [Project coordinator](adapters/pi/project-workflow/README.md) | Connect native Pi tools to the admitted project, board and retained work. |
