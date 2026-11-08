@@ -36,6 +36,14 @@ Claude-mem, Pi sessions, MemPalace and ICM. It only produces **unverified
 candidates**; no local model can promote its own memory or grant task
 permission. Automatic ingestion and scheduled promotion are not released.
 
+## Inspect existing Pi sessions safely
+
+For an already-admitted Linux project, the opt-in
+[native Pi session catalogue](NATIVE-SESSION-CATALOG.md) can list native
+JSONL session headers without reading conversation bodies, creating
+another writer or acquiring tool execution authority. It is a local
+continuity aid, not a ChatGPT/Gemini/Claude account-history importer.
+
 ## Start here
 
 The complete installer currently supports **Linux x86_64 with glibc**. Windows

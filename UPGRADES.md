@@ -24,6 +24,28 @@ source ownership and keep the original transcripts outside this repo.
 Native history/field adapters are evidence converters, not new stores.
 See MEMORY-DREAM.md and its deterministic/loopback tests.
 
+## Read-only project-bound native Pi session catalogue — 2026-11-08
+
+Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
+
+Port a read-only native Pi 1.4 session-header catalogue into the public
+Python toolkit. Reuse the managed launcher's session-directory convention
+and existing project/board/Home identity, without creating a bucket or a
+second session database. The bounded listing exposes only session IDs,
+timestamps and file sizes; SHA-pinned paging rejects changed session sets.
+
+Native owner UID, regular single-link file, exact project cwd, stable
+header and no-symlink constraints prevent unrelated session discovery.
+Listing never opens the conversation body, creates a session writer,
+resumes an agent, dispatches work or grants authority. Source/history
+content is not a substitute for the original ChatGPT account export.
+The public installer does not activate this command automatically.
+
+Source adapted from the private Agent Home session-header reader; private
+desktop read-view tests remain separate. Exact synthetic tests, CLI no-write
+controls and Linux-native symlink tests are required before release.
+See NATIVE-SESSION-CATALOG.md.
+
 ## Source-bound answer-first continuation across questions — 2026-11-08
 
 Public parent: `6013b06a89853dc4713fbf438a710424e41159ca`.
