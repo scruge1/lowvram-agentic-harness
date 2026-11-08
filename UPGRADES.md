@@ -23,6 +23,26 @@ or GPU/model operations are made by the checker. The example mapping
 uses generic paths; actual local version names are private inputs.
 See PI-SOURCE-PARITY.md and the synthetic unit controls.
 
+## Source-pinned bounded Pi intake result views — 2026-11-08
+
+Public parent: `17bb0fe7d36629535f132e592d2ee98123b81b82`.
+
+Port the private presentation-only request-intake projector, adapted to
+the public request/retained-work contract. The model sees a bounded
+source-paged view, normally no more than 6,144 bytes, rather than
+repeated large pending/board/source payloads. Native `details.result`
+and original journal entries retain their unmodified source bytes,
+approval status, frozen route intent and task wait/recovery evidence.
+Hash pins refuse stale reply/source pages; large non-status receipts
+retain a non-authoritative pointer instead of being printed in full.
+
+No new authority, task runner, model load, session importer, automatic
+retry, service or shared store is introduced. Existing small responses
+remain compatible. Underlying 30-task/12-pending status snapshots are
+not a complete historical export. Standalone Unicode, stale-paging
+and full-extension tests and a clean native Pi/CI check must precede
+adoption. See PI-INTAKE-MODEL-VIEW.md.
+
 ## Bounded Pi runtime context telemetry - 2026-11-08
 
 Parent: `237cc68538ad5de6998ef4a23ed085a409f33299`.

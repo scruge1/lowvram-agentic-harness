@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
 import { createHash, randomUUID } from 'node:crypto';
+import { projectIntakeModelView } from './intake-model-view.mjs';
 import { buildRetainedPacket, cancelledSelection, nativeCompletionOrder, workKey } from './retained-packet-138.ts';
 import { decideRetainedWork, packetDigest } from './decision-bridge-138.ts';
 import { checkedReceipt, inspectReceipt, watchReceipt, blockedTaskIds, type TaskWait, type Receipt } from './dependency-receipts-138.ts';
@@ -140,7 +141,27 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
     queue_truncated: state.queue.length > 30, pending_total: pending().length, pending_truncated: pending().length > 12,
     pending: pending().slice(0, 12).map(({ text, ...rest }) => ({ ...rest,
     excerpt: text.slice(0, 2500), truncated: text.length > 2500 })) });
-  const result = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }], details: { ok: true, result: data } });
+  const result = (data: unknown, viewOptions: Record<string, unknown> = {}) => {
+    // Only presentation is bounded. The original native result (including
+    // captured user source, routing intent and retention state) remains in
+    // details for independent host checks and exact retry recovery.
+    let view: unknown;
+    try { view = projectIntakeModelView(data, viewOptions); }
+    catch {
+      // A display bug after an effect must NEVER turn a successful native
+      // mutation into a false failure or encourage duplicate execution.
+      const record = data as any;
+      view = {
+        schema: 'pi-intake-model-view/v1', view: 'presentation_unavailable',
+        ok: true, source_id: record?.source_id ?? record?.source?.id ?? null,
+        raw_reply_sha256: createHash('sha256').update(JSON.stringify(data)).digest('hex'),
+        recovery: 'Native result is unchanged in tool details. Re-read the exact source with kanban_intake_status; never retry a completed effect just to repair a view.',
+        authority: 'PRESENTATION_ONLY_NOT_APPROVAL',
+      };
+    }
+    return { content: [{ type: 'text' as const, text: JSON.stringify(view) }],
+      details: { ok: true, result: data } };
+  };
   const failed = (error: unknown) => ({ content: [{ type: 'text' as const, text: String(error) }],
     details: { ok: false }, isError: true });
   const readLoop = registerReadLoopGuard(pi, {
@@ -388,10 +409,37 @@ export function registerRequestIntake(pi: ExtensionAPI, bindings: Bindings) {
   pi.on('context', async (event: any) => ({ messages: [...event.messages, { role: 'custom',
     customType: 'pi-request-context/v1', content: liveGuidance() + readLoop.warning(), display: false, timestamp: Date.now() }] }));
   pi.registerTool({ name: 'kanban_intake_status', label: 'Read pending requests',
-    description: 'Read durable pending/deferred source messages and retained authorized work. Optional source_id returns the full captured source, disposition and any frozen routing intent for exact retry recovery. Deferred conversation is context, not approval.',
-    parameters: Type.Object({ source_id: Type.Optional(Type.String()) }, { additionalProperties: false }),
-    async execute(_id, params) { const source = params.source_id ? captures.get(params.source_id) : undefined;
-      return params.source_id && !source ? failed('Unknown source') : result({ ...status(), ...(source ? { source, disposition: routed.has(source.id) ? 'routed' : deferred.has(source.id) ? 'deferred' : 'pending', ...(intents.has(source.id) ? { frozen_intent: structuredClone(intents.get(source.id)) } : {}) } : {}) }); },
+    description: 'Read native retained work and captured source with a bounded model view, preserving exact full source in tool details. Use source_id plus source_offset/source_limit and expected_source_sha256 to page complete Unicode source; expected_reply_sha256 rejects stale snapshots. Queue/pending/wait pages cover the underlying bounded intake snapshot, not the whole historical journal. Deferred conversation remains context, never approval.',
+    parameters: Type.Object({
+      source_id: Type.Optional(Type.String()),
+      source_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      source_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 4096 })),
+      expected_source_sha256: Type.Optional(Type.String({ pattern: '^[a-f0-9]{64}$' })),
+      expected_reply_sha256: Type.Optional(Type.String({ pattern: '^[a-f0-9]{64}$' })),
+      queue_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      queue_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 20 })),
+      pending_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      pending_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 20 })),
+      wait_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      wait_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 20 })),
+      bound_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      bound_limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 20 })),
+    }, { additionalProperties: false }),
+    async execute(_id, params) {
+      const source = params.source_id ? captures.get(params.source_id) : undefined;
+      if (params.source_id && !source) return failed('Unknown source');
+      if (!source && (params.source_offset !== undefined || params.source_limit !== undefined ||
+          params.expected_source_sha256 !== undefined)) return failed('Source text paging requires source_id');
+      const { source_id: _sourceId, ...viewOptions } = params;
+      return result({
+        ...status(),
+        ...(source ? {
+          source,
+          disposition: routed.has(source.id) ? 'routed' : deferred.has(source.id) ? 'deferred' : 'pending',
+          ...(intents.has(source.id) ? { frozen_intent: structuredClone(intents.get(source.id)) } : {}),
+        } : {}),
+      }, viewOptions);
+    },
   });
   pi.registerTool({ name: 'kanban_intake_reconcile', label: 'Recover earlier session requests',
     description: 'On owner-authorized backlog review, capture earlier USER message entries on this branch from an explicit first_entry_id, up to 30 at a time. Preserves originals and uses stable entry IDs. Historical origin is unverified: imports are triage/held only, not execution authority. Inspect each source and reconcile existing cards; report remaining entries.',

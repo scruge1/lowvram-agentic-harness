@@ -35,6 +35,14 @@ future maintainers identify changes that need individual upstream review
 without relying on AI chat memory. Use a private mapping and keep private
 source hashes out of public issue reports.
 
+## Bounded request-intake replies
+
+The [intake model-view contract](PI-INTAKE-MODEL-VIEW.md) preserves the
+complete native intake result while limiting repeated model-facing status
+and source text. Long original sources are readable through Unicode
+codepoint pages with source/reply hash pins. This is presentation-only;
+the existing approval, retained-work and effect gates are unchanged.
+
 ## Pi context telemetry (optional)
 
 The [context telemetry contract](PI-CONTEXT-TELEMETRY.md) exposes
