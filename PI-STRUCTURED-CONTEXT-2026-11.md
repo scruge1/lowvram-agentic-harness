@@ -60,21 +60,38 @@ refusals, and stable named section behavior. It does **not** start a real model,
 force a compaction summary of a long live session, modify an active Pi process,
 or establish independent whole-project acceptance.
 
-A separate large, disposable session with real native compaction is required
-before claiming **lossless model context** across full compaction. In
-particular, tests of hook reset and small Q4 shadow turns are not the same as
-native large-session summarisation. Provider caching and tool correctness also
-require measured backend-level acceptance. The existing private four-source
-candidate and its test receipts are deliberately not uploaded verbatim.
+The portable native lifecycle regression uses the actual Pi 1.4 `AgentSession.compact()`
+entry with **1,200 synthetic session messages** and a deterministic, synthetic
+extension-provided summary. It passed on a disposable rig fixture on
+8 November 2026. The original 797,541-byte JSONL remained an unchanged
+prefix of the 797,976-byte post-compaction record, exactly one compaction entry
+was appended, both native before/after hooks fired, and the session projection
+included the supplied summary. No model API or GPU was invoked.
+
+To reproduce this **append-only persistence and event-ordering** test:
+
+    PI_TEST_NATIVE_PACKAGE=/exact/pi-coding-agent/package \
+      python -m unittest discover -s tests \
+      -p test_pi_large_compaction_native.py -v
+
+The test is skipped by default unless an exact Pi package is explicitly
+provided. This qualifies the *native compaction lifecycle*, **not** the
+correctness, completeness, or fidelity of an AI-generated summary. The remaining
+large-session end-to-end gate needs a genuinely summarised provider response,
+post-compaction source re-delivery, task recovery, and independent outcome
+checks. Provider caching and long-context tool quality likewise remain
+unqualified. Private transcripts and receipts are not uploaded verbatim.
 
 ## Follow-up gates
 
 - Verify actual Pi 1.4 native loader and prompt diff on the published branch.
 - Compare exact source hashes and output under repeated unchanged turns and a
   changed selected card. Never assume token savings from a synthetic fixture.
-- Exercise a realistically large *disposable* session through automatic/manual
-  compaction, preserved original JSONL, source re-delivery and failed tool
-  recovery. No live private session may be used as a disposable fixture.
+- Extend the now-tested native *manual compaction lifecycle* to a real
+  model-generated long-session summary. Verify source re-delivery, instructions
+  recovered by the worker, failed-tool recovery and independent task acceptance.
+  Test automatic threshold/overflow paths separately. Do not use a live private
+  session as a disposable fixture.
 - Retain separate host/OS-scoped authority: the private session-wide
   `ledgerRan` weakness needs a host-bound negative-tested fix. These prompt
   changes do not fix that gate.
