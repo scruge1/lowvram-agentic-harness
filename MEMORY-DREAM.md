@@ -98,7 +98,11 @@ Synthetic tests cover owner/project identity, current-source hashes,
 exact excerpts, stale/foreign sources, duplicated identities, conflicting
 chronology, no filesystem changes, input/secret limits, native Claude-mem
 field provenance, local-stub model JSON controls, no public network
-destinations and no unsafe CLI response leakage. On a local rig test,
+destinations and no unsafe CLI response leakage. Python 3.13 Windows
+fixtures require stable `path.stat` versus `fstat` birth timestamps and
+native case-normalization for stored project paths; the Linux
+runtime still requires exact original project identity and ctime-based
+source drift refusal. On a local rig test,
 the corresponding private candidate received two proposals from a
 real Q4 model, but that is *not* proof of long-term memory ranking,
 research quality or an autonomous learned memory manager.

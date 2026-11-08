@@ -1,6 +1,7 @@
 """Native Dream manager tests with disposable data and local HTTP model stub."""
 
 import hashlib
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -73,6 +74,19 @@ class DreamFixture(unittest.TestCase):
 
     def run_dream(self, req=None):
         return dream.preview(self.home, self.project, req or self.base)
+
+    def test_source_descriptor_and_path_stamps_remain_consistent(self):
+        before = self.record.stat(follow_symlinks=False)
+        descriptor = os.open(self.record, os.O_RDONLY)
+        try:
+            after = os.fstat(descriptor)
+            self.assertEqual(
+                dream._source_stamp(before),
+                dream._source_stamp(after),
+                "Same source must have stable physical identity across stat and fstat",
+            )
+        finally:
+            os.close(descriptor)
 
     def test_verified_current_source_is_still_not_blessed(self):
         data = self.run_dream()

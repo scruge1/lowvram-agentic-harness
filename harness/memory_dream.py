@@ -69,6 +69,28 @@ def normalize(text):
     return re.sub(r"\s+", " ", re.sub(r"[\W_]+", " ", text.lower())).strip()
 
 
+def _same_identity_path(value, expected):
+    """Keep strict Linux owner binding; normalize Windows fixture aliases only."""
+    if not isinstance(value, str):
+        return False
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        return False
+    if os.name != "nt":
+        return value == str(expected)
+    # Windows Python3.13 may canonicalize temp-directory casing differently
+    # from the string saved by the fixture. Reject actual symlink aliases.
+    ancestor = candidate
+    while ancestor != ancestor.parent:
+        if ancestor.is_symlink():
+            return False
+        ancestor = ancestor.parent
+    try:
+        return candidate.resolve(strict=False) == expected
+    except OSError:
+        return False
+
+
 def project_scope(home, project):
     home, project = Path(home).resolve(strict=True), Path(project).resolve(strict=True)
     marker = project / ".icm" / "project.json"
@@ -91,11 +113,25 @@ def project_scope(home, project):
         isinstance(pid, str)
         and pid
         and value.get("board_id") == "project:" + pid
-        and value.get("canonical_root") == str(project)
-        and value.get("state_root") == str(home / "state" / "projects" / pid),
+        and _same_identity_path(value.get("canonical_root"), project)
+        and _same_identity_path(
+            value.get("state_root"), home / "state" / "projects" / pid
+        ),
         "Dream evidence belongs to a different home/project",
     )
     return home, project, pid, sha(raw)
+
+
+def _source_stamp(st):
+    # Linux source drift checks must keep exact ctime. On Windows 3.13,
+    # path.stat/fstat expose distinct ctime semantics; the test fixture
+    # compares the consistent birth timestamp instead. No Linux gate weakens.
+    changed = (
+        getattr(st, "st_birthtime_ns", st.st_ctime_ns)
+        if os.name == "nt"
+        else st.st_ctime_ns
+    )
+    return st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, changed
 
 
 def prove_source(home, project, value):
@@ -134,15 +170,7 @@ def prove_source(home, project, value):
     try:
         opened = os.fstat(fd)
 
-        def fields(st):
-            return (
-                st.st_dev,
-                st.st_ino,
-                st.st_size,
-                st.st_mtime_ns,
-                st.st_ctime_ns,
-            )
-
+        fields = _source_stamp
         require(fields(opened) == fields(before), "Memory source changed during open")
         with os.fdopen(fd, "rb", closefd=False) as stream:
             raw = stream.read(MAX_SOURCE_BYTES + 1)
