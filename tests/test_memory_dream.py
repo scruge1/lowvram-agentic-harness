@@ -19,7 +19,10 @@ def sha(value):
 class DreamFixture(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="dream-intelligence-fixture-")
-        base = Path(self.tmp.name)
+        # Resolve the disposable root before writing ICM/source identities.
+        # Python 3.13 Windows may return a different canonical Temp path
+        # from resolve() than the string supplied by TemporaryDirectory.
+        base = Path(self.tmp.name).resolve(strict=True)
         self.home = base / "agent-home"
         self.home.mkdir()
         self.project = base / "project"
