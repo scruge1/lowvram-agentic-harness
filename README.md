@@ -27,6 +27,15 @@ records recent private work on Pi context lifecycle, repeated tool output,
 GPU resource planning and long-running local agents. Those candidates are
 not part of this public release until independently qualified.
 
+## Review long-project memory without trusting the newest summary
+
+The opt-in [bidirectional memory Dream review](MEMORY-DREAM.md)
+compares source-linked historical claims in both chronological directions,
+flags conflicting or stale evidence, and retains separate ownership for
+Claude-mem, Pi sessions, MemPalace and ICM. It only produces **unverified
+candidates**; no local model can promote its own memory or grant task
+permission. Automatic ingestion and scheduled promotion are not released.
+
 ## Inspect existing Pi sessions safely
 
 For an already-admitted Linux project, the opt-in
