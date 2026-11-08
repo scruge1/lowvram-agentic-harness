@@ -1,0 +1,46 @@
+name: Enhancement or integration
+description: Propose a capability that advances portable, verified local-agent work.
+title: "[Enhancement] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Focus on the project outcome and reproducible evidence, not a particular model brand.
+        The public repository does not yet claim a qualified desktop app, automatic GPU
+        orchestration, full personal chat archive or autonomous memory promotion.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Required user outcome
+      description: What concrete task or lifecycle failure should this resolve?
+      placeholder: "As an operator, I need ... so that ..."
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior and public source
+      description: Link the relevant public module, document, issue or reproducible limitation.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Constraints, authorization and non-goals
+      description: Specify project identity, privacy, process ownership, model/VRAM or source-verification constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Independent acceptance and negative control
+      description: What test proves success, and what must remain refused?
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: This issue contains no credentials, private transcripts, customer records or private rig manifests.
+          required: true

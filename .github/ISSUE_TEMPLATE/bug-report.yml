@@ -1,0 +1,74 @@
+name: Reproducible bug
+description: Report a defect in the public agent harness, installer or verification flow.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a reproducible problem. This is a development-stage project.
+        Do not attach credentials, customer data, personal sessions, raw prompt histories,
+        private host paths or unredacted service logs.
+        For a vulnerability, use the private security reporting link instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected component
+      options:
+        - Agent Home installer or lifecycle
+        - Pi session, project context or task board
+        - Memory retrieval or Dream review
+        - SSOT controller or task verification
+        - Local-model inference or hardware tools
+        - Documentation or other
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Public commit, tag or installed version
+      description: State an exact version when known; do not include private repo URLs.
+      placeholder: "Example: 343eaa3 (main, 8 Nov 2026)"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and runtime
+      description: Include only non-sensitive platform, Python and relevant model server versions.
+      placeholder: "Example: Ubuntu x86_64, Python 3.11; no GPU involved"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproducible steps
+      description: Include bounded example commands or synthetic fixtures, not original private sessions.
+      placeholder: |
+        1. Start from a clean checkout at the stated commit.
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: State the acceptance or safety boundary that should hold.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and redacted evidence
+      description: Include exit code, error and relevant source hashes if safe; remove secrets and host paths.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have removed credentials, customer data, raw session content and identifying host paths.
+          required: true
+        - label: This is not a vulnerability that should be reported privately.
+          required: true
