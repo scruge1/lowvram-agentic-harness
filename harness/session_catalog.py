@@ -68,8 +68,15 @@ def _bucket(home: Path, project: Path) -> Path:
 
 
 def _stamp(info: os.stat_result) -> tuple[int, ...]:
+    # This is a Linux-only runtime. Windows test fixtures emulate Linux
+    # admission, but Python 3.13 reports path.stat().st_ctime_ns as birthtime
+    # while fstat().st_ctime_ns can represent a different NTFS change time.
+    # Use the stable Windows birthtime solely for cross-platform test fidelity;
+    # on the real Linux host retain exact ctime checks against source drift.
+    change_ns = (getattr(info, "st_birthtime_ns", info.st_ctime_ns)
+                 if os.name == "nt" else info.st_ctime_ns)
     return (int(info.st_dev), int(info.st_ino), int(info.st_size),
-            int(info.st_mtime_ns), int(info.st_ctime_ns), int(info.st_nlink))
+            int(info.st_mtime_ns), int(change_ns), int(info.st_nlink))
 
 
 def _header(path: Path, project: Path) -> tuple[dict, os.stat_result]:

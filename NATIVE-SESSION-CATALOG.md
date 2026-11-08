@@ -76,6 +76,13 @@ oversized or invalid headers, duplicate IDs, symlink containment, no message
 body leaks and CLI no-write behavior. Host-specific symlink tests may skip
 on Windows because creating them requires elevated privileges.
 
+Python 3.13 changed how Windows `path.stat().st_ctime_ns` and
+`os.fstat().st_ctime_ns` compare. The portable test fixture now compares
+Windows' stable `st_birthtime_ns` field (where available). **The real
+Linux runtime still compares exact ctime, inode, device, size and mtime**;
+no Linux source-drift protection is relaxed. Verified locally using both
+Windows Python 3.10 and 3.13 plus the existing Linux source checks.
+
 The source is derived from an independently tested private Agent Home
 read-only session catalogue, **not** its Tauri desktop views or private
 session records. Its public adapter is independently versioned and must

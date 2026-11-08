@@ -4,6 +4,7 @@ Fixtures are disposable; no real sessions, task board or model touched.
 """
 from contextlib import contextmanager
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -49,6 +50,17 @@ class NativeCatalogueFixtures(unittest.TestCase):
              "timestamp":created})+"\n"+json.dumps({"type":"message","private":extra})+"\n",
              encoding="utf-8")
         return file
+
+    def test_descriptor_and_path_stamps_agree_on_supported_test_platforms(self):
+        file = self.saved("session-stamp.jsonl", "sid-one")
+        before = file.stat(follow_symlinks=False)
+        descriptor = os.open(file, os.O_RDONLY)
+        try:
+            after = os.fstat(descriptor)
+            self.assertEqual(cat._stamp(before), cat._stamp(after),
+                             "Cross-platform fixture must use stable physical file attributes")
+        finally:
+            os.close(descriptor)
 
     def test_empty_is_read_only_and_does_not_create_bucket(self):
         self.bucket.rmdir()
