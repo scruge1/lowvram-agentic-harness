@@ -5,6 +5,24 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Portable read-only multi-GPU and GGUF discovery - 2026-11-08
+
+Public parent commit: `75c4e6d84f9800677c0d2b527ff540c5edf29ed2`.
+
+Add an opt-in, Python standard-library-only catalogue that enumerates all
+NVIDIA GPU cards and explicitly selected GGUF model directories. It groups
+complete sharded models, refuses source path escapes, caps files/time/depth
+and returns unavailable rather than partial or falsely actionable results.
+All discovered models remain unqualified for execution and all GPU free-space
+observations lack reservation authority. No backend model loads, lease
+writes, process signals, new daemon or credentials are involved.
+
+This is a portable **first stage** of the private Pi dynamic catalogue, not
+a clone of the rig-specific worker selector or its Ollama/roster/GPUQ
+transactions. Synthetic cross-platform tests check invalid assets, symlinks,
+incomplete shards, malformed GPU inventories and absence of side effects.
+See DYNAMIC-MODEL-INVENTORY.md for next source/owner acceptance work.
+
 ## Stable Pi 1.4 prompt sections and context redelivery — 2026-11-08
 
 Parent: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.
