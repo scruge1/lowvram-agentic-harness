@@ -1041,8 +1041,10 @@ def main(argv=None, *, bound_home=None):
     schedule_result.add_argument("job")
     schedule_result.add_argument("filename", nargs="?")
     memory = commands.add_parser("memory")
-    memory.add_argument("operation", choices=("start", "stop", "status", "search"))
+    memory.add_argument("operation", choices=("start", "stop", "status", "search", "dream-preview"))
     memory.add_argument("--query")
+    memory.add_argument("--project", type=Path,
+                        help="Only for dream-preview: existing admitted project")
     palace_command = commands.add_parser("palace", help="Manage this home's native MemPalace single-writer hub")
     palace_command.add_argument("operation", choices=("start", "stop", "status"))
     research = commands.add_parser("research", help="Set up optional web retrieval in your terminal or inspect redacted status")
@@ -1153,6 +1155,19 @@ def main(argv=None, *, bound_home=None):
             print(json.dumps(palace(args.home, args.operation), indent=2))
             return 0
         if args.command == "memory":
+            if args.operation == "dream-preview":
+                if args.project is None or args.query is not None:
+                    raise HomeError("Dream preview requires --project and no --query")
+                from harness import memory_dream, home_entry
+                home, _config = load(args.home)
+                # Reuse this Home's existing consumer lease. No second store,
+                # new session writer, autonomous promotion or model call.
+                with home_entry.consumer(home):
+                    return memory_dream.main(
+                        ["--home", str(home), "--project", str(args.project)]
+                    )
+            if args.project is not None:
+                raise HomeError("--project is reserved for memory dream-preview")
             from harness.claude_memory import invoke
             result = invoke(args.home, args.operation, event=args.query)
             print(json.dumps(result, indent=2))
