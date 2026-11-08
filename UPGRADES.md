@@ -5,6 +5,30 @@ and remaining adoption limits. Extend this file with later accepted changes.
 Keep private transcripts, machine locators, credentials, and generated run state
 out of the public repository. Git records the resulting commit after publication.
 
+## Bounded Pi system-tool model replies and November parity — 2026-11-08
+
+Parent: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.
+
+Transfer the reviewed 4096-byte, SHA-pinned pagination projector for
+`system_tool_query` into the public Pi adapter. Keep complete backend
+source/record evidence in tool `details` and ensure malformed query results
+are refused before an oversized model-visible response. Record exact helper
+pin, stable paging and stale-refusal behavior with standalone synthetic and
+whole-extension fake-transport tests. The existing Kanban projector was
+already byte-identical to the private rig and was not copied again.
+
+`PI-HARNESS-PARITY-2026-11.md` tracks the remaining source gap around
+four named prompt sections, real compaction/redelivery, scoped ledger
+authorization, native dynamic GPU selection, capture/wake continuity and
+local model leadership. None are implicitly installed or declared
+accepted by this source change. No private transcripts, source paths,
+machine secrets or live model settings are copied to the public tree.
+
+Current proof: pure JavaScript source controls, injected transport integration
+and focused Python unittest pass on a Windows development host. The
+complete CI release gate and clean installed Pi acceptance are separate;
+do not promote this work on documentation or a shadow model benchmark alone.
+
 ## Portable handoff and November development ledger — 2026-11-08
 
 Parent commit: `f0d22fc28d2efb9e9e4ce47239ac946287c239a1`.

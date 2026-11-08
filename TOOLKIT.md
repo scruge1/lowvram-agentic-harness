@@ -24,6 +24,23 @@ The included local controller cannot grant the external `blessed` authority.
 See [current qualification](AGENT-HOME.md#current-qualification) before making
 claims about the complete assistant.
 
+## Pi harness parity and bounded system-tool replies
+
+The [November Pi parity audit](PI-HARNESS-PARITY-2026-11.md) separates
+already-portable code, newly transferred improvements, and private candidates
+that have not passed public adoption. In particular, the
+`system_tool_query` extension now displays at most 4096 bytes by default
+while retaining the complete backend reply in tool details. Follow
+`items_offset`, `items_limit` and the returned `raw_reply_sha256`
+as `expected_reply_sha256` to continue a source-pinned result without
+loading the full catalogue into the model context. A stale cursor must be
+restarted, not combined with a new source version.
+
+The pure helper and extension integration regressions run with
+`python -m unittest discover -s tests -p test_pi_system_tool_projection.py -v`.
+These controls do not prove that a particular installed model successfully
+performed an end-to-end engineering task.
+
 ## Local inference and Python toolkit
 
 ```bash
