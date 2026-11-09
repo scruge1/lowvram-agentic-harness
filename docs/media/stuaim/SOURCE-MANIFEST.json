@@ -1,0 +1,86 @@
+{
+  "animation_kind": "illustrated_scripted_fixture",
+  "assets": {
+    "docs/media/source-backed-workflow.mp4": {
+      "sha256": "97b32330d13da5023dc7c37a8a914f06fbd419404345bc313c72f7805694955b",
+      "size_bytes": 551656
+    },
+    "docs/media/stuaim-workflow-preview.gif": {
+      "sha256": "fb639670b2f260e27dbe59afc3e0763bbc15b41e2b4d9abd77b489b8dfa4994c",
+      "size_bytes": 393342
+    },
+    "docs/media/stuaim/flat-knot-banner-study.png": {
+      "sha256": "79ff4b67c46a7272e5b3588e12aec23e1b1435058ffb1b6401ac8ce80394965a",
+      "size_bytes": 1113373
+    },
+    "docs/media/stuaim/stuaim-app-icon.png": {
+      "sha256": "16193af682a8221069b64b73d5d9364a189eb578536201694c50935eef7c44dc",
+      "size_bytes": 43017
+    },
+    "docs/media/stuaim/stuaim-chat-candidate.png": {
+      "sha256": "6ad196a51563bfd6b8e4ed10856125a92ff1c967a9eef8a1cea8ac015522c79a",
+      "size_bytes": 85846
+    },
+    "docs/media/stuaim/stuaim-horizontal-dark.png": {
+      "sha256": "32251f8f3ce943d82f7c09386de93283f2b9e28078275d563df2a64106284e41",
+      "size_bytes": 27412
+    },
+    "docs/media/stuaim/stuaim-horizontal-light.png": {
+      "sha256": "2dc347d43ac5ae05bb9a593f9a7f05365b325c9699a1f203ec44a9b4771fc09d",
+      "size_bytes": 27187
+    },
+    "docs/media/stuaim/stuaim-symbol-dark.svg": {
+      "sha256": "a7c02d84a414aef6bb99acff42c4c3b9c5214e03e45e0a8ceece32dc9363cb96",
+      "size_bytes": 16698
+    },
+    "docs/media/stuaim/stuaim-symbol-light.svg": {
+      "sha256": "e1c206e11345e8dec6583552b09637f3c0e92e373b4b2e6d4c50a27b4a2e7b67",
+      "size_bytes": 16698
+    },
+    "docs/media/workflow-opening.png": {
+      "sha256": "de86d92d4ab0c3cec87c6e4eb9c8fc9390b2ced45d0d99236a1e2cb22cfd59b7",
+      "size_bytes": 81974
+    },
+    "docs/media/workflow-poster.png": {
+      "sha256": "2533b8114aac953cf9a198a8812d3e6ac2be96c7ec63f0236036397a54106e77",
+      "size_bytes": 77395
+    },
+    "docs/media/workflow-task.png": {
+      "sha256": "a048fdbeee26976fc6c5e00acfe27a7d84345e83d5c136182abd6c26e9e62549",
+      "size_bytes": 76129
+    },
+    "docs/media/workflow-verified.png": {
+      "sha256": "effb0be9bbcbd90b352aaabb2e541645795657a07aeb26235bf158116deda5dd",
+      "size_bytes": 76376
+    }
+  },
+  "base_harness_example": "examples/enforced-task/demo.py",
+  "brand_source_commit": "89ee9c801bfc170e260229827a884ff8af0ab7c7",
+  "desktop_ui_captured": false,
+  "flat_banner_geometry": {
+    "columns": 40,
+    "left_knots": 240,
+    "projection": "orthographic_2d",
+    "right_knots": 240,
+    "rows": 12
+  },
+  "inline_gif": {
+    "duration_seconds": 10.2,
+    "frames": 102,
+    "height": 450,
+    "loop": true,
+    "width": 800
+  },
+  "live_model_used": false,
+  "no_font_binaries_distributed": true,
+  "schema": "stuaim-public-visual-review/v1",
+  "status": "design_review_not_desktop_release",
+  "video": {
+    "audio": false,
+    "duration_seconds": 22.0,
+    "fps": 24,
+    "frames": 528,
+    "height": 1080,
+    "width": 1920
+  }
+}

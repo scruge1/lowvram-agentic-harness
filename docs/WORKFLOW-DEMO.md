@@ -1,83 +1,73 @@
-# Source-backed workflow demonstration
+# Offline task verification example
 
-**A reproducible, 22-second illustrated replay of a real public-harness
-scripted offline fixture — not a screenshot of STUAIM, Pi, a local AI model
-or a finished desktop product.**
+![Animated STUAIM-themed illustration of the public harness checking a scripted task](media/stuaim-workflow-preview.gif)
 
-[Watch the 1080p motion graphic](media/source-backed-workflow.mp4) ·
-[View the poster](media/workflow-poster.png) ·
-[Inspect the sanitized captured evidence](media/workflow-evidence.json) ·
-[Read the exact source example](../examples/enforced-task/README.md)
+This animation is based on the actual public
+[enforced-task example](../examples/enforced-task/README.md). It uses
+the STUAIM visual design from the [branding study](STUAIM-BRANDING.md)
+rather than the older teal-and-orange graphics. The animation is a
+constructed explanation of the recorded results, **not an application
+screen recording**.
 
-![Illustrated SSOT workflow: first rejected attempt and accepted corrective retry](media/workflow-poster.png)
+[Download the 22-second MP4](https://raw.githubusercontent.com/scruge1/lowvram-agentic-harness/main/docs/media/source-backed-workflow.mp4) ·
+[View the source results](media/workflow-evidence.json) ·
+[Reproduce the test](../examples/media/source-backed-workflow/capture.py)
 
-The supporting illustrated stills show the same captured event sequence:
-[opening](media/workflow-opening.png),
-[source-bound task](media/workflow-task.png) and
-[independent verification](media/workflow-verified.png).
-All three are frames of the original motion graphic, not application screenshots.
+## Recorded test
 
-## What is actually demonstrated
+The example uses a scripted command-line worker. Its first output was
+rejected by the independent verifier, which returned exit code `1`.
+The second attempt used the recorded feedback and passed with exit code
+`0`. The project acceptance check then recorded a verified stage and
+a local authority level of `tested`.
 
-The existing repository [enforced-task example](../examples/enforced-task)
-is copied to a disposable work directory and run with Python.
-It exercises a script worker, a checked research receipt, the independent
-task verifier, corrective feedback and final SSOT project acceptance.
-The animated nodes, cards, transitions and labels are **original
-illustrations derived from the checked result**, not graphical captures
-of the public Pi CLI, a live model prompt, Garden Brain or the private
-Agent Home desktop.
+| Event | Recorded value |
+| --- | --- |
+| Task | `offline-enforced-example` |
+| Requirement | One source-bound requirement |
+| First verifier result | `rejected`; exit `1` |
+| Corrective retry | `accepted`; exit `0` |
+| Project acceptance | `accepted: true`, `complete: true` |
+| Authority | `tested`, locally |
 
-| Scene | Truth in the public source | Qualification |
-| --- | --- | --- |
-| Task intake | `offline-enforced-example` has one admitted source-bound requirement | Existing scripted fixture, not an inferred user request |
-| Attempt 01 | Output rejected; task-verifier exit code 1 | Negative result from actual enforcement receipt |
-| Feedback | `verification_failure` supplied for bounded retry | Genuine status/feedback classification |
-| Attempt 02 | Output accepted; task-verifier exit code 0 | A scripted corrective retry, **not a language model** |
-| Final result | `accepted:true`, `complete:true`, verified stage; project authority capped at `tested` | Independent local source/receipt checks, not externally `blessed` |
+These values come from the publicly executable fixture. A language model
+was not involved. The `tested` result does not certify a customer's
+deployment or the unreleased desktop application.
 
-The final result text is **“accepted: admitted research and corrective
-retry were used”**. The source output is SHA-256 bound in the sanitized
-JSON receipt. The renderer displays the first twelve hex digits; it
-does not independently validate arbitrary user-created screenshots.
+## Run it locally
 
-No live LLM, GPU, external search engine, phone app, desktop UI, cloud
-service, fully autonomous agent chief or scheduled Dream memory manager
-was exercised to make this film. The film is intentionally **silent**,
-with explanatory text integrated into the frames and no synthetic
-voiceover presented as a real user recording.
-
-## Reproduce the observed outcome
-
-From a fresh checkout with the installed Python runtime:
+From the repository root:
 
 ```bash
 python examples/media/source-backed-workflow/capture.py
 ```
 
-This runs the existing public `examples/enforced-task/demo.py` in a
-**disposable copy** and prints its bounded, source-linked sanitized
-evidence as JSON. Its original working project, generated run IDs and
-process traces remain outside the Git tree. The published
-[reference evidence](media/workflow-evidence.json) was captured on
-Windows and records **SHA-256 of canonical LF-normalized public text
-source** (the `canonical_lf_text_sha256` mode), so Linux and Windows
-checkouts resolve the same Git text despite Windows CRLF conversion.
-The actual output SHA-256 is over the **exact produced bytes** and may
-differ between platforms because the scripted example emits native
-line endings. This does not change whether the verifier rejected or
-accepted the recorded attempts.
+The capture script copies the original fixture into a disposable
+directory, executes it and checks the real run receipts. It prints a
+sanitized JSON summary with source digests, task states and the output
+digest. Private process IDs, run directories and host paths are not
+included.
 
-To make a new local capture file (choose a path that does not exist):
+To save the result to a *new* file:
 
 ```bash
 python examples/media/source-backed-workflow/capture.py \
   --output my-workflow-evidence.json
 ```
 
-To author visual frames and the optional local video, install the
-separate creative tooling **in your own isolated environment**. The core
-harness does not depend on Pillow or FFmpeg:
+Its `canonical_lf_text_sha256` source hashes normalise CRLF to LF
+for cross-platform text comparison. The actual result-file SHA-256 is
+calculated from its original bytes, so Windows and Linux may produce
+different raw file digests while reporting the same verified outcome.
+
+## Editable video and image assets
+
+The public composition is
+[render.py](../examples/media/source-backed-workflow/render.py).
+It uses the retained STUAIM wordmark, symbol and app-shell palette.
+The source is editable and has no Tauri app dependency. Rendering
+requires Pillow and FFmpeg, which are **not** installed by the core
+harness.
 
 ```bash
 python -m pip install Pillow==12.3.0
@@ -87,40 +77,49 @@ python examples/media/source-backed-workflow/render.py \
   --review-frames --render-video
 ```
 
-That last step requires an `ffmpeg` executable with H.264 encoding on
-`PATH`. The source is editable Python; no proprietary design file,
-stock audio, licensed font files or private work-session data is
-needed. Poster and video use original shapes, typography rendered
-from host fonts, and a restrained teal/brass visual language.
+A locally installed DM Sans font can optionally be selected with
+`STUAIM_RENDER_FONT`. The published video uses the app's own approved
+font files during rendering, but no font binaries are included in this
+repository. The lettering in the retained wordmark is already part
+of the raster brand asset.
 
-The reference MP4 is **1920×1080, 24 fps, 22 seconds, silent**.
-The movie is a diagram-based explanatory animation, not an exact
-frame recording of the preceding fixture execution. Review actual
-playback and reading time on desktop and phone before wider marketing
-use. Programmatic decode and sampled frame checks are necessary
-technical gates, not a human artistic or accessibility acceptance.
+The [animated GitHub preview](media/stuaim-workflow-preview.gif) is
+a short section of the full video. It can play directly in README
+images, including clients that cannot preview a GitHub MP4 blob.
+The [poster](media/workflow-poster.png),
+[opening](media/workflow-opening.png),
+[task view](media/workflow-task.png) and
+[accepted result](media/workflow-verified.png) provide static fallbacks.
 
-## Production and source provenance
+## Visual and technical review
 
-The **method** was recovered from earlier Garden Brain production
-and Codex-session/Gmail review: storyboard/styleframe first, authentic
-source evidence, explicit motion hierarchy, dedicated phone-size
-checks, restrained visual revisions and separate technical/creative
-acceptance. The artwork and source of this particular demo are **new**.
+The original illustrated cut used a different palette and
+slogan-like writing. Its first review also found overlapping headings
+at four scene handoffs; a scene-window test was subsequently added.
+This revision replaces those headings with actual task labels and
+outcomes, and uses non-overlapping scene windows.
 
-None of the historical Garden Brain/Obsidian images, earlier rendered
-MP4s, customer vault, voice tracks, font binaries, Remotion/Shotcraft
-source, original Codex conversations, Gmail contents or private
-filesystem paths have been copied into this repository.
+The new layout references the tested STUAIM chat-first frontend
+**design study**. Its sidebar and navigation are illustrative:
+the offline fixture ran in Python, not through the desktop UI.
 
-All public scene claims are tied to
-[the sanitized capture](media/workflow-evidence.json),
-[the capture script](../examples/media/source-backed-workflow/capture.py),
-[the render script](../examples/media/source-backed-workflow/render.py)
-and the original public
-[enforced-task fixture](../examples/enforced-task/demo.py).
+The full MP4 is silent H.264, 1920×1080 at 24 fps for 22 seconds.
+The GIF is provided for inline GitHub viewing. Decode, metadata,
+still-frame and phone-size inspections are technical checks. The
+moving cut still requires a normal-speed human review for final
+aesthetic and accessibility acceptance.
 
-**What this proof does not settle:** useful local-model quality,
-an independently accepted Pi/desktop first-run journey, automatic
-model/GPU leasing, unassisted user onboarding and long-project
-autonomous continuity. These remain separately qualified.
+## Source ownership
+
+The Garden Brain project and original Codex/Gmail reviews were used
+to recover the creative production method: edit the source scene,
+inspect contact sheets, check the actual motion, and retain rejected
+versions when a defect is found. No Garden Brain product imagery,
+customer notes, private transcripts, native app build, source font
+files or stock audio were copied into the public video.
+
+The [source-linked summary](media/workflow-evidence.json),
+[capture implementation](../examples/media/source-backed-workflow/capture.py)
+and [original fixture](../examples/enforced-task/demo.py)
+remain the evidence for what occurred. A working local-model first
+report and a shipped STUAIM desktop are separate acceptance tasks.

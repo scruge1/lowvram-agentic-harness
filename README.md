@@ -1,48 +1,30 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/stuaim/stuaim-horizontal-dark.png">
+    <img src="docs/media/stuaim/stuaim-horizontal-light.png" alt="STUAIM three-loop Celtic symbol and wordmark" width="510">
+  </picture>
+</p>
+
 # Low-VRAM Agentic Harness
 
-**Local-first agents for projects that outlive a chat session.**
+This repository contains the public command-line harness and project controller behind the STUAIM work. The managed assistant connects Pi to an existing local model endpoint. The independent controller checks task outputs before recording their status.
 
-Your model can change. Your project's decisions, evidence and verification rules should not.
+The STUAIM desktop interface is still being developed and qualified. The branding and UI images here are design studies, not screenshots of a released desktop application.
 
 [![Offline release checks](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml/badge.svg)](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-555555.svg)](LICENSE)
+[![MIT license](https://img.shields.io/badge/license-MIT-555555.svg)](LICENSE)
 
-A development-stage, self-hostable toolkit for running **supervised AI agents with locally served models**. The managed assistant uses [Pi](https://github.com/earendil-works/pi); an independent, harness-neutral project controller preserves the task contract, source evidence and verification receipts. Low-VRAM inference guidance and hardware inspection are included, but no model weights or universal performance claims are bundled.
+[Getting started](GETTING-STARTED.md) · [Project verification](BLESSED-SSOT.md) · [Developer toolkit](TOOLKIT.md) · [STUAIM visual assets](docs/STUAIM-BRANDING.md)
 
-**[Get started](GETTING-STARTED.md) · [How it works](#how-it-works) · [Current limits](#what-is-and-isnt-ready) · [Developer toolkit](TOOLKIT.md)**
+## Offline verifier example
 
-> **Development status:** The portable controller has passing offline acceptance tests. The complete managed assistant and its first useful local-model report remain under qualification. This is not a production-ready autonomous agent or a finished desktop app.
+[![STUAIM-styled preview of the scripted verifier example](docs/media/stuaim-workflow-preview.gif)](docs/WORKFLOW-DEMO.md)
 
-## Why this exists
+The bundled example runs a scripted worker. Its first result was rejected by the verifier, and the retry passed using the recorded feedback. The controller then set the local project status to `tested`.
 
-Many agent workflows lose the reasoning behind a project when the model changes, context compacts, or a session ends. A successful tool call can also be mistaken for a completed task.
+[Read the reproducible example](docs/WORKFLOW-DEMO.md) · [Download the full MP4](https://raw.githubusercontent.com/scruge1/lowvram-agentic-harness/main/docs/media/source-backed-workflow.mp4)
 
-This project separates **remembering, doing and accepting work**. Sessions and memory are retrieval evidence; the task and its current source files define what is allowed; an independent host-side verifier checks actual outputs. A model cannot approve its own completion.
-
-| Problem | Included public capability |
-| --- | --- |
-| A long project outlives a model session | Managed Pi sessions, project identity, task board, explicit resume and [cross-assistant handoff](CROSS-ASSISTANT-CONTINUITY.md) |
-| Tool output consumes too much context | Stable Pi prompt sections, bounded source-hash-paginated tool replies and native compaction lifecycle checks |
-| Old memories contradict newer ones | Opt-in [bidirectional Dream review](MEMORY-DREAM.md), [validated retrieval](adapters/pi/memory/README.md) and [source-owned memory adapters](MEMORY-SOURCE-ADAPTERS.md); suggestions **do not** overwrite accepted memory |
-| An agent says "done" before work is verified | [Independent SSOT controller](BLESSED-SSOT.md), source-bound receipts and [supervised task enforcement](ENFORCEMENT.md) |
-| A large model may not fit available VRAM | [Hardware probing and measured CPU/MoE offload](TOOLKIT.md) plus [read-only GGUF/GPU inventory](DYNAMIC-MODEL-INVENTORY.md) |
-
-The individual components can be used independently. You do not need the experimental full profile to use the default assistant or the offline verification toolkit.
-
-## See an actual checked retry
-
-[![Illustrated offline verifier workflow: rejected output, corrected retry and tested acceptance](docs/media/workflow-poster.png)](docs/media/source-backed-workflow.mp4)
-
-[Watch the 22-second 1080p video](docs/media/source-backed-workflow.mp4) ·
-[Read the source-linked evidence and reproduce it](docs/WORKFLOW-DEMO.md)
-
-This is an **illustrated replay of the repository's genuine scripted
-offline enforced-task example**: the first worker output is rejected,
-feedback drives the second attempt, and independent verification
-accepts the corrected result at `tested` authority. It is **not** a
-desktop screenshot or evidence of a local language-model call. Original
-motion-design methods were adapted from the privately reviewed Garden
-Brain production workflow; no historical customer assets are included.
+The animation uses the STUAIM visual design to explain real public test results. It is an illustration; the test did not involve the desktop interface or a language model.
 
 ## Quick start
 
