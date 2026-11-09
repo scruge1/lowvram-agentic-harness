@@ -100,6 +100,29 @@ playback and reading time on desktop and phone before wider marketing
 use. Programmatic decode and sampled frame checks are necessary
 technical gates, not a human artistic or accessibility acceptance.
 
+## Visual verification and remaining limits
+
+The first full-video contact-sheet review found **four scene-handoff
+collisions** where old and new headlines overlapped. The rejected first
+cut is retained in private QA, not in the public media gallery.
+The published revised render uses non-overlapping text-scene intervals.
+Two source-only timeline tests independently verify the five scene
+windows and demonstrate that an injected overlapping interval is
+rejected.
+
+The revised MP4 was decoded across all 528 frames. Twenty-two frames
+sampled at one-second intervals were reviewed together, with selected
+native stills and a 480×270 decoded phone-size frame. Small technical
+metadata becomes difficult to read at phone preview sizes; use the
+full-size clip and written evidence for those details. These checks
+establish bounded static/technical review, **not independent human
+real-time playback or accessibility acceptance**.
+
+The published revised MP4 has SHA-256
+`67c7cb496d4e421817aa22b00b85cae20f5b7f50f491251d3e0c862364417bfa`,
+size **1,384,372 bytes**, duration **22.000 s** and **528 decoded H.264
+frames**. The film has no audio stream.
+
 ## Production and source provenance
 
 The **method** was recovered from earlier Garden Brain production
