@@ -46,7 +46,7 @@ SOURCE_LINEAGE = (
      "dirty_scope": "Private model-routing changes; reused fetch/extraction portion unchanged"},
 )
 _TRACKING_QUERY_KEYS = {"fbclid", "gclid", "mc_cid", "mc_eid", "msclkid", "ref_src"}
-_UA = "lowvram-agentic-harness-public-research/1.0"
+_UA = "stuaim-public-research/1.0"
 RESPONSE_HEADERS = frozenset({
     "content-type", "content-language", "content-disposition", "cache-control", "vary", "retry-after",
     "content-security-policy", "content-security-policy-report-only", "referrer-policy", "permissions-policy",

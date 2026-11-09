@@ -30,7 +30,7 @@ DIM = (108, 120, 113)
 ACCENT = (177, 208, 193)
 BORDER = (56, 65, 61)
 FAILED = (217, 132, 121)
-SCHEMA = "lowvram-offline-workflow-capture/v1"
+SCHEMA = "stuaim-offline-workflow-capture/v1"
 FONTS: dict[tuple[int, bool, bool], ImageFont.FreeTypeFont] = {}
 
 
@@ -272,7 +272,7 @@ def scene_reproduce(d, t, evidence):
         TEXT,
         mono=True,
     )
-    txt(d, (430, 866), "scruge1/lowvram-agentic-harness", 25, MUTED)
+    txt(d, (430, 866), "scruge1/stuaim", 25, MUTED)
 
 
 def frame(t, evidence, background):

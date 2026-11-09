@@ -45,7 +45,7 @@ except ImportError:
     import verify as V
     from llm import LocalLLM, load_config
 
-UA = "Mozilla/5.0 (compatible; lowvram-harness-research/1.0)"
+UA = "Mozilla/5.0 (compatible; stuaim-research/1.0)"
 
 
 # --- SEARCH (pluggable) -----------------------------------------------------------

@@ -13,7 +13,7 @@ Optional research tools may contact external services.
 
 ## Report a vulnerability privately
 
-Use GitHub's **[Report a vulnerability](https://github.com/scruge1/lowvram-agentic-harness/security/advisories/new)** feature rather than posting exploit details,
+Use GitHub's **[Report a vulnerability](https://github.com/scruge1/stuaim/security/advisories/new)** feature rather than posting exploit details,
 tokens, prompt injections or private logs in public issues.
 
 A useful report includes the affected public commit or tag, supported
@@ -35,4 +35,4 @@ validation, safe session reuse, model-service ownership or protected
 file operations should be reported privately.
 
 For non-sensitive bugs and usability problems, use
-[GitHub Issues](https://github.com/scruge1/lowvram-agentic-harness/issues).
+[GitHub Issues](https://github.com/scruge1/stuaim/issues).
