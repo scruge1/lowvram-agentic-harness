@@ -25,7 +25,7 @@ class BrandedMediaTests(unittest.TestCase):
         self.assertFalse(record["live_model_used"])
         self.assertFalse(record["desktop_ui_captured"])
         self.assertTrue(record["no_font_binaries_distributed"])
-        self.assertEqual(len(record["assets"]), 13)
+        self.assertEqual(len(record["assets"]), 16)
         self.assertFalse(list(ASSETS.rglob("*.ttf")))
         self.assertFalse(list(ASSETS.rglob("*.otf")))
         for path, pinned in record["assets"].items():
@@ -60,10 +60,10 @@ class BrandedMediaTests(unittest.TestCase):
             },
         )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("stuaim-horizontal-dark.png", readme)
-        self.assertIn("stuaim-horizontal-light.png", readme)
-        self.assertIn("stuaim-workflow-preview.gif", readme)
-        self.assertIn("STUAIM desktop interface is still being developed", readme)
+        self.assertIn("stuaim-github-hero-2400x720.png", readme)
+        self.assertIn("# STUAIM", readme)
+        self.assertNotIn("stuaim-workflow-preview.gif", readme)
+        self.assertIn("desktop application has a separately qualified Windows candidate", readme)
         self.assertIn("scripted worker", readme)
         self.assertIn(
             "controller then set the local project status to `tested`", readme
@@ -82,7 +82,7 @@ class BrandedMediaTests(unittest.TestCase):
         render = (ROOT / "examples/media/source-backed-workflow/render.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("stuaim-horizontal-dark.png", render)
+        self.assertIn("stuaim-vector-lockup.png", render)
         self.assertIn('"ILLUSTRATED REPLAY"', render)
         self.assertIn("Scripted fixture. No local LLM used.", render)
         for original in (

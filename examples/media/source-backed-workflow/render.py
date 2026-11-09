@@ -174,12 +174,16 @@ def shell_background():
 
 
 def apply_brand(im):
-    brand = ROOT / "docs/media/stuaim/stuaim-horizontal-dark.png"
+    brand = ROOT / "docs/media/stuaim/stuaim-vector-lockup.png"
     if not brand.is_file():
         raise ValueError("Exact retained STUAIM brand asset missing")
-    original = Image.open(brand).convert("RGB")
-    scaled = original.resize((273, 77), Image.Resampling.LANCZOS)
-    im.paste(scaled, (13, 21))
+    original = Image.open(brand).convert("RGBA")
+    visible = original.getchannel("A").getbbox()
+    if not visible:
+        raise ValueError("STUAIM asset contains no visible vector artwork")
+    original = original.crop(visible)
+    original.thumbnail((280, 75), Image.Resampling.LANCZOS)
+    im.paste(original, (13, 21), original)
 
 
 def card(d, y, label, state, note, good):
