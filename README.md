@@ -29,6 +29,21 @@ This project separates **remembering, doing and accepting work**. Sessions and m
 
 The individual components can be used independently. You do not need the experimental full profile to use the default assistant or the offline verification toolkit.
 
+## See an actual checked retry
+
+[![Illustrated offline verifier workflow: rejected output, corrected retry and tested acceptance](docs/media/workflow-poster.png)](docs/media/source-backed-workflow.mp4)
+
+[Watch the 22-second 1080p video](docs/media/source-backed-workflow.mp4) ·
+[Read the source-linked evidence and reproduce it](docs/WORKFLOW-DEMO.md)
+
+This is an **illustrated replay of the repository's genuine scripted
+offline enforced-task example**: the first worker output is rejected,
+feedback drives the second attempt, and independent verification
+accepts the corrected result at `tested` authority. It is **not** a
+desktop screenshot or evidence of a local language-model call. Original
+motion-design methods were adapted from the privately reviewed Garden
+Brain production workflow; no historical customer assets are included.
+
 ## Quick start
 
 The **complete bootstrap is for Linux x86_64 with glibc**. It attaches to an *existing* local OpenAI-compatible model endpoint; supply the exact server address and model ID. Model downloads are separate from the default installation.

@@ -1,0 +1,54 @@
+{
+  "kind": "scripted_offline_fixture",
+  "limitations": [
+    "visualization of a real scripted offline fixture, not a desktop screenshot",
+    "no local language model was exercised",
+    "local tested does not establish externally blessed"
+  ],
+  "live_model_invoked": false,
+  "product_ui_captured": false,
+  "project": "enforced-task-example",
+  "result": {
+    "accepted": true,
+    "authority_cap": "tested",
+    "complete": true,
+    "result_sha256": "be0d4d14883f99617f58ad227bbfe062ddd918854d1904df2b351a8b7d6dd500",
+    "result_text": "accepted: admitted research and corrective retry were used",
+    "stage_state": "verified"
+  },
+  "schema": "lowvram-offline-workflow-capture/v1",
+  "source": {
+    "examples/enforced-task/demo.py": "f806282e26cda7080f3a79f066715538a04774699898c935bb584e7183d89196",
+    "examples/enforced-task/task.json": "3b4661df28fbb6de0f46c5c279c7eb2f8bed3917ec4573f94d40df91ac130a1f",
+    "examples/enforced-task/verify_result.py": "4d754ef9aff73cf279fcf78a063358cf4a9e097da4602a4a2e255031c32e6b5b",
+    "examples/enforced-task/worker.py": "5bede1e2707e535f9776ba7e4c85ca26cf99c40ba80008e0f1b3f4f6828377b1",
+    "ssot/control.py": "8f09d2a7bbe06a747dd01e5c1b0a3f1cb87a9ba3eb463a1e10f4f7d2a64443d1"
+  },
+  "source_hash_mode": "canonical_lf_text_sha256",
+  "task": "offline-enforced-example",
+  "workflow": [
+    {
+      "requirements": 1,
+      "state": "admitted",
+      "step": "source_bound_task"
+    },
+    {
+      "status": "rejected",
+      "step": "worker_attempt_1",
+      "verifier_exit_code": 1
+    },
+    {
+      "reason_class": "verification_failure",
+      "step": "corrective_feedback"
+    },
+    {
+      "status": "accepted",
+      "step": "worker_attempt_2",
+      "verifier_exit_code": 0
+    },
+    {
+      "state": "tested",
+      "step": "independent_project_acceptance"
+    }
+  ]
+}
