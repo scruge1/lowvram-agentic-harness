@@ -82,7 +82,7 @@ def reveal(t, start, duration=0.7):
     return ease((t - start) / duration)
 
 
-def scene_alpha(t, start, end, fade=0.65):
+def scene_alpha(t, start, end, fade=0.55):
     return reveal(t, start, fade) * (1 - ease((t - end + fade) / fade))
 
 
@@ -232,7 +232,7 @@ def hero(draw, t):
 
 
 def source_scene(draw, t):
-    dy = 35 * (1 - reveal(t, 3.5, 0.7))
+    dy = 35 * (1 - reveal(t, 4.4, 0.7))
     label(
         draw, (110, 205 + dy), "01    ADMIT THE TASK", TEAL, 24, letter=2, weight="bold"
     )
@@ -276,7 +276,7 @@ def retry_scene(draw, t):
     )
     label(draw, (108, 289), "A passing command is not proof.", WHITE, 68, weight="bold")
     label(draw, (112, 385), "The same verifier checks every attempt.", MUTE, 32)
-    p1, p2 = reveal(t, 8.3, 0.8), reveal(t, 10.7, 0.8)
+    p1, p2 = reveal(t, 8.75, 0.8), reveal(t, 10.7, 0.8)
     y1, y2 = 487 + round((1 - p1) * 65), 700 + round((1 - p2) * 68)
     card(draw, (112, y1, 1808, y1 + 170), stroke=RED, fill=(31, 25, 31))
     label(draw, (153, y1 + 23), "ATTEMPT 01", RED, 24, letter=1, weight="bold")
@@ -338,7 +338,7 @@ def verified_scene(draw, t, evidence):
 
 
 def close_scene(draw, t):
-    dy = 40 * (1 - reveal(t, 18, 0.7))
+    dy = 40 * (1 - reveal(t, 18.7, 0.7))
     label(
         draw,
         (111, 209 + dy),
@@ -396,12 +396,16 @@ def frame(t, evidence, background):
     back = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     graph(ImageDraw.Draw(back, "RGBA"), t, 0.73 if t < 4 else 0.35)
     result = Image.alpha_composite(result, back)
+    # No crossfading of two text-heavy scenes. Shared visual background
+    # remains in place; each scene fades through that background before
+    # the next heading appears. The first sampled render exposed overlapping
+    # titles at four handoffs, now prohibited by non-overlapping ranges.
     scenes = [
-        (0, 4.55, hero),
-        (3.65, 8.75, source_scene),
-        (7.85, 14.55, retry_scene),
-        (13.65, 18.95, lambda draw, time: verified_scene(draw, time, evidence)),
-        (18, 22.1, close_scene),
+        (0.0, 4.40, hero),
+        (4.40, 8.75, source_scene),
+        (8.75, 14.20, retry_scene),
+        (14.20, 18.70, lambda draw, time: verified_scene(draw, time, evidence)),
+        (18.70, 22.10, close_scene),
     ]
     for start, end, painter in scenes:
         alpha = scene_alpha(t, start, end)
