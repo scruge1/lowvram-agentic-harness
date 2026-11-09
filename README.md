@@ -1,38 +1,38 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/stuaim/stuaim-horizontal-dark.png">
-    <img src="docs/media/stuaim/stuaim-horizontal-light.png" alt="STUAIM three-loop Celtic symbol and wordmark" width="510">
-  </picture>
+  <img src="docs/media/stuaim/stuaim-github-hero-2400x720.png"
+       alt="STUAIM — custom silver wordmark over the original flat, repeating Celtic vesica lattice"
+       width="1200">
 </p>
 
-# Low-VRAM Agentic Harness
+# STUAIM
 
-This repository contains the public command-line harness and project controller behind the STUAIM work. The managed assistant connects Pi to an existing local model endpoint. The independent controller checks task outputs before recording their status.
+STUAIM is an open-source, local-first assistant and project execution system. Its public command-line tools connect a managed Pi assistant to an existing model endpoint, with an independent controller that verifies task outputs before recording their status.
 
-The STUAIM desktop interface is still being developed and qualified. The branding and UI images here are design studies, not screenshots of a released desktop application.
+The desktop application has a separately qualified Windows candidate. That does not establish a public desktop release or autonomous completion of arbitrary work.
 
-[![Offline release checks](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml/badge.svg)](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml)
+[![Offline release checks](https://github.com/scruge1/stuaim/actions/workflows/offline-release.yml/badge.svg)](https://github.com/scruge1/stuaim/actions/workflows/offline-release.yml)
 [![MIT license](https://img.shields.io/badge/license-MIT-555555.svg)](LICENSE)
 
 [Getting started](GETTING-STARTED.md) · [Project verification](BLESSED-SSOT.md) · [Developer toolkit](TOOLKIT.md) · [STUAIM visual assets](docs/STUAIM-BRANDING.md)
 
 ## Offline verifier example
 
-[![STUAIM-styled preview of the scripted verifier example](docs/media/stuaim-workflow-preview.gif)](docs/WORKFLOW-DEMO.md)
+The verifier example below is a **scripted, model-independent demonstration**. It is not a recording of the desktop application.
+
 
 The bundled example runs a scripted worker. Its first result was rejected by the verifier, and the retry passed using the recorded feedback. The controller then set the local project status to `tested`.
 
-[Read the reproducible example](docs/WORKFLOW-DEMO.md) · [Download the full MP4](https://raw.githubusercontent.com/scruge1/lowvram-agentic-harness/main/docs/media/source-backed-workflow.mp4)
+[Read the reproducible example](docs/WORKFLOW-DEMO.md) · [Download the full MP4](https://raw.githubusercontent.com/scruge1/stuaim/main/docs/media/source-backed-workflow.mp4)
 
-The animation uses the STUAIM visual design to explain real public test results. It is an illustration; the test did not involve the desktop interface or a language model.
+The recorded outcome and reproduction steps are documented independently of the desktop interface. The tested workflow uses no language model.
 
 ## Quick start
 
 The **complete bootstrap is for Linux x86_64 with glibc**. It attaches to an *existing* local OpenAI-compatible model endpoint; supply the exact server address and model ID. Model downloads are separate from the default installation.
 
 ```bash
-git clone https://github.com/scruge1/lowvram-agentic-harness.git
-cd lowvram-agentic-harness
+git clone https://github.com/scruge1/stuaim.git
+cd stuaim
 
 # Inspect the plan before creating a home.
 bash install.sh --home /data/my-agent --plan
@@ -62,7 +62,7 @@ The repository also contains an offline, harness-neutral source/receipt example.
 python scripts/verify_ssot_release.py
 ```
 
-That checks the portable project's controlled execution and independent acceptance path, without requiring a GPU or paid model API. It **does not** prove a useful end-to-end response from whichever model you later configure. GitHub's [offline release workflow](https://github.com/scruge1/lowvram-agentic-harness/actions/workflows/offline-release.yml) runs the release gate and lint on Ubuntu/Python 3.11 and Windows/Python 3.13.
+That checks the portable project's controlled execution and independent acceptance path, without requiring a GPU or paid model API. It **does not** prove a useful end-to-end response from whichever model you later configure. GitHub's [offline release workflow](https://github.com/scruge1/stuaim/actions/workflows/offline-release.yml) runs the release gate and lint on Ubuntu/Python 3.11 and Windows/Python 3.13.
 
 ## How it works
 

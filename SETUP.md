@@ -178,7 +178,7 @@ You should get a JSON response with the model's reply.
 ## 5. Point the harness at the server
 
 ```bash
-cd lowvram-agentic-harness
+cd stuaim
 cp config.example.yaml config.yaml
 # edit config.yaml only if your base_url differs from http://localhost:8080/v1
 cp models.example.yaml models.yaml

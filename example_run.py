@@ -125,7 +125,7 @@ def step_cold_swap(args):
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="end-to-end demo of the low-VRAM agentic harness")
+    ap = argparse.ArgumentParser(description="end-to-end demo of the STUAIM")
     ap.add_argument("--config", default=None, help="path to config.yaml (optional)")
     ap.add_argument("--question", default="How much VRAM does an RTX 2080 have?")
     ap.add_argument("--backend", default="none", choices=["none", "brave", "serpapi"])

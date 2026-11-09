@@ -1,0 +1,31 @@
+{
+  "schema": "stuaim-public-brand-refactor/v1",
+  "old_name_replacements": 21,
+  "modified_files": [
+    ".github/ISSUE_TEMPLATE/config.yml",
+    "AGENT-HOME.md",
+    "FAQ.md",
+    "PI-HARNESS-PARITY-2026-11.md",
+    "PI-SOURCE-PARITY.md",
+    "README.md",
+    "RELEASE-CHECKLIST.md",
+    "SECURITY.md",
+    "SETUP.md",
+    "docs/STUAIM-BRANDING.md",
+    "docs/WORKFLOW-DEMO.md",
+    "example_run.py",
+    "examples/media/source-backed-workflow/render.py",
+    "harness/__init__.py",
+    "harness/web_research.py",
+    "pyproject.toml",
+    "docs/STUAIM-BRANDING.md",
+    "DELETE docs/media/stuaim/stuaim-horizontal-dark.png",
+    "DELETE docs/media/stuaim/stuaim-horizontal-light.png",
+    "DELETE docs/media/stuaim/stuaim-app-icon.png",
+    "DELETE docs/media/stuaim/stuaim-chat-candidate.png"
+  ],
+  "name_removed_from_public_intro": true,
+  "workflow_evidence_unchanged": true,
+  "repo_rename_required": true,
+  "source_commit": "c8eb2878f4fbe3daf2c5a3e2addaa98788496fbc"
+}

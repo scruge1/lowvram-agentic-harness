@@ -15,8 +15,8 @@ Its process-API self-check must pass before agent packages are installed. Hosts
 without usable Linux pidfd APIs are refused with the owned runtime retained.
 
 ```bash
-git clone https://github.com/scruge1/lowvram-agentic-harness.git
-cd lowvram-agentic-harness
+git clone https://github.com/scruge1/stuaim.git
+cd stuaim
 bash install.sh
 ```
 
@@ -392,7 +392,7 @@ full-profile scaffold declaration does not enable the lab extension in an
 existing home. Later source-files or interface packaging changes are outside
 this exact frontier.
 
-The qualified controller payload is [commit `1aceecd`](https://github.com/scruge1/lowvram-agentic-harness/commit/1aceecd37220c630ef7f71766f90457f827c8af2).
+The qualified controller payload is [commit `1aceecd`](https://github.com/scruge1/stuaim/commit/1aceecd37220c630ef7f71766f90457f827c8af2).
 Use that reviewed source selection for this frontier. A later checkout with
 other protected home changes is still refused; publication does not admit it.
 
@@ -1220,7 +1220,7 @@ the nonsecret selection and pass it to the existing home factory:
 ```bash
 python -m harness.model_service_handoff --home /data/my-agent > selection.json
 python -m harness.model_service_setup --home /data/my-agent \
-  --selection selection.json --source /path/to/lowvram-agentic-harness \
+  --selection selection.json --source /path/to/stuaim \
   --python312 /data/my-agent-runtimes/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12 \
   --managed-node /data/my-agent-runtimes/node-v22.23.2-linux-x64/bin/node
 ```

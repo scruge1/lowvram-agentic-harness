@@ -130,7 +130,7 @@ boundary passed on 2026-09-06:
 ## Current delivery — 9 October 2026
 
 The standalone repository is published at
-[scruge1/lowvram-agentic-harness](https://github.com/scruge1/lowvram-agentic-harness)
+[scruge1/stuaim](https://github.com/scruge1/stuaim)
 with public visibility and the MIT license. Parent-linked upgrades are recorded
 in `UPGRADES.md`.
 

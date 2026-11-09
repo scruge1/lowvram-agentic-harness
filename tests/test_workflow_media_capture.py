@@ -24,7 +24,7 @@ class MediaFixtureTests(unittest.TestCase):
 
     def test_actual_scripted_retry_rejected_then_verified(self):
         data = self.data
-        self.assertEqual(data["schema"], "lowvram-offline-workflow-capture/v1")
+        self.assertEqual(data["schema"], "stuaim-offline-workflow-capture/v1")
         self.assertEqual(data["kind"], "scripted_offline_fixture")
         self.assertFalse(data["live_model_invoked"])
         self.assertFalse(data["product_ui_captured"])

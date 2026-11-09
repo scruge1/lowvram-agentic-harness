@@ -173,7 +173,7 @@ and still reads `config.example.yaml`. Env vars work with zero dependencies.
 **Q: `ModuleNotFoundError: harness` when running example_run.py.**
 Fix: run it from the repo root, or set `PYTHONPATH` to the repo root:
 ```bash
-cd lowvram-agentic-harness && python example_run.py --config config.yaml
+cd stuaim && python example_run.py --config config.yaml
 ```
 
 ---

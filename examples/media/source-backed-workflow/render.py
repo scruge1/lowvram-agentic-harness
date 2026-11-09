@@ -30,7 +30,7 @@ DIM = (108, 120, 113)
 ACCENT = (177, 208, 193)
 BORDER = (56, 65, 61)
 FAILED = (217, 132, 121)
-SCHEMA = "lowvram-offline-workflow-capture/v1"
+SCHEMA = "stuaim-offline-workflow-capture/v1"
 FONTS: dict[tuple[int, bool, bool], ImageFont.FreeTypeFont] = {}
 
 
@@ -174,12 +174,16 @@ def shell_background():
 
 
 def apply_brand(im):
-    brand = ROOT / "docs/media/stuaim/stuaim-horizontal-dark.png"
+    brand = ROOT / "docs/media/stuaim/stuaim-vector-lockup.png"
     if not brand.is_file():
         raise ValueError("Exact retained STUAIM brand asset missing")
-    original = Image.open(brand).convert("RGB")
-    scaled = original.resize((273, 77), Image.Resampling.LANCZOS)
-    im.paste(scaled, (13, 21))
+    original = Image.open(brand).convert("RGBA")
+    visible = original.getchannel("A").getbbox()
+    if not visible:
+        raise ValueError("STUAIM asset contains no visible vector artwork")
+    original = original.crop(visible)
+    original.thumbnail((280, 75), Image.Resampling.LANCZOS)
+    im.paste(original, (13, 21), original)
 
 
 def card(d, y, label, state, note, good):
@@ -272,7 +276,7 @@ def scene_reproduce(d, t, evidence):
         TEXT,
         mono=True,
     )
-    txt(d, (430, 866), "scruge1/lowvram-agentic-harness", 25, MUTED)
+    txt(d, (430, 866), "scruge1/stuaim", 25, MUTED)
 
 
 def frame(t, evidence, background):

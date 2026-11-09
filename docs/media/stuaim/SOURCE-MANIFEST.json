@@ -13,21 +13,25 @@
       "sha256": "79ff4b67c46a7272e5b3588e12aec23e1b1435058ffb1b6401ac8ce80394965a",
       "size_bytes": 1113373
     },
-    "docs/media/stuaim/stuaim-app-icon.png": {
-      "sha256": "16193af682a8221069b64b73d5d9364a189eb578536201694c50935eef7c44dc",
-      "size_bytes": 43017
+    "docs/media/stuaim/stuaim-app-icon-1024.png": {
+      "sha256": "385372c7ba713ca0912ff09254ce7bba7c02183270d262396189612c8c594524",
+      "size_bytes": 530591
     },
-    "docs/media/stuaim/stuaim-chat-candidate.png": {
-      "sha256": "6ad196a51563bfd6b8e4ed10856125a92ff1c967a9eef8a1cea8ac015522c79a",
-      "size_bytes": 85846
+    "docs/media/stuaim/stuaim-custom-wordmark-1420.png": {
+      "sha256": "80e5838b23a8961dc5f1b798657f05c64adbb0d9eaebffe4d90499c89e099183",
+      "size_bytes": 45319
     },
-    "docs/media/stuaim/stuaim-horizontal-dark.png": {
-      "sha256": "32251f8f3ce943d82f7c09386de93283f2b9e28078275d563df2a64106284e41",
-      "size_bytes": 27412
+    "docs/media/stuaim/stuaim-custom-wordmark.svg": {
+      "sha256": "afebc7696567ea2dc6eb8acaa100cc2100cae8bffc6d06ad012b5446a7ba3044",
+      "size_bytes": 1610
     },
-    "docs/media/stuaim/stuaim-horizontal-light.png": {
-      "sha256": "2dc347d43ac5ae05bb9a593f9a7f05365b325c9699a1f203ec44a9b4771fc09d",
-      "size_bytes": 27187
+    "docs/media/stuaim/stuaim-github-hero-2400x720.png": {
+      "sha256": "8a4cf90e1cba3b6b57911c49a39d0f3fd891c71b1003fc0144147719c1911e36",
+      "size_bytes": 1737795
+    },
+    "docs/media/stuaim/stuaim-github-hero-preview.png": {
+      "sha256": "cf477f8f5da4df710de1a3779e1fcd15b5668c765f7681e49392d2929e7b9d4f",
+      "size_bytes": 983865
     },
     "docs/media/stuaim/stuaim-symbol-dark.svg": {
       "sha256": "a7c02d84a414aef6bb99acff42c4c3b9c5214e03e45e0a8ceece32dc9363cb96",
@@ -36,6 +40,14 @@
     "docs/media/stuaim/stuaim-symbol-light.svg": {
       "sha256": "e1c206e11345e8dec6583552b09637f3c0e92e373b4b2e6d4c50a27b4a2e7b67",
       "size_bytes": 16698
+    },
+    "docs/media/stuaim/stuaim-vector-lockup.png": {
+      "sha256": "7530da7e353b8c5ab3009079ffb7a926c2caf1f23df8d4c8b98b0fbd9b03370c",
+      "size_bytes": 84589
+    },
+    "docs/media/stuaim/stuaim-vector-lockup.svg": {
+      "sha256": "e5125ca9f3720d857b83f1b187ce3c2cc229016fe857a89fe26c5b62d207c8d7",
+      "size_bytes": 18277
     },
     "docs/media/workflow-opening.png": {
       "sha256": "de86d92d4ab0c3cec87c6e4eb9c8fc9390b2ced45d0d99236a1e2cb22cfd59b7",
@@ -55,7 +67,21 @@
     }
   },
   "base_harness_example": "examples/enforced-task/demo.py",
-  "brand_source_commit": "89ee9c801bfc170e260229827a884ff8af0ab7c7",
+  "brand_source_commit": "rig-origin R2-R3 vectors + original tiled banner; updated 2026-11-09",
+  "custom_glyphs": true,
+  "design_generation": {
+    "color_system": [
+      "black",
+      "charcoal",
+      "silver",
+      "white"
+    ],
+    "original_small_icon_unchanged": false,
+    "same_grid_density_across_banner": true,
+    "source_icon": "original-rig-master/06-symbol-only-white.svg",
+    "source_pattern": "original-rig-master/celtic-vesica-lattice-4800x1440.png",
+    "type": "procedural_vector_and_rig_original"
+  },
   "desktop_ui_captured": false,
   "flat_banner_geometry": {
     "columns": 40,

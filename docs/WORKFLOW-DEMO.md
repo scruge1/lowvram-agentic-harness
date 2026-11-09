@@ -9,7 +9,7 @@ rather than the older teal-and-orange graphics. The animation is a
 constructed explanation of the recorded results, **not an application
 screen recording**.
 
-[Download the 22-second MP4](https://raw.githubusercontent.com/scruge1/lowvram-agentic-harness/main/docs/media/source-backed-workflow.mp4) ·
+[Download the 22-second MP4](https://raw.githubusercontent.com/scruge1/stuaim/main/docs/media/source-backed-workflow.mp4) ·
 [View the source results](media/workflow-evidence.json) ·
 [Reproduce the test](../examples/media/source-backed-workflow/capture.py)
 

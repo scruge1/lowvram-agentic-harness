@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lowvram-agentic-harness"
+name = "stuaim"
 version = "0.1.0"
 description = "Local-model utilities and a receipt-gated agent task supervisor"
 readme = "README.md"

@@ -18,7 +18,7 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[3]
-SCHEMA = "lowvram-offline-workflow-capture/v1"
+SCHEMA = "stuaim-offline-workflow-capture/v1"
 
 
 def sha(data: bytes) -> str:

@@ -17,17 +17,17 @@ preserved to show what prompted the subsequent work. It is no longer a list
 of still-unmerged source changes. The current public state is:
 
 - Cross-assistant recovery/handoff documentation and candidate JSON packet:
-  [PR #77](https://github.com/scruge1/lowvram-agentic-harness/pull/77),
+  [PR #77](https://github.com/scruge1/stuaim/pull/77),
   merged as `2ecf689`.
 - Bounded, 4 KiB SHA-paginated `system_tool_query` model view and retained
-  backend details: [PR #78](https://github.com/scruge1/lowvram-agentic-harness/pull/78),
+  backend details: [PR #78](https://github.com/scruge1/stuaim/pull/78),
   merged as `75c4e6d`.
 - Four stable Pi structured prompt sections, native project-context
   redelivery and synthetic 1,200-message append-only compaction lifecycle:
-  [PR #80](https://github.com/scruge1/lowvram-agentic-harness/pull/80),
+  [PR #80](https://github.com/scruge1/stuaim/pull/80),
   merged as `237cc68`.
 - Opt-in explicit-root GGUF inventory and all-card read-only NVIDIA
-  observation: [PR #81](https://github.com/scruge1/lowvram-agentic-harness/pull/81),
+  observation: [PR #81](https://github.com/scruge1/stuaim/pull/81),
   merged as `f891157`.
 
 The first three changes do not prove uninterrupted *model-generated*
@@ -39,9 +39,9 @@ separate from Pi session JSONLs; a personal account export is required for
 verbatim recovery and has not been ingested.
 
 Optional hashed context-size diagnostics are being qualified separately in
-[PR #82](https://github.com/scruge1/lowvram-agentic-harness/pull/82);
+[PR #82](https://github.com/scruge1/stuaim/pull/82);
 a draft PR must not be represented as a released public capability.
-See [the current upgrade ledger](UPGRADES.md) and [issue #79](https://github.com/scruge1/lowvram-agentic-harness/issues/79)
+See [the current upgrade ledger](UPGRADES.md) and [issue #79](https://github.com/scruge1/stuaim/issues/79)
 for remaining negative-control gates.
 
 ## Original baseline gap comparison (historical)

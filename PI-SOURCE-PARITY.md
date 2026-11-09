@@ -25,7 +25,7 @@ The two root directories and mapping are supplied explicitly:
 
 ```bash
 python scripts/pi_source_parity.py \
-  --public-root /path/to/lowvram-agentic-harness \
+  --public-root /path/to/stuaim \
   --installed-root /path/to/your/pi/extensions \
   --mapping /private/location/pi-parity-map.json \
   --strict-drift > /private/location/parity-receipt.json
