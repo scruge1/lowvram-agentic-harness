@@ -1,12 +1,9 @@
-"""Original source-backed motion graphic, not an actual app or desktop capture.
+"""STUAIM-styled illustrated replay of the public scripted offline fixture.
 
-Uses the retained Garden Brain creative method: a source-first brief,
-editable scene code, grounded layout, motivated motion and moving review.
-All artwork and animation here are original. No old Garden Brain visuals,
-third-party fonts, stock audio or proprietary templates are redistributed.
-
-Requires Pillow at authoring time and ffmpeg only to create the silent MP4.
-Never invoked by the core installer or acceptance gate.
+This is editorial artwork generated from public test evidence. It is not a
+screenshot or screen recording of the unreleased desktop, a local LLM run,
+or an autonomous worker session. The mark and wordmark are copied from
+the retained STUAIM branding review. No font binaries are redistributed.
 """
 
 from __future__ import annotations
@@ -14,501 +11,387 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
+import os
 from pathlib import Path
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
+ROOT = Path(__file__).resolve().parents[3]
 W, H, FPS, DURATION = 1920, 1080, 24, 22
-WHITE = (241, 247, 248)
-MUTE = (146, 166, 180)
-TEAL = (119, 224, 216)
-GOLD = (223, 175, 108)
-RED = (239, 120, 111)
+BG = (24, 27, 27)
+SIDEBAR = (21, 24, 23)
+PANEL = (30, 34, 33)
+PANEL2 = (34, 39, 36)
+TEXT = (231, 233, 232)
+MUTED = (149, 159, 154)
+DIM = (108, 120, 113)
+ACCENT = (177, 208, 193)
+BORDER = (56, 65, 61)
+FAILED = (217, 132, 121)
 SCHEMA = "lowvram-offline-workflow-capture/v1"
+FONTS: dict[tuple[int, bool, bool], ImageFont.FreeTypeFont] = {}
 
 
-def font_path(weight="regular", mono=False):
-    if sys.platform == "win32":
-        root = Path("C:/Windows/Fonts")
-        variants = (
-            ["consola.ttf"]
-            if mono
-            else (
-                ["segoeuib.ttf", "segoeuivar.ttf", "arialbd.ttf"]
-                if weight == "bold"
-                else ["segoeui.ttf", "segoeuivar.ttf", "arial.ttf"]
-            )
-        )
-    else:
-        root = Path("/usr/share/fonts/truetype/dejavu")
-        variants = (
-            ["DejaVuSansMono.ttf"]
-            if mono
-            else (["DejaVuSans-Bold.ttf"] if weight == "bold" else ["DejaVuSans.ttf"])
-        )
-    for name in variants:
-        p = root / name
-        if p.is_file():
-            return str(p)
-    return None
-
-
-FONTS = {}
-
-
-def ft(size, weight="regular", mono=False):
-    key = (size, weight, mono)
+def f(size: int, bold: bool = False, mono: bool = False):
+    key = (size, bold, mono)
     if key not in FONTS:
-        path = font_path(weight, mono)
+        optional = os.getenv("STUAIM_RENDER_FONT")
+        opts = [optional] if optional and not mono else []
+        if sys.platform == "win32":
+            base = Path("C:/Windows/Fonts")
+            opts += [
+                str(base / s)
+                for s in (
+                    ["consola.ttf"]
+                    if mono
+                    else ["segoeuib.ttf", "arialbd.ttf"]
+                    if bold
+                    else ["segoeui.ttf", "arial.ttf"]
+                )
+            ]
+        else:
+            base = Path("/usr/share/fonts/truetype/dejavu")
+            opts += [
+                str(base / s)
+                for s in (
+                    ["DejaVuSansMono.ttf"]
+                    if mono
+                    else ["DejaVuSans-Bold.ttf"]
+                    if bold
+                    else ["DejaVuSans.ttf"]
+                )
+            ]
+        chosen = next((p for p in opts if p and Path(p).is_file()), None)
         FONTS[key] = (
-            ImageFont.truetype(path, size) if path else ImageFont.load_default()
+            ImageFont.truetype(chosen, size) if chosen else ImageFont.load_default()
         )
     return FONTS[key]
 
 
-def clamp(x):
-    return max(0.0, min(1.0, x))
-
-
-def ease(x):
-    x = clamp(x)
+def ease(x: float) -> float:
+    x = min(1, max(0, x))
     return x * x * (3 - 2 * x)
 
 
-def reveal(t, start, duration=0.7):
-    return ease((t - start) / duration)
+def scene_alpha(t, start, end):
+    fade = 0.5
+    return ease((t - start) / fade) * (1 - ease((t - end + fade) / fade))
 
 
-def scene_alpha(t, start, end, fade=0.55):
-    return reveal(t, start, fade) * (1 - ease((t - end + fade) / fade))
+def txt(d, pos, value, size=28, color=TEXT, bold=False, mono=False):
+    d.text(
+        (round(pos[0]), round(pos[1])),
+        value,
+        font=f(size, bold, mono),
+        fill=(*color, 255),
+    )
 
 
-def rgba(c, a=255):
-    return (*c, max(0, min(255, int(a))))
+def rect(d, box, fill=PANEL, border=BORDER, radius=16):
+    d.rounded_rectangle(
+        box, radius=radius, fill=(*fill, 255), outline=(*border, 255), width=2
+    )
 
 
-def compose_background():
-    bg = Image.new("RGBA", (W, H), (8, 13, 21, 255))
-    draw = ImageDraw.Draw(bg, "RGBA")
-    for y in range(0, H, 3):
-        k = y / H
-        draw.line(
-            ((0, y), (W, y)),
-            fill=(12 + round(k * 6), 19 + round(k * 5), 28 + round(k * 4), 255),
-            width=3,
+def heading(d, eyebrow, title, subtitle=None):
+    txt(d, (425, 246), eyebrow.upper(), 23, ACCENT, bold=True)
+    txt(d, (422, 321), title, 66, TEXT, bold=True)
+    if subtitle:
+        txt(d, (426, 423), subtitle, 30, MUTED)
+
+
+def icon(d, x, y, kind, color=MUTED):
+    w = 2
+    if kind == "chat":
+        d.rounded_rectangle(
+            (x, y, x + 24, y + 19), radius=6, outline=(*color, 255), width=w
         )
-    gl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    light = ImageDraw.Draw(gl, "RGBA")
-    light.ellipse((1130, 80, 2010, 1010), fill=(15, 125, 120, 105))
-    light.ellipse((1370, 680, 2280, 1490), fill=(196, 111, 63, 48))
-    bg = Image.alpha_composite(bg, gl.filter(ImageFilter.GaussianBlur(230)))
-    draw = ImageDraw.Draw(bg, "RGBA")
-    for x in range(72, W, 116):
-        draw.line((x, 0, x, H), fill=(34, 53, 62, 255), width=1)
-    for y in range(78, H, 116):
-        draw.line((0, y, W, y), fill=(31, 46, 55, 255), width=1)
-    return bg
-
-
-def label(draw, xy, text, color=MUTE, size=24, letter=0, weight="regular", mono=False):
-    x, y = xy
-    face = ft(size, weight, mono)
-    if letter:
-        for ch in text:
-            draw.text((round(x), round(y)), ch, font=face, fill=rgba(color))
-            x += draw.textlength(ch, font=face) + letter
+        d.line((x + 6, y + 19, x + 3, y + 25), fill=(*color, 255), width=w)
+    elif kind == "home":
+        d.line(
+            (x + 1, y + 12, x + 13, y + 1, x + 25, y + 12), fill=(*color, 255), width=w
+        )
+        d.line(
+            (x + 5, y + 11, x + 5, y + 23, x + 21, y + 23, x + 21, y + 11),
+            fill=(*color, 255),
+            width=w,
+        )
+    elif kind == "board":
+        d.rectangle((x + 1, y + 2, x + 22, y + 23), outline=(*color, 255), width=w)
+        d.line((x + 12, y + 2, x + 12, y + 23), fill=(*color, 255), width=w)
+    elif kind == "book":
+        d.line(
+            (x + 2, y + 3, x + 11, y + 6, x + 11, y + 23, x + 2, y + 20),
+            fill=(*color, 255),
+            width=w,
+        )
+        d.line(
+            (x + 12, y + 6, x + 22, y + 3, x + 22, y + 20, x + 12, y + 23),
+            fill=(*color, 255),
+            width=w,
+        )
     else:
-        draw.text((round(x), round(y)), text, font=face, fill=rgba(color))
+        d.ellipse((x + 4, y + 4, x + 22, y + 22), outline=(*color, 255), width=w)
+        for dx in (0, 26):
+            d.line((x + dx, y + 11, x + dx, y + 17), fill=(*color, 255), width=w)
 
 
-def card(draw, box, stroke=TEAL, fill=(17, 29, 38), radius=28):
-    x1, y1, x2, y2 = [int(v) for v in box]
-    if x2 <= x1 or y2 <= y1:
-        return
-    draw.rounded_rectangle(
-        (x1 + 10, y1 + 16, x2 + 10, y2 + 16), radius=radius, fill=(0, 0, 0, 56)
-    )
-    draw.rounded_rectangle(
-        (x1, y1, x2, y2),
-        radius=radius,
-        fill=rgba(fill, 242),
-        outline=rgba(stroke, 110),
-        width=2,
-    )
-
-
-def node(draw, x, y, color=TEAL, r=18, alpha=255):
-    draw.ellipse(
-        (x - r - 9, y - r - 9, x + r + 9, y + r + 9),
-        outline=rgba(color, alpha * 0.26),
-        width=1,
-    )
-    draw.ellipse(
-        (x - r, y - r, x + r, y + r),
-        fill=rgba((13, 30, 33), alpha),
-        outline=rgba(color, alpha),
-        width=3,
-    )
-    draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill=rgba(color, alpha))
-
-
-def graph(draw, t, opacity=1):
-    coords = [
-        (1245, 282),
-        (1470, 400),
-        (1335, 610),
-        (1650, 645),
-        (1750, 340),
-        (1545, 825),
-    ]
-    edges = [(0, 1), (1, 2), (1, 4), (2, 3), (3, 4), (3, 5)]
-    for i, j in edges:
-        draw.line(
-            (*coords[i], *coords[j]), fill=(124, 192, 193, round(55 * opacity)), width=2
+def shell_background():
+    im = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(im, "RGB")
+    d.rectangle((0, 0, 305, H), fill=SIDEBAR)
+    d.line((305, 0, 305, H), fill=BORDER, width=1)
+    d.line((305, 91, W, 91), fill=BORDER, width=1)
+    d.line((0, 1000, W, 1000), fill=BORDER, width=1)
+    for y, name, symbol in [
+        (235, "Chat", "chat"),
+        (301, "Projects", "home"),
+        (367, "Board", "board"),
+        (433, "Knowledge", "book"),
+        (499, "Models", "model"),
+    ]:
+        if name == "Board":
+            d.rounded_rectangle((24, y - 9, 281, y + 44), radius=10, fill=PANEL)
+        icon(d, 52, y, symbol, ACCENT if name == "Board" else MUTED)
+        txt(
+            d,
+            (102, y - 2),
+            name,
+            23,
+            TEXT if name == "Board" else MUTED,
+            bold=name == "Board",
         )
-    for i, (x, y) in enumerate(coords):
-        c = TEAL if i in (0, 1, 3) else GOLD
-        node(
-            draw,
-            x,
-            y + 1.8 * math.sin(t * 0.8 + i * 0.7),
-            c,
-            r=14 + 2 * math.sin(t * 0.7 + i),
-            alpha=int(190 * opacity),
+    txt(d, (35, 176), "WORKSPACE", 16, DIM, bold=True)
+    txt(d, (38, 876), "LOCAL EXAMPLE", 17, MUTED)
+    txt(d, (38, 917), "Script worker", 20, TEXT)
+    txt(d, (350, 34), "Workspace    /    Offline verifier example", 23, MUTED)
+    txt(d, (1520, 34), "ILLUSTRATED REPLAY", 19, DIM)
+    txt(d, (350, 1025), "Examples / enforced-task", 19, MUTED)
+    txt(d, (1170, 1025), "Scripted fixture. No local LLM used.", 19, MUTED)
+    return im
+
+
+def apply_brand(im):
+    brand = ROOT / "docs/media/stuaim/stuaim-horizontal-dark.png"
+    if not brand.is_file():
+        raise ValueError("Exact retained STUAIM brand asset missing")
+    original = Image.open(brand).convert("RGB")
+    scaled = original.resize((273, 77), Image.Resampling.LANCZOS)
+    im.paste(scaled, (13, 21))
+
+
+def card(d, y, label, state, note, good):
+    rect(d, (430, y, 1800, y + 167), fill=PANEL2 if good else PANEL)
+    tag = ACCENT if good else FAILED
+    txt(d, (467, y + 23), label.upper(), 22, MUTED, bold=True)
+    txt(d, (466, y + 77), state, 42, tag, bold=True)
+    txt(d, (930, y + 40), note, 31, TEXT, mono=True)
+    d.ellipse((1713, y + 54, 1750, y + 91), outline=tag, width=3)
+
+
+def scene_intro(d, t, evidence):
+    heading(d, "Enforced task / public harness", "Offline verifier example")
+    txt(
+        d,
+        (426, 455),
+        "The example runs a scripted worker with independent output checks.",
+        30,
+        MUTED,
+    )
+    rect(d, (428, 595, 1800, 810))
+    txt(d, (470, 630), "TASK", 21, ACCENT, bold=True)
+    txt(d, (470, 697), evidence["task"], 40, TEXT, mono=True)
+    txt(d, (470, 761), "One requirement. Two recorded attempts.", 28, MUTED)
+
+
+def scene_scope(d, t, evidence):
+    heading(d, "Task contract", "Source-bound task")
+    rect(d, (426, 532, 1800, 824))
+    txt(d, (474, 565), "TASK ID", 19, MUTED)
+    txt(d, (474, 611), evidence["task"], 36, TEXT, mono=True)
+    txt(d, (474, 697), "Requirement", 26, MUTED)
+    txt(d, (800, 697), "1 admitted", 30, TEXT, bold=True)
+    txt(d, (474, 763), "Verifier", 26, MUTED)
+    txt(d, (800, 763), "Independent", 30, ACCENT, bold=True)
+
+
+def scene_attempts(d, t, evidence):
+    heading(d, "Task execution", "Verification results")
+    workflow = evidence["workflow"]
+    if t >= 8.75:
+        card(
+            d,
+            518,
+            "Attempt 01",
+            "Rejected",
+            f"verifier exit  {workflow[1]['verifier_exit_code']}",
+            False,
         )
-    phase = (t * 0.22) % len(edges)
-    i = min(len(edges) - 1, int(phase))
-    u = phase - i
-    p, q = edges[i]
-    x1, y1 = coords[p]
-    x2, y2 = coords[q]
-    x, y = x1 + (x2 - x1) * u, y1 + (y2 - y1) * u
-    draw.ellipse((x - 7, y - 7, x + 7, y + 7), fill=rgba(WHITE, 160 * opacity))
-
-
-def common(draw, t):
-    label(
-        draw,
-        (108, 76),
-        "LOW-VRAM  /  AGENTIC HARNESS",
-        TEAL,
-        24,
-        letter=2,
-        weight="bold",
-    )
-    label(draw, (1284, 77), "OFFLINE  •  SOURCE-BOUND", (192, 207, 213), 21, letter=1)
-    draw.line((108, 121, 1812, 121), fill=(53, 77, 83, 255), width=2)
-    draw.line((108, 972, 1812, 972), fill=(49, 69, 76, 255), width=2)
-    label(
-        draw,
-        (108, 997),
-        "REAL SCRIPTED FIXTURE   /   NOT A DESKTOP SCREEN RECORDING",
-        (155, 176, 188),
-        19,
-    )
-    draw.rounded_rectangle((108, 1053, 1812, 1058), radius=3, fill=(52, 69, 77, 255))
-    end = 108 + int(1704 * clamp(t / DURATION))
-    if end > 108:
-        draw.rounded_rectangle((108, 1053, end, 1058), radius=3, fill=rgba(TEAL))
-
-
-def hero(draw, t):
-    shift = 34 * (1 - reveal(t, 0, 0.85))
-
-    def L(x, y, text, color=WHITE, size=40, **kw):
-        label(draw, (x + shift, y), text, color, size, **kw)
-
-    L(114, 244, "THE VERIFICATION PROBLEM", TEAL, 24, letter=2, weight="bold")
-    L(108, 316, "Agents can write the work.", WHITE, 75, weight="bold")
-    L(108, 414, "Only evidence can", WHITE, 89, weight="bold")
-    L(108, 515, "complete it.", TEAL, 89, weight="bold")
-    L(112, 670, "A real portable SSOT example: rejected output,", MUTE, 32)
-    L(112, 717, "corrective retry, independent acceptance.", MUTE, 32)
-    card(draw, (110, 823, 754, 902), stroke=GOLD, radius=18)
-    L(143, 841, "ONE FIXTURE  •  TWO ATTEMPTS  •  ONE CHECK", GOLD, 23, weight="bold")
-
-
-def source_scene(draw, t):
-    dy = 35 * (1 - reveal(t, 4.4, 0.7))
-    label(
-        draw, (110, 205 + dy), "01    ADMIT THE TASK", TEAL, 24, letter=2, weight="bold"
-    )
-    label(
-        draw,
-        (108, 290 + dy),
-        "A project owns the requirement.",
-        WHITE,
-        70,
-        weight="bold",
-    )
-    label(draw, (112, 404 + dy), "Source files and task scope are fixed", MUTE, 33)
-    label(draw, (112, 451 + dy), "before the worker can claim a result.", MUTE, 33)
-    card(draw, (112, 562 + dy, 1055, 840 + dy), stroke=GOLD)
-    label(draw, (150, 594 + dy), "SSOT TASK CONTRACT", GOLD, 25, letter=1)
-    label(
-        draw,
-        (150, 656 + dy),
-        "offline-enforced-example",
-        WHITE,
-        38,
-        weight="bold",
-        mono=True,
-    )
-    label(draw, (150, 730 + dy), "1  source-bound requirement", MUTE, 28)
-    label(draw, (150, 776 + dy), "Independent verifier required", TEAL, 28)
-    node(draw, 1360, 570, TEAL, r=25)
-    label(draw, (1434, 548), "SOURCE", WHITE, 24, weight="bold")
-    label(draw, (1434, 592), "pinned input", MUTE, 22)
-
-
-def retry_scene(draw, t):
-    label(
-        draw,
-        (110, 204),
-        "02    DETECT • CORRECT • RECHECK",
-        TEAL,
-        24,
-        letter=2,
-        weight="bold",
-    )
-    label(draw, (108, 289), "A passing command is not proof.", WHITE, 68, weight="bold")
-    label(draw, (112, 385), "The same verifier checks every attempt.", MUTE, 32)
-    p1, p2 = reveal(t, 8.75, 0.8), reveal(t, 10.7, 0.8)
-    y1, y2 = 487 + round((1 - p1) * 65), 700 + round((1 - p2) * 68)
-    card(draw, (112, y1, 1808, y1 + 170), stroke=RED, fill=(31, 25, 31))
-    label(draw, (153, y1 + 23), "ATTEMPT 01", RED, 24, letter=1, weight="bold")
-    label(draw, (155, y1 + 76), "REJECTED", WHITE, 51, weight="bold")
-    label(draw, (990, y1 + 44), "verifier_exit_code  =  1", RED, 31, mono=True)
-    label(draw, (991, y1 + 101), "Output failed the independent check", MUTE, 25)
-    if p2 > 0.02:
-        card(draw, (112, y2, 1808, y2 + 170), stroke=TEAL, fill=(16, 37, 40))
-        label(draw, (153, y2 + 23), "ATTEMPT 02", TEAL, 24, letter=1, weight="bold")
-        label(draw, (155, y2 + 76), "ACCEPTED", WHITE, 51, weight="bold")
-        label(draw, (990, y2 + 44), "verifier_exit_code  =  0", TEAL, 31, mono=True)
-        label(draw, (991, y2 + 101), "Corrective retry passed the same check", MUTE, 25)
-    if 9.45 < t < 11.4:
-        p = reveal(t, 9.5, 1.5)
-        draw.line((960, 660, 960, 700), fill=rgba(GOLD, p * 180), width=4)
-        node(draw, 960, 686, GOLD, r=6, alpha=int(210 * p))
-
-
-def verified_scene(draw, t, evidence):
-    label(
-        draw,
-        (110, 204),
-        "03    INDEPENDENT ACCEPTANCE",
-        TEAL,
-        24,
-        letter=2,
-        weight="bold",
-    )
-    label(draw, (108, 292), "The host checks the result.", WHITE, 76, weight="bold")
-    label(draw, (112, 389), "The worker cannot promote its own success.", MUTE, 32)
-    prog = reveal(t, 14.4, 0.8)
-    card(draw, (111, 502, 1810, 854), stroke=TEAL, fill=(16, 34, 40))
-    label(draw, (154, 543), "LOCAL AUTHORITY", GOLD, 24, letter=1, weight="bold")
-    label(draw, (148, 617), "TESTED", TEAL, 97, weight="bold")
-    label(draw, (151, 768), "not externally blessed", MUTE, 26)
-    draw.line((825, 560, 825, 809), fill=(119, 224, 216, 58), width=2)
-    label(draw, (889, 555), "accepted     true", WHITE, 40, mono=True)
-    label(draw, (889, 633), "complete     true", WHITE, 40, mono=True)
-    label(draw, (889, 711), "stage        verified", TEAL, 37, mono=True)
-    label(
-        draw,
-        (889, 790),
-        "result SHA256   " + evidence["result"]["result_sha256"][:12] + "…",
-        MUTE,
-        26,
-        mono=True,
-    )
-    if prog > 0:
-        x, y = 732 + round(prog * 42), 636
-        draw.ellipse(
-            (x - 29, y - 29, x + 29, y + 29), outline=rgba(TEAL, prog * 255), width=5
-        )
-        draw.line(
-            (x - 13, y - 2, x - 3, y + 8, x + 17, y - 14),
-            fill=rgba(TEAL, prog * 255),
-            width=5,
-            joint="curve",
+    if t >= 10.65:
+        card(
+            d,
+            717,
+            "Attempt 02",
+            "Accepted",
+            f"verifier exit  {workflow[3]['verifier_exit_code']}",
+            True,
         )
 
 
-def close_scene(draw, t):
-    dy = 40 * (1 - reveal(t, 18.7, 0.7))
-    label(
-        draw,
-        (111, 209 + dy),
-        "REPRODUCE THE PUBLIC EXAMPLE",
-        TEAL,
-        26,
-        letter=1.5,
-        weight="bold",
+def scene_accepted(d, t, evidence):
+    heading(d, "Project state", "Result recorded")
+    rect(d, (426, 535, 1800, 830))
+    txt(d, (474, 573), "Authority", 21, MUTED)
+    txt(
+        d,
+        (474, 621),
+        evidence["result"]["authority_cap"].upper(),
+        72,
+        ACCENT,
+        bold=True,
     )
-    label(
-        draw,
-        (108, 296 + dy),
-        "Inspect the evidence yourself.",
-        WHITE,
-        74,
-        weight="bold",
-    )
-    label(
-        draw,
-        (112, 404 + dy),
-        "It is scripted, offline, and intentionally limited.",
-        MUTE,
-        31,
-    )
-    card(draw, (110, 541 + dy, 1812, 756 + dy), stroke=GOLD, fill=(24, 31, 39))
-    label(
-        draw,
-        (151, 565 + dy),
-        "REPRODUCIBLE COMMAND",
-        GOLD,
-        23,
-        letter=1.6,
-        weight="bold",
-    )
-    label(
-        draw,
-        (151, 632 + dy),
+    d.line((940, 576, 940, 791), fill=BORDER, width=2)
+    txt(d, (1003, 581), "accepted    true", 35, TEXT, mono=True)
+    txt(d, (1003, 665), "complete    true", 35, TEXT, mono=True)
+    txt(d, (1003, 751), "stage       verified", 33, ACCENT, mono=True)
+    txt(d, (480, 752), "Local acceptance only", 25, MUTED)
+
+
+def scene_reproduce(d, t, evidence):
+    heading(d, "Reproduce the test", "Run the public example")
+    txt(d, (426, 457), "Source and checks are included in this repository.", 30, MUTED)
+    rect(d, (426, 574, 1800, 779))
+    txt(d, (470, 607), "COMMAND", 21, ACCENT, bold=True)
+    txt(
+        d,
+        (470, 681),
         "python examples/media/source-backed-workflow/capture.py",
-        WHITE,
-        34,
+        27,
+        TEXT,
         mono=True,
     )
-    label(draw, (112, 831 + dy), "github.com/scruge1/lowvram-agentic-harness", TEAL, 29)
-    label(
-        draw,
-        (112, 893 + dy),
-        "See workflow source + notes  ·  No local LLM called",
-        MUTE,
-        26,
-    )
+    txt(d, (430, 866), "scruge1/lowvram-agentic-harness", 25, MUTED)
 
 
 def frame(t, evidence, background):
-    result = background.copy()
-    back = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    graph(ImageDraw.Draw(back, "RGBA"), t, 0.73 if t < 4 else 0.35)
-    result = Image.alpha_composite(result, back)
-    # No crossfading of two text-heavy scenes. Shared visual background
-    # remains in place; each scene fades through that background before
-    # the next heading appears. The first sampled render exposed overlapping
-    # titles at four handoffs, now prohibited by non-overlapping ranges.
+    im = background.copy().convert("RGBA")
     scenes = [
-        (0.0, 4.40, hero),
-        (4.40, 8.75, source_scene),
-        (8.75, 14.20, retry_scene),
-        (14.20, 18.70, lambda draw, time: verified_scene(draw, time, evidence)),
-        (18.70, 22.10, close_scene),
+        (0.0, 4.40, scene_intro),
+        (4.40, 8.75, scene_scope),
+        (8.75, 14.20, scene_attempts),
+        (14.20, 18.70, scene_accepted),
+        (18.70, 22.10, scene_reproduce),
     ]
-    for start, end, painter in scenes:
-        alpha = scene_alpha(t, start, end)
-        if alpha <= 0:
+    for start, end, fn in scenes:
+        a = scene_alpha(t, start, end)
+        if a <= 0:
             continue
-        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        painter(ImageDraw.Draw(layer, "RGBA"), t)
-        layer.putalpha(layer.getchannel("A").point(lambda p: int(p * alpha)))
-        result = Image.alpha_composite(result, layer)
-    common(ImageDraw.Draw(result, "RGBA"), t)
-    return result.convert("RGB")
+        layer = Image.new("RGBA", (W, H))
+        draw = ImageDraw.Draw(layer, "RGBA")
+        fn(draw, t, evidence)
+        layer.putalpha(layer.getchannel("A").point(lambda v: int(v * a)))
+        im = Image.alpha_composite(im, layer)
+    # Preserve the actual wordmark above all scene transitions.
+    im = im.convert("RGB")
+    apply_brand(im)
+    d = ImageDraw.Draw(im)
+    pct = min(1, max(0, t / DURATION))
+    d.rounded_rectangle((351, 982, 1813, 988), radius=3, fill=BORDER)
+    d.rounded_rectangle((351, 982, 351 + round(1462 * pct), 988), radius=3, fill=ACCENT)
+    return im
 
 
 def validate(evidence):
     if not (
         evidence.get("schema") == SCHEMA
         and evidence.get("kind") == "scripted_offline_fixture"
-        and evidence.get("live_model_invoked") is False
         and evidence.get("product_ui_captured") is False
+        and evidence.get("live_model_invoked") is False
         and evidence.get("result", {}).get("authority_cap") == "tested"
         and evidence.get("result", {}).get("accepted") is True
         and evidence.get("result", {}).get("complete") is True
         and evidence.get("workflow", [{}, {}])[1].get("status") == "rejected"
+        and evidence.get("workflow", [{}, {}, {}, {}])[3].get("status") == "accepted"
     ):
-        raise ValueError("Refusing to visualize unqualified or fabricated fixture data")
+        raise ValueError("Refuse unsupported workflow claims")
+
+
+def render_video(bg, evidence, target):
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgb24",
+        "-s",
+        f"{W}x{H}",
+        "-r",
+        str(FPS),
+        "-i",
+        "-",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-threads",
+        "4",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(target),
+    ]
+    child = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        for i in range(DURATION * FPS):
+            child.stdin.write(frame(i / FPS, evidence, bg).tobytes())
+            if (i + 1) % 96 == 0:
+                print(json.dumps({"rendered_frames": i + 1}), flush=True)
+        child.stdin.close()
+        status = child.wait(timeout=180)
+        if status:
+            raise ValueError(child.stderr.read().decode("utf-8", "replace")[-1000:])
+    except BaseException:
+        child.kill()
+        child.wait()
+        raise
+    return {
+        "bytes": target.stat().st_size,
+        "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+    }
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--evidence", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--render-video", action="store_true")
-    parser.add_argument("--review-frames", action="store_true")
-    args = parser.parse_args(argv)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--evidence", type=Path, required=True)
+    ap.add_argument("--output-dir", type=Path, required=True)
+    ap.add_argument("--render-video", action="store_true")
+    ap.add_argument("--review-frames", action="store_true")
+    args = ap.parse_args(argv)
     evidence = json.loads(args.evidence.read_text(encoding="utf-8"))
     validate(evidence)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    background = compose_background()
+    bg = shell_background()
     poster = args.output_dir / "workflow-poster.png"
-    frame(11.8, evidence, background).save(poster, optimize=True)
-    print(json.dumps({"poster": str(poster), "bytes": poster.stat().st_size}))
+    frame(12.0, evidence, bg).save(poster, optimize=True)
     if args.review_frames:
-        for t in (2.1, 5.4, 12.0, 15.9, 19.9):
-            frame(t, evidence, background).save(
-                args.output_dir / ("review-%03d.png" % int(t * 10)), optimize=True
+        for t in (2.5, 6, 12, 16, 20.5):
+            frame(t, evidence, bg).save(
+                args.output_dir / f"review-{round(t * 10):03d}.png", optimize=True
             )
     if args.render_video:
         target = args.output_dir / "source-backed-workflow.mp4"
-        command = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-f",
-            "rawvideo",
-            "-pix_fmt",
-            "rgb24",
-            "-s",
-            f"{W}x{H}",
-            "-r",
-            str(FPS),
-            "-i",
-            "-",
-            "-an",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "20",
-            "-threads",
-            "4",
-            "-pix_fmt",
-            "yuv420p",
-            "-movflags",
-            "+faststart",
-            str(target),
-        ]
-        child = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            for n in range(DURATION * FPS):
-                child.stdin.write(frame(n / FPS, evidence, background).tobytes())
-                if (n + 1) % 96 == 0:
-                    print(json.dumps({"rendered_frames": n + 1}), flush=True)
-            child.stdin.close()
-            status = child.wait(timeout=120)
-            errors = child.stderr.read().decode("utf-8", "replace")
-            if status:
-                raise RuntimeError("ffmpeg failed: " + errors[-1000:])
-        except BaseException:
-            child.kill()
-            child.wait()
-            raise
-        print(
-            json.dumps(
-                {
-                    "video": str(target),
-                    "bytes": target.stat().st_size,
-                    "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
-                }
-            )
-        )
+        info = render_video(bg, evidence, target)
+        print(json.dumps({"video": target.name, **info}, sort_keys=True))
 
 
 if __name__ == "__main__":
